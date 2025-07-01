@@ -1,0 +1,29 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor Developer
+actor RenderEngine
+
+rectangle "RenderGraph System" {
+    Developer --> (Create RenderGraph)
+    Developer --> (Add RenderPass)
+    Developer --> (Declare Resource)
+    Developer --> (Import External Resource)
+    Developer --> (Set Pass Callback)
+
+    RenderEngine --> (Compile RenderGraph)
+    (Compile RenderGraph) --> (Analyze Resource Lifetimes)
+    (Compile RenderGraph) --> (Allocate Physical Resources)
+    (Compile RenderGraph) --> (Insert Barriers)
+    (Compile RenderGraph) --> (Resolve Resource Aliasing)
+
+    RenderEngine --> (Execute Compiled Graph)
+    (Execute Compiled Graph) --> (Prepare Pass)
+    (Execute Compiled Graph) --> (Record Commands)
+    (Execute Compiled Graph) --> (Submit Pass)
+
+    Developer --> (Export Graph Stats)
+}
+
+@enduml

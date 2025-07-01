@@ -1,0 +1,105 @@
+@startuml FullRenderGraph
+
+' === Интерфейсы и дескрипторы ===
+interface IResourceDesc
+class TextureDesc implements IResourceDesc
+class BufferDesc implements IResourceDesc
+
+' === Логический уровень ===
+class RenderGraph {
+  +AddPass(name, setup, execute)
+  +Import(handle, external)
+  +Compile() : CompiledRenderGraph
+  -passes : List<RenderPass>
+  -imports : Dictionary<ResourceHandle, IGraphicsResource>
+}
+
+class RenderPass {
+  +Name : string
+  +Setup(RenderGraphContext)
+  +Execute(RenderGraphContext)
+  -reads : List<ResourceHandle>
+  -writes : List<ResourceHandle>
+  -deps : List<RenderPass>
+}
+
+class RenderGraphContext {
+  +Read(ResourceHandle)
+  +Write(ResourceHandle)
+  +Create(desc : IResourceDesc) : ResourceHandle
+  +Import(external : IGraphicsResource) : ResourceHandle
+}
+
+class ResourceHandle {
+  +Id : int
+  +Desc : IResourceDesc
+}
+
+' === Компиляция ===
+class RenderGraphCompiler {
+  +Compile(RenderGraph) : CompiledRenderGraph
+  -AnalyzeDependencies()
+  -ComputeLifetimes()
+  -PlanResourceStates()
+  -AliasResources()
+}
+
+class CompiledRenderGraph {
+  +Execute()
+  -passes : List<CompiledRenderPass>
+  -resources : Dictionary<ResourceHandle, PhysicalResourceId>
+  -aliases : Dictionary<PhysicalResourceId, IGraphicsResource>
+}
+
+class CompiledRenderPass {
+  +Execute()
+  -cmdList : ICommandList
+  -barriers : List<ResourceBarrier>
+}
+
+class ResourceBarrier {
+  +Resource : ResourceHandle
+  +Before : ResourceState
+  +After : ResourceState
+}
+
+' === Физический уровень ===
+class PhysicalResourceId {
+  +Id : int
+}
+
+interface IGraphicsResource
+class TextureResource implements IGraphicsResource
+class BufferResource implements IGraphicsResource
+
+class ResourceAllocator {
+  +Allocate(desc : IResourceDesc) : IGraphicsResource
+  +Release(resource : IGraphicsResource)
+}
+
+' === Связи ===
+RenderGraph --> RenderPass : contains
+RenderPass --> RenderGraphContext : uses
+RenderGraphContext --> ResourceHandle : returns
+ResourceHandle --> IResourceDesc
+IResourceDesc <|-- TextureDesc
+IResourceDesc <|-- BufferDesc
+
+RenderGraph --> RenderGraphCompiler : uses
+RenderGraphCompiler --> CompiledRenderGraph : builds
+CompiledRenderGraph --> CompiledRenderPass : contains
+CompiledRenderGraph --> PhysicalResourceId : maps
+CompiledRenderGraph --> IGraphicsResource : allocates
+CompiledRenderPass --> ResourceBarrier : uses
+CompiledRenderPass --> ICommandList : records
+
+RenderGraph --> IGraphicsResource : imports
+RenderGraphContext --> IGraphicsResource : imports
+ResourceAllocator --> IGraphicsResource : allocates
+IGraphicsResource <|-- TextureResource
+IGraphicsResource <|-- BufferResource
+
+ResourceBarrier --> ResourceHandle
+ResourceBarrier --> ResourceState
+
+@enduml

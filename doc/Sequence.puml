@@ -1,0 +1,41 @@
+@startuml
+actor Developer
+participant "RenderGraph" as RG
+participant "RenderEngine" as RE
+participant "RenderGraphCompiler" as Compiler
+participant "CompiledRenderGraph" as Compiled
+participant "GPU"
+
+== Setup ==
+
+Developer -> RG : CreateRenderGraph()
+Developer -> RG : DeclareResource()
+Developer -> RG : AddRenderPass()
+Developer -> RG : SetPassCallback()
+Developer -> RG : ImportExternalResource()
+
+== Compilation ==
+
+RE -> Compiler : CompileRenderGraph(RG)
+Compiler -> Compiler : AnalyzeResourceLifetimes()
+Compiler -> Compiler : ResolveResourceAliasing()
+Compiler -> Compiler : AllocatePhysicalResources()
+Compiler -> Compiler : InsertBarriers()
+Compiler -> Compiled : BuildCompiledGraph()
+Compiler --> RE : return CompiledRenderGraph
+
+== Execution (per frame) ==
+
+RE -> Compiled : ExecuteCompiledGraph()
+loop for each pass
+    Compiled -> RE : PreparePass()
+    RE -> RG : Call PassCallback()
+    RE -> GPU : RecordCommands()
+    RE -> GPU : SubmitPass()
+end
+
+== Debug (optional) ==
+
+Developer -> Compiled : ExportGraphStats()
+
+@enduml
