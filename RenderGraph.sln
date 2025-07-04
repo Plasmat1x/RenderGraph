@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphicsAPI", "Parts\Graphi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Directx12Impl", "Parts\Directx12Impl\Directx12Impl.csproj", "{30BB457E-ECC5-4744-9BB1-747D8F2272DC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Passes", "Parts\Passes\Passes.csproj", "{DDC71367-F0DB-46DC-9271-59689E75E2B0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{30BB457E-ECC5-4744-9BB1-747D8F2272DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30BB457E-ECC5-4744-9BB1-747D8F2272DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30BB457E-ECC5-4744-9BB1-747D8F2272DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDC71367-F0DB-46DC-9271-59689E75E2B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDC71367-F0DB-46DC-9271-59689E75E2B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDC71367-F0DB-46DC-9271-59689E75E2B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDC71367-F0DB-46DC-9271-59689E75E2B0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -61,6 +67,7 @@ Global
 		{69C542FD-8968-4CF2-86A6-ED83FE7CFFC1} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{5D968C42-1C86-4C85-B7DD-60EF21FAFCE1} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{30BB457E-ECC5-4744-9BB1-747D8F2272DC} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{DDC71367-F0DB-46DC-9271-59689E75E2B0} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {376DA86B-0E5C-4A57-9198-A072E5FD6F04}

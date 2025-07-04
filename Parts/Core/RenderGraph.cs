@@ -19,7 +19,7 @@ internal class RenderGraph
     throw new NotImplementedException();
   }
 
-  public void AddPass<T>(T _pass)
+  public void AddPass<T>(T _pass) where T : RenderPass
   {
     throw new NotImplementedException();
   }
