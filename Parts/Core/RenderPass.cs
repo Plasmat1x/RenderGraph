@@ -1,4 +1,4 @@
-﻿using Core.Data;
+using Resources.Data;
 
 using System;
 using System.Collections.Generic;
@@ -7,20 +7,14 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Core;
-internal class RenderPass
+public abstract class RenderPass
 {
-  string Name { get; init; }
+  public string Name { get; }
 
-  private readonly List<ResourceHandle> p_reads = new();
-  private readonly List<ResourceHandle> p_writes = new();
-  private readonly List<RenderPass> p_deps = new();
+  protected readonly List<ResourceHandle> p_reads = new();
+  protected readonly List<ResourceHandle> p_writes = new();
+  protected readonly List<RenderPass> p_deps = new();
 
-  public void Setup(RenderGraphContext _ctx)
-  {
-    throw new NotImplementedException();
-  }
-  public void Execute(RenderGraphContext _ctx)
-  {
-    throw new NotImplementedException();
-  }
+  public abstract void Setup(RenderPassContext _ctx);
+  public abstract void Execute(RenderPassContext _ctx);
 }

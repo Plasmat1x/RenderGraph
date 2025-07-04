@@ -1,105 +1,332 @@
-@startuml FullRenderGraph
+@startuml RenderGraphLibrary
 
-' === Интерфейсы и дескрипторы ===
-interface IResourceDesc
-class TextureDesc implements IResourceDesc
-class BufferDesc implements IResourceDesc
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam classFontName Arial
+skinparam classFontSize 12
 
-' === Логический уровень ===
-class RenderGraph {
-  +AddPass(name, setup, execute)
-  +Import(handle, external)
-  +Compile() : CompiledRenderGraph
-  -passes : List<RenderPass>
-  -imports : Dictionary<ResourceHandle, IGraphicsResource>
+package "Core" {
+    class RenderGraph {
+        - _passes: List<RenderPass>
+        - _resourceManager: ResourceManager
+        - _device: IGraphicsDevice
+        - _compiled: bool
+        --
+        + AddPass<T>(pass: T): void
+        + Execute(commandBuffer: CommandBuffer): void
+        + Compile(): void
+        + Dispose(): void
+    }
+
+    abstract class RenderPass {
+        + Name: string
+        + Inputs: List<ResourceHandle>
+        + Outputs: List<ResourceHandle>
+        --
+        + {abstract} Setup(builder: RenderGraphBuilder): void
+        + {abstract} Execute(context: RenderPassContext): void
+    }
+
+    class RenderGraphBuilder {
+        - _resourceManager: ResourceManager
+        --
+        + CreateTexture(name: string, desc: TextureDescription): ResourceHandle
+        + CreateBuffer(name: string, desc: BufferDescription): ResourceHandle
+        + ReadTexture(handle: ResourceHandle): void
+        + WriteTexture(handle: ResourceHandle): void
+        + ReadBuffer(handle: ResourceHandle): void
+        + WriteBuffer(handle: ResourceHandle): void
+    }
+
+    class RenderPassContext {
+        + CommandBuffer: CommandBuffer
+        + Resources: ResourceManager
+        + FrameData: FrameData
+        --
+        + GetTexture(handle: ResourceHandle): ITexture
+        + GetBuffer(handle: ResourceHandle): IBuffer
+    }
+
+    class ResourceManager {
+        - _resources: Dictionary<ResourceHandle, IResource>
+        - _texturePool: ObjectPool<ITexture>
+        - _bufferPool: ObjectPool<IBuffer>
+        --
+        + CreateTexture(desc: TextureDescription): ResourceHandle
+        + CreateBuffer(desc: BufferDescription): ResourceHandle
+        + GetTexture(handle: ResourceHandle): ITexture
+        + GetBuffer(handle: ResourceHandle): IBuffer
+        + TransitionResource(handle: ResourceHandle, state: ResourceState): void
+        + ReleaseResource(handle: ResourceHandle): void
+    }
+
+    struct ResourceHandle {
+        + Id: uint
+        + Type: ResourceType
+        + Generation: uint
+        --
+        + IsValid(): bool
+        + Equals(other: ResourceHandle): bool
+    }
+
+    enum ResourceType {
+        Texture
+        Buffer
+    }
+
+    enum ResourceState {
+        Undefined
+        RenderTarget
+        ShaderResource
+        UnorderedAccess
+        DepthWrite
+        DepthRead
+        Present
+    }
 }
 
-class RenderPass {
-  +Name : string
-  +Setup(RenderGraphContext)
-  +Execute(RenderGraphContext)
-  -reads : List<ResourceHandle>
-  -writes : List<ResourceHandle>
-  -deps : List<RenderPass>
+package "GraphicsAPI" {
+    interface IGraphicsDevice {
+        + CreateCommandBuffer(): CommandBuffer
+        + CreateTexture(desc: TextureDescription): ITexture
+        + CreateBuffer(desc: BufferDescription): IBuffer
+        + ExecuteCommandBuffer(commandBuffer: CommandBuffer): void
+        + Present(): void
+        + WaitForGPU(): void
+        + Dispose(): void
+    }
+
+    interface ITexture {
+        + Width: uint
+        + Height: uint
+        + Format: TextureFormat
+        + MipLevels: uint
+        + ArraySize: uint
+        --
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+    }
+
+    interface IBuffer {
+        + Size: ulong
+        + Usage: BufferUsage
+        + Stride: uint
+        --
+        + Map(): IntPtr
+        + Unmap(): void
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+    }
+
+    abstract class CommandBuffer {
+        + IsRecording: bool
+        --
+        + Begin(): void
+        + End(): void
+        + SetRenderTargets(colorTargets: ITexture[], depthTarget: ITexture): void
+        + SetViewport(viewport: Viewport): void
+        + SetScissorRect(rect: Rectangle): void
+        + DrawIndexed(indexCount: uint, instanceCount: uint): void
+        + Dispatch(groupCountX: uint, groupCountY: uint, groupCountZ: uint): void
+        + CopyTexture(src: ITexture, dst: ITexture): void
+        + TransitionResource(resource: IResource, state: ResourceState): void
+        + Dispose(): void
+    }
+
+    class D3D12GraphicsDevice {
+        - _d3d12: D3D12
+        - _device: ComPtr<ID3D12Device>
+        - _commandQueue: ComPtr<ID3D12CommandQueue>
+        - _swapChain: ComPtr<IDXGISwapChain3>
+        - _fence: ComPtr<ID3D12Fence>
+        - _fenceValue: ulong
+        --
+        + CreateCommandBuffer(): CommandBuffer
+        + CreateTexture(desc: TextureDescription): ITexture
+        + CreateBuffer(desc: BufferDescription): IBuffer
+        + ExecuteCommandBuffer(commandBuffer: CommandBuffer): void
+        + Present(): void
+        + WaitForGPU(): void
+        + Dispose(): void
+    }
+
+    class D3D12Texture {
+        - _resource: ComPtr<ID3D12Resource>
+        - _rtvHandle: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _srvHandle: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _dsvHandle: D3D12_CPU_DESCRIPTOR_HANDLE
+        --
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+    }
+
+    class D3D12Buffer {
+        - _resource: ComPtr<ID3D12Resource>
+        - _mappedData: IntPtr
+        --
+        + Map(): IntPtr
+        + Unmap(): void
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+    }
+
+    class D3D12CommandBuffer {
+        - _commandList: ComPtr<ID3D12GraphicsCommandList>
+        - _allocator: ComPtr<ID3D12CommandAllocator>
+        --
+        + Begin(): void
+        + End(): void
+        + SetRenderTargets(colorTargets: ITexture[], depthTarget: ITexture): void
+        + DrawIndexed(indexCount: uint, instanceCount: uint): void
+        + Dispatch(groupCountX: uint, groupCountY: uint, groupCountZ: uint): void
+        + TransitionResource(resource: IResource, state: ResourceState): void
+    }
 }
 
-class RenderGraphContext {
-  +Read(ResourceHandle)
-  +Write(ResourceHandle)
-  +Create(desc : IResourceDesc) : ResourceHandle
-  +Import(external : IGraphicsResource) : ResourceHandle
+package "Passes" {
+    class GeometryPass {
+        + ColorTarget: ResourceHandle
+        + DepthTarget: ResourceHandle
+        + CameraBuffer: ResourceHandle
+        --
+        + Setup(builder: RenderGraphBuilder): void
+        + Execute(context: RenderPassContext): void
+    }
+
+    class BlurPass {
+        + InputTexture: ResourceHandle
+        + OutputTexture: ResourceHandle
+        + BlurRadius: float
+        + BlurDirection: Vector2
+        --
+        + Setup(builder: RenderGraphBuilder): void
+        + Execute(context: RenderPassContext): void
+    }
+
+    class ColorCorrectionPass {
+        + InputTexture: ResourceHandle
+        + OutputTexture: ResourceHandle
+        + Gamma: float
+        + Contrast: float
+        + Brightness: float
+        --
+        + Setup(builder: RenderGraphBuilder): void
+        + Execute(context: RenderPassContext): void
+    }
 }
 
-class ResourceHandle {
-  +Id : int
-  +Desc : IResourceDesc
+package "ECS" {
+    class RenderSystem {
+        - _renderGraph: RenderGraph
+        - _world: World
+        - _camera: Camera
+        --
+        + Update(deltaTime: float): void
+        + Initialize(): void
+        + Cleanup(): void
+    }
+
+    struct MeshRenderer {
+        + Mesh: Mesh
+        + Material: Material
+        + CastShadows: bool
+        + ReceiveShadows: bool
+    }
+
+    struct Transform {
+        + Position: Vector3
+        + Rotation: Quaternion
+        + Scale: Vector3
+        --
+        + GetWorldMatrix(): Matrix4x4
+    }
+
+    struct Camera {
+        + Position: Vector3
+        + Target: Vector3
+        + Up: Vector3
+        + FieldOfView: float
+        + NearPlane: float
+        + FarPlane: float
+        --
+        + GetViewMatrix(): Matrix4x4
+        + GetProjectionMatrix(): Matrix4x4
+    }
 }
 
-' === Компиляция ===
-class RenderGraphCompiler {
-  +Compile(RenderGraph) : CompiledRenderGraph
-  -AnalyzeDependencies()
-  -ComputeLifetimes()
-  -PlanResourceStates()
-  -AliasResources()
+package "Resources" {
+    struct TextureDescription {
+        + Width: uint
+        + Height: uint
+        + Format: TextureFormat
+        + MipLevels: uint
+        + ArraySize: uint
+        + Usage: TextureUsage
+        + BindFlags: BindFlags
+    }
+
+    struct BufferDescription {
+        + Size: ulong
+        + Usage: BufferUsage
+        + BindFlags: BindFlags
+        + CPUAccessFlags: CPUAccessFlags
+        + Stride: uint
+    }
+
+    enum TextureFormat {
+        R8G8B8A8_UNORM
+        R32G32B32A32_FLOAT
+        D32_FLOAT
+        R16G16_FLOAT
+        BC1_UNORM
+        BC3_UNORM
+    }
+
+    enum BufferUsage {
+        Default
+        Immutable
+        Dynamic
+        Staging
+    }
+
+    struct Viewport {
+        + X: float
+        + Y: float
+        + Width: float
+        + Height: float
+        + MinDepth: float
+        + MaxDepth: float
+    }
 }
 
-class CompiledRenderGraph {
-  +Execute()
-  -passes : List<CompiledRenderPass>
-  -resources : Dictionary<ResourceHandle, PhysicalResourceId>
-  -aliases : Dictionary<PhysicalResourceId, IGraphicsResource>
-}
+' Relationships
+RenderGraph *-- RenderPass : contains
+RenderGraph *-- ResourceManager : uses
+RenderGraph *-- IGraphicsDevice : uses
+RenderPass ..> RenderGraphBuilder : uses
+RenderPass ..> RenderPassContext : uses
+RenderGraphBuilder --> ResourceManager : uses
+RenderPassContext --> ResourceManager : uses
+ResourceManager --> ResourceHandle : manages
+ResourceManager --> ITexture : creates
+ResourceManager --> IBuffer : creates
 
-class CompiledRenderPass {
-  +Execute()
-  -cmdList : ICommandList
-  -barriers : List<ResourceBarrier>
-}
+IGraphicsDevice <|-- D3D12GraphicsDevice
+ITexture <|-- D3D12Texture
+IBuffer <|-- D3D12Buffer
+CommandBuffer <|-- D3D12CommandBuffer
 
-class ResourceBarrier {
-  +Resource : ResourceHandle
-  +Before : ResourceState
-  +After : ResourceState
-}
+RenderPass <|-- GeometryPass
+RenderPass <|-- BlurPass
+RenderPass <|-- ColorCorrectionPass
 
-' === Физический уровень ===
-class PhysicalResourceId {
-  +Id : int
-}
+RenderSystem --> RenderGraph : uses
+RenderSystem --> MeshRenderer : queries
+RenderSystem --> Transform : queries
+RenderSystem --> Camera : uses
 
-interface IGraphicsResource
-class TextureResource implements IGraphicsResource
-class BufferResource implements IGraphicsResource
-
-class ResourceAllocator {
-  +Allocate(desc : IResourceDesc) : IGraphicsResource
-  +Release(resource : IGraphicsResource)
-}
-
-' === Связи ===
-RenderGraph --> RenderPass : contains
-RenderPass --> RenderGraphContext : uses
-RenderGraphContext --> ResourceHandle : returns
-ResourceHandle --> IResourceDesc
-IResourceDesc <|-- TextureDesc
-IResourceDesc <|-- BufferDesc
-
-RenderGraph --> RenderGraphCompiler : uses
-RenderGraphCompiler --> CompiledRenderGraph : builds
-CompiledRenderGraph --> CompiledRenderPass : contains
-CompiledRenderGraph --> PhysicalResourceId : maps
-CompiledRenderGraph --> IGraphicsResource : allocates
-CompiledRenderPass --> ResourceBarrier : uses
-CompiledRenderPass --> ICommandList : records
-
-RenderGraph --> IGraphicsResource : imports
-RenderGraphContext --> IGraphicsResource : imports
-ResourceAllocator --> IGraphicsResource : allocates
-IGraphicsResource <|-- TextureResource
-IGraphicsResource <|-- BufferResource
-
-ResourceBarrier --> ResourceHandle
-ResourceBarrier --> ResourceState
+D3D12GraphicsDevice --> D3D12Texture : creates
+D3D12GraphicsDevice --> D3D12Buffer : creates
+D3D12GraphicsDevice --> D3D12CommandBuffer : creates
 
 @enduml

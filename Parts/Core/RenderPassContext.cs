@@ -1,5 +1,6 @@
-﻿using Core.Data;
 using Core.Interfaces;
+
+using Resources.Data;
 
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Core;
-internal class RenderGraphContext
+public class RenderPassContext
 {
   public void Read(ResourceHandle _handle)
   {
@@ -20,12 +21,12 @@ internal class RenderGraphContext
     throw new NotImplementedException();
   }
 
-  public ResourceHandle Create(IResourceDesc _desc)
+  public ResourceHandle Create(IResource _desc)
   {
     throw new NotImplementedException();
   }
 
-  public ResourceHandle Import(IGraphicsResource _external)
+  public ResourceHandle Import(IResource _external)
   {
     throw new NotImplementedException();
   }

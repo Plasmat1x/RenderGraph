@@ -1,5 +1,6 @@
-﻿using Core.Data;
+
 using Core.Interfaces;
+using Resources.Data;
 
 using System;
 using System.Collections.Generic;
@@ -11,9 +12,14 @@ namespace Core;
 internal class RenderGraph
 {
   private readonly List<RenderPass> p_renderPasses = new();
-  private readonly Dictionary<ResourceHandle, IGraphicsResource> p_imports = new();
+  private readonly Dictionary<ResourceHandle, IResource> p_imports = new();
 
   public void AddPass(string _name, Action<RenderPass> _build)
+  {
+    throw new NotImplementedException();
+  }
+
+  public void AddPass<T>(T _pass)
   {
     throw new NotImplementedException();
   }

@@ -19,4 +19,9 @@
 	  <!--<GenerateDocumentationFile>True</GenerateDocumentationFile>-->
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\GraphicsAPI\GraphicsAPI.csproj" />
+    <ProjectReference Include="..\Resources\Resources.csproj" />
+  </ItemGroup>
+
 </Project>
