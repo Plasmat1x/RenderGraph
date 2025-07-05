@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Resources.Enums;
+
 public enum ResourceState
 {
   Undefined,

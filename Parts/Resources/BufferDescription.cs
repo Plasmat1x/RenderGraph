@@ -1,31 +1,26 @@
 using Resources.Enums;
+using Resources.Interfaces;
 
 namespace Resources;
 
-public class BufferDescription: ResourceDescription
+public struct BufferDescription: IResourceDescription
 {
   public ulong Size { get; set; }
   public uint Stride { get; set; }
   public uint ElementCount { get; set; }
   public uint StructureByteStride { get; set; }
-  public BufferUsage Usage { get; set; }
 
-  public override ResourceUsage Usage => throw new NotImplementedException();
+  public ResourceUsage Usage => throw new NotImplementedException();
 
-  public override BindFlags BindFlags => throw new NotImplementedException();
+  public BindFlags BindFlags => throw new NotImplementedException();
 
-  public override string Name => throw new NotImplementedException();
+  public string Name => throw new NotImplementedException();
 
-  public override CPUAccessFlags CPUAcessFalgs => throw new NotImplementedException();
+  public CPUAccessFlags CPUAcessFalgs => throw new NotImplementedException();
 
-  public override ResourceMiscFlags ResourceMiscFlags => throw new NotImplementedException();
+  public ResourceMiscFlags ResourceMiscFlags => throw new NotImplementedException();
 
   public ulong GetMemorySize()
-  {
-    throw new NotImplementedException();
-  }
-
-  public override ulong GetMemorySize()
   {
     throw new NotImplementedException();
   }
@@ -35,7 +30,7 @@ public class BufferDescription: ResourceDescription
     throw new NotImplementedException();
   }
 
-  public override bool IsComaptible(ResourceDescription _other)
+  public bool IsComaptible(IResourceDescription _other)
   {
     throw new NotImplementedException();
   }
@@ -44,9 +39,4 @@ public class BufferDescription: ResourceDescription
   {
     throw new NotImplementedException();
   }
-}
-
-public enum ResourceUsage
-{
-
 }

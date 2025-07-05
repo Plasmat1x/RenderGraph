@@ -1,11 +1,9 @@
-using Core.Interfaces;
-
 using Resources;
 using Resources.Enums;
 
 namespace GraphicsAPI;
 
-public abstract class CommandBuffer
+public interface ICommandBuffer
 {
   public bool IsRecording { get; }
   public abstract void Begin();

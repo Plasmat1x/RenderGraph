@@ -18,11 +18,3 @@ public enum ResourceMiscFlags
   SharedKeyedMutex,
   GDICompatible,
 }
-
-public enum TextureViewType
-{
-  ShaderResource,
-  RenderTarget,
-  DepthStencil,
-  UnorderedAccess,
-}

@@ -1,4 +1,5 @@
 using Resources.Enums;
+using Resources.Interfaces;
 
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Resources;
-public struct TextureDescription
+public struct TextureDescription : IResourceDescription
 {
   public uint Width { get; set; }
   public uint Height { get; set; }
@@ -20,6 +21,14 @@ public struct TextureDescription
   public TextureUsage Usage { get; set; }
   public BindFlags BindFlags { get; set; }
 
+  public string Name => throw new NotImplementedException();
+
+  ResourceUsage IResourceDescription.Usage => throw new NotImplementedException();
+
+  public CPUAccessFlags CPUAcessFalgs => throw new NotImplementedException();
+
+  public ResourceMiscFlags ResourceMiscFlags => throw new NotImplementedException();
+
   public ulong GetMemorySize()
   {
     throw new NotImplementedException();
@@ -31,6 +40,11 @@ public struct TextureDescription
   }
 
   public List<TextureDescription> CreateMipChain()
+  {
+    throw new NotImplementedException();
+  }
+
+  public bool IsComaptible(IResourceDescription _other)
   {
     throw new NotImplementedException();
   }

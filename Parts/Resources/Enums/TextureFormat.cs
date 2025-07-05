@@ -86,19 +86,3 @@ public enum TextureFormat
   BC7_UNORM,
   BC7_UNORM_SRGB,
 }
-
-public enum BufferUsage
-{
-  Vertex,
-  Index,
-  Constant,
-  Structured,
-  Raw,
-  IndirectArgs,
-  Counter,
-  Append,
-  Consume,
-  Staging,
-  Upload,
-  Readback,
-}

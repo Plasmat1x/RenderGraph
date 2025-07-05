@@ -2,7 +2,7 @@ using Resources.Enums;
 
 namespace GraphicsAPI;
 
-public interface IBuffer : IDisposable
+public interface IBuffer : IResource, IDisposable
 {
   ulong Size { get; }
   TextureUsage Usage { get; }

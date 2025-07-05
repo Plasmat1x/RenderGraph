@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Resources.Data;
+namespace Core;
 public struct ResourceBarrier
 {
   public ResourceHandle Resource;

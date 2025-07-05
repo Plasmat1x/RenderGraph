@@ -1,8 +1,8 @@
 using Resources.Enums;
 
-namespace Resources;
+namespace Resources.Interfaces;
 
-public abstract class ResourceDescription
+public interface IResourceDescription
 {
   public abstract string Name { get; }
   public abstract ResourceUsage Usage { get; }
@@ -12,6 +12,6 @@ public abstract class ResourceDescription
 
   public abstract ulong GetMemorySize();
 
-  public abstract bool IsComaptible(ResourceDescription _other);
+  public abstract bool IsComaptible(IResourceDescription _other);
 
 }

@@ -1,32 +1,33 @@
-using Core.Interfaces;
+using GraphicsAPI;
 
-using Resources.Data;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Resources.Enums;
 
 namespace Core;
 public class RenderPassContext
 {
-  public void Read(ResourceHandle _handle)
+  public ICommandBuffer CommandBuffer;
+  public ResourceManager Resources;
+  public FrameData FrameData;
+  public int PassIndex;
+  public uint ViewportWidth;
+  public uint ViewportHeight;
+
+  public ITexture GetTexture(ResourceHandle _handle)
   {
     throw new NotImplementedException();
   }
 
-  public void Write(ResourceHandle _handle)
+  public IBuffer GetBuffer(ResourceHandle _handle)
   {
     throw new NotImplementedException();
   }
 
-  public ResourceHandle Create(IResource _desc)
+  public ITextureView GetTextureView(ResourceHandle _handle, TextureViewType _viewType)
   {
     throw new NotImplementedException();
   }
 
-  public ResourceHandle Import(IResource _external)
+  public IBufferView GetBufferView(ResourceHandle _handle, BufferViewType _viewType)
   {
     throw new NotImplementedException();
   }

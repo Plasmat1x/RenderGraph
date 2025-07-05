@@ -1,5 +1,3 @@
-using System.Data;
-
 namespace Utility;
 
 public class DirectedGraph<T>

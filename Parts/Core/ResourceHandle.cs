@@ -1,14 +1,7 @@
-using Core.Interfaces;
+using Core.Enums;
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Security.AccessControl;
-using System.Text;
-using System.Threading.Tasks;
+namespace Core;
 
-namespace Resources.Data;
 public struct ResourceHandle
 {
   public uint Id;

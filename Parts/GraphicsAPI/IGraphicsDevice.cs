@@ -4,10 +4,10 @@ namespace GraphicsAPI;
 
 public interface IGraphicsDevice : IDisposable
 {
-  CommandBuffer CreateCommandBuffer();
+  ICommandBuffer CreateCommandBuffer();
   ITexture CreateTexture(TextureDescription _desc);
   IBuffer CreateBuffer(BufferDescription _desc);
-  void ExecuteCommandBuffer(CommandBuffer _commandBuffer);
+  void ExecuteCommandBuffer(ICommandBuffer _commandBuffer);
   void Present();
   void WaitForGpu();
 }

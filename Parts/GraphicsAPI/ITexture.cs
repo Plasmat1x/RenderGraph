@@ -2,7 +2,7 @@ using Resources.Enums;
 
 namespace GraphicsAPI;
 
-public interface ITexture : IDisposable
+public interface ITexture : IResource, IDisposable
 {
   uint Width { get; }
   uint Height { get; }

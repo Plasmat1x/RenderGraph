@@ -1,7 +1,7 @@
 namespace Resources.Enums;
 
-public enum ResourceType
+public enum ResourceUsage
 {
   Texture,
-  Buffer
+  Buffer,
 }

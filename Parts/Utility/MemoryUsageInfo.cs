@@ -1,6 +1,6 @@
 namespace Utility;
 
-public class MemoryUsageInfo
+public struct MemoryUsageInfo
 {
   public ulong TotalAllocated {  get; private set; }
   public ulong TotalUsed { get; private set; }

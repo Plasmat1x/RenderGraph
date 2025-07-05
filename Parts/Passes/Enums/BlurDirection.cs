@@ -4,5 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.Interfaces;
-public interface IResource;
+namespace Passes.Enums;
+public enum BlurDirection
+{
+  Horziontal,
+  Vertical,
+  Both,
+}

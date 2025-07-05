@@ -1,18 +1,8 @@
-using Core.Interfaces;
-
 using GraphicsAPI;
-
 using Resources;
-using Resources.Data;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Core;
-internal class ResourceManager
+public class ResourceManager
 {
   private readonly Dictionary<ResourceHandle, IResource> p_resources;
   private readonly List<ITexture> p_texturePool;

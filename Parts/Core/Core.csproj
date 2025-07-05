@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GraphicsAPI\GraphicsAPI.csproj" />
     <ProjectReference Include="..\Resources\Resources.csproj" />
+    <ProjectReference Include="..\Utility\Utility.csproj" />
   </ItemGroup>
 
 </Project>
