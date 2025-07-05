@@ -2,8 +2,14 @@ namespace Resources.Enums;
 
 public enum TextureUsage
 {
-  Default,
-  Immutable,
-  Dynamic,
-  Staging
+  RenderTarget,
+  DepthStencil,
+  ShaderResource,
+  UnorderedAccess,
+  BackBuffer,
+  Staging,
+  ResolveTarget,
+  ResolveSource,
+  CubeMap,
+  VolumeTexture,
 }
