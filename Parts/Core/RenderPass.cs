@@ -4,6 +4,7 @@ public abstract class RenderPass
   public string Name { get; set; }
   public bool Enabled { get; set; }
   public int ExecutionOrder { get; set; }
+  public bool AlwaysExecute { get; set; } = false;
 
   public readonly List<ResourceHandle> Inputs = new();
   public readonly List<ResourceHandle> Outputs = new();
