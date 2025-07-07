@@ -2,6 +2,8 @@ namespace Resources.Enums;
 
 public enum ResourceUsage
 {
-  Texture,
-  Buffer,
+  Default,
+  Immutable,
+  Dynamic,
+  Staging,
 }

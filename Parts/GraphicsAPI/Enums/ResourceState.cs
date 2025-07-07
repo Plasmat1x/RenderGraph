@@ -4,15 +4,22 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Resources.Enums;
+namespace GraphicsAPI.Enums;
 
 public enum ResourceState
 {
   Undefined,
+  Common,
   RenderTarget,
-  ShaderResource,
   UnorderedAccess,
   DepthWrite,
   DepthRead,
-  Present
+  ShaderResource,
+  StreamOut,
+  IndirectArgument,
+  CopyDestination,
+  CopySource,
+  ResolveDestination,
+  ResolveSource,
+  Present,
 }

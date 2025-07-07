@@ -1,4 +1,4 @@
-namespace GraphicsAPI;
+namespace GraphicsAPI.Interfaces;
 
 public interface ITextureView
 {

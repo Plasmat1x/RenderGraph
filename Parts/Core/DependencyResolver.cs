@@ -7,6 +7,11 @@ public class DependencyResolver
   private readonly DirectedGraph<RenderPass> p_passGraph = new DirectedGraph<RenderPass>();
   private readonly Dictionary<ResourceHandle, List<RenderPass>> p_resourceDependencies = [];
   
+  public void Clear()
+  {
+    throw new NotImplementedException();  
+  }
+
   public void BuildDependencyGraph(List<RenderPass> _passes)
   {
     throw new NotImplementedException();
@@ -33,6 +38,16 @@ public class DependencyResolver
   }
 
   public List<RenderPass> GetCrtiticalPath()
+  {
+    throw new NotImplementedException();
+  }
+
+  internal void AddNode(RenderPass pass)
+  {
+    throw new NotImplementedException();
+  }
+
+  internal void AddEdge(RenderPass dependency, RenderPass pass)
   {
     throw new NotImplementedException();
   }

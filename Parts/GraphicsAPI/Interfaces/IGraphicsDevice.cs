@@ -1,6 +1,6 @@
 using Resources;
 
-namespace GraphicsAPI;
+namespace GraphicsAPI.Interfaces;
 
 public interface IGraphicsDevice : IDisposable
 {

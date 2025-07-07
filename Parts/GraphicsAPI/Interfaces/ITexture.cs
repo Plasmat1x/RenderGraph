@@ -1,6 +1,7 @@
+using Resources;
 using Resources.Enums;
 
-namespace GraphicsAPI;
+namespace GraphicsAPI.Interfaces;
 
 public interface ITexture : IResource, IDisposable
 {
@@ -9,6 +10,5 @@ public interface ITexture : IResource, IDisposable
   TextureFormat Format { get; }
   uint MipLevels { get; }
   uint ArraySize { get; }
-
-  nint GetNativeHandle();
+  TextureDescription Description { get; }
 }

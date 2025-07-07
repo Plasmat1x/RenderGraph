@@ -1,7 +1,8 @@
-using Resources;
-using Resources.Enums;
+using GraphicsAPI.Enums;
 
-namespace GraphicsAPI;
+using Resources;
+
+namespace GraphicsAPI.Interfaces;
 
 public interface ICommandBuffer
 {

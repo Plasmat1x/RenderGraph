@@ -3,22 +3,23 @@ using Resources.Interfaces;
 
 namespace Resources;
 
-public struct BufferDescription: IResourceDescription
+public class BufferDescription: IResourceDescription
 {
   public ulong Size { get; set; }
   public uint Stride { get; set; }
   public uint ElementCount { get; set; }
   public uint StructureByteStride { get; set; }
+  public string Name { get; set; }
 
-  public ResourceUsage Usage => throw new NotImplementedException();
+  public BufferUsage Usage { get; set; }
 
-  public BindFlags BindFlags => throw new NotImplementedException();
+  public BindFlags BindFlags { get; set; }
 
-  public string Name => throw new NotImplementedException();
+  public CPUAccessFlags CPUAcessFalgs { get; set; }
 
-  public CPUAccessFlags CPUAcessFalgs => throw new NotImplementedException();
+  public ResourceMiscFlags ResourceMiscFlags { get; set; }
 
-  public ResourceMiscFlags ResourceMiscFlags => throw new NotImplementedException();
+  ResourceUsage IResourceDescription.Usage { get;}
 
   public ulong GetMemorySize()
   {

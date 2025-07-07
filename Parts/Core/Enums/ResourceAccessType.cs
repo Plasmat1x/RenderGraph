@@ -1,6 +1,6 @@
 namespace Core.Enums;
 
-public enum ResourceAccesType
+public enum ResourceAccessType
 {
   Read,
   Write,

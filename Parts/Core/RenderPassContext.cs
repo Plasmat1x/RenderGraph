@@ -1,4 +1,4 @@
-using GraphicsAPI;
+using GraphicsAPI.Interfaces;
 
 using Resources.Enums;
 

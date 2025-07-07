@@ -160,22 +160,7 @@ package "RenderGraph Core" {
         ReadWrite
     }
 
-    enum ResourceState {
-        Undefined
-        Common
-        RenderTarget
-        UnorderedAccess
-        DepthWrite
-        DepthRead
-        ShaderResource
-        StreamOut
-        IndirectArgument
-        CopyDestination
-        CopySource
-        ResolveDestination
-        ResolveSource
-        Present
-    }
+
 
     enum ResourceLifetime {
         Transient
@@ -360,6 +345,13 @@ package "Resource Descriptions" {
         ReadWrite
     }
 
+    enum ResourceUsage {
+        Default
+        Immutable
+        Dynamic
+        Staging
+    }
+
     enum ResourceMiscFlags {
         None
         GenerateMips
@@ -421,6 +413,23 @@ package "GraphicsAPI Abstraction" {
         + End(): void
         + TransitionResource(resource: IResource, state: ResourceState): void
         + Dispose(): void
+    }
+
+    enum ResourceState {
+        Undefined
+        Common
+        RenderTarget
+        UnorderedAccess
+        DepthWrite
+        DepthRead
+        ShaderResource
+        StreamOut
+        IndirectArgument
+        CopyDestination
+        CopySource
+        ResolveDestination
+        ResolveSource
+        Present
     }
 }
 

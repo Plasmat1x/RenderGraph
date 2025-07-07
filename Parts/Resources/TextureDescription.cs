@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Resources;
-public struct TextureDescription : IResourceDescription
+public class TextureDescription : IResourceDescription
 {
   public uint Width { get; set; }
   public uint Height { get; set; }
@@ -21,13 +21,13 @@ public struct TextureDescription : IResourceDescription
   public TextureUsage Usage { get; set; }
   public BindFlags BindFlags { get; set; }
 
-  public string Name => throw new NotImplementedException();
+  public string Name { get; set; }
 
-  ResourceUsage IResourceDescription.Usage => throw new NotImplementedException();
+  ResourceUsage IResourceDescription.Usage { get; }
 
-  public CPUAccessFlags CPUAcessFalgs => throw new NotImplementedException();
+  public CPUAccessFlags CPUAcessFalgs { get; set; }
 
-  public ResourceMiscFlags ResourceMiscFlags => throw new NotImplementedException();
+  public ResourceMiscFlags ResourceMiscFlags { get; set; }
 
   public ulong GetMemorySize()
   {
