@@ -5,11 +5,12 @@ using Resources;
 using Resources.Enums;
 
 using System.Reflection.Metadata;
+using System.Runtime.InteropServices;
 
 namespace Core;
 public class RenderPassContext
 {
-  public ICommandBuffer CommandBuffer { get; set; }
+  public CommandBuffer CommandBuffer { get; set; }
   public ResourceManager Resources { get; set; }
   public FrameData FrameData { get; set; }
   public int PassIndex { get; set; }

@@ -1,7 +1,7 @@
 using Resources;
 using Resources.Enums;
 
-namespace Core.Extensions;
+namespace Core;
 
 public static class RenderGraphBuilderExtensions
 {
@@ -16,7 +16,7 @@ public static class RenderGraphBuilderExtensions
       Depth = 1,
       MipLevels = 1,
       ArraySize = 1,
-      Usage = TextureUsage.ResolveTarget,
+      TextureUsage = TextureUsage.ResolveTarget,
       BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource
     };
 
@@ -34,7 +34,7 @@ public static class RenderGraphBuilderExtensions
       Depth = 1,
       MipLevels = 1,
       ArraySize = 1,
-      Usage = TextureUsage.DepthStencil,
+      TextureUsage = TextureUsage.DepthStencil,
       BindFlags = BindFlags.DepthStencil | BindFlags.ShaderResource
     };
 
@@ -48,7 +48,7 @@ public static class RenderGraphBuilderExtensions
       Name = _name,
       Size = _size,
       Stride = _stride,
-      Usage = BufferUsage.Vertex,
+      BufferUsage = BufferUsage.Vertex,
       BindFlags = BindFlags.VertexBuffer,
     };
 
@@ -62,7 +62,7 @@ public static class RenderGraphBuilderExtensions
       Name = _name,
       Size = _size,
       Stride = sizeof(uint),
-      Usage = BufferUsage.Index,
+      BufferUsage = BufferUsage.Index,
       BindFlags = BindFlags.IndexBuffer,
     };
 
@@ -76,7 +76,7 @@ public static class RenderGraphBuilderExtensions
       Name = _name,
       Size = _size,
       Stride = 0,
-      Usage = BufferUsage.Constant,
+      BufferUsage = BufferUsage.Constant,
       BindFlags = BindFlags.ConstantBuffer,
     };
 

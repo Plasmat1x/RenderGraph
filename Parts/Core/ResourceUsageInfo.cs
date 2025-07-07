@@ -51,9 +51,9 @@ public class ResourceUsageInfo
     return $"ResourceUsage(Handle: {Handle}, Access: {AccessType}, State: {State}, Pass: '{PassName}')";
   }
 
-  public override bool Equals(object? obj)
+  public override bool Equals(object? _obj)
   {
-    return obj is ResourceUsageInfo other &&
+    return _obj is ResourceUsageInfo other &&
       Handle == other.Handle &&
       AccessType == other.AccessType &&
       State == other.State &&

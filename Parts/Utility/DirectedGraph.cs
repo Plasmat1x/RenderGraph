@@ -8,7 +8,7 @@ public class DirectedGraph<T>
 
   public IReadOnlyCollection<T> Nodes => p_nodes;
   public int NodeCount => p_nodes.Count;
-  public int EdgeCount => p_edges.Values.Sum(list => list.Count);
+  public int EdgeCount => p_edges.Values.Sum(_list => _list.Count);
 
   public void AddNode(T _node)
   {
@@ -139,47 +139,47 @@ public class DirectedGraph<T>
       p_edges[_from].Contains(_to);
   }
 
-  private bool TopologicalSortDFS(T? node, HashSet<T> visited, HashSet<T> visiting, List<T> result)
+  private bool TopologicalSortDFS(T? _node, HashSet<T> _visited, HashSet<T> _visiting, List<T> _result)
   {
-    if(visiting.Contains(node))
+    if(_visiting.Contains(_node))
       return false;
 
-    if(visited.Contains(node))
+    if(_visited.Contains(_node))
      return true;
 
-    visiting.Add(node);
+    _visiting.Add(_node);
 
-    foreach(var neighbor in p_edges[node])
+    foreach(var neighbor in p_edges[_node])
     {
-      if(!TopologicalSortDFS(neighbor, visited, visiting, result))
+      if(!TopologicalSortDFS(neighbor, _visited, _visiting, _result))
         return false;
     }
 
-    visiting.Remove(node);
-    visited.Add(node);
-    result.Add(node);
+    _visiting.Remove(_node);
+    _visited.Add(_node);
+    _result.Add(_node);
 
     return true;
   }
 
-  private bool HasCycleDFS(T? node, HashSet<T> visited, HashSet<T> visiting)
+  private bool HasCycleDFS(T? _node, HashSet<T> _visited, HashSet<T> _visiting)
   {
-    if(visiting.Contains(node))
+    if(_visiting.Contains(_node))
       return true;
 
-    if(visited.Contains(node))
+    if(_visited.Contains(_node))
       return false;
 
-    visiting.Add(node);
+    _visiting.Add(_node);
 
-    foreach(var neighbor in p_edges[node])
+    foreach(var neighbor in p_edges[_node])
     {
-      if(HasCycleDFS(neighbor, visited, visiting))
+      if(HasCycleDFS(neighbor, _visited, _visiting))
         return true;
     }
 
-    visiting.Remove(node);
-    visited.Add(node);
+    _visiting.Remove(_node);
+    _visited.Add(_node);
     return true;
   }
 }

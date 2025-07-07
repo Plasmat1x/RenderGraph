@@ -73,7 +73,7 @@ public class DependencyResolver
         }
       }
 
-      foreach (var dependency in pass.Dependicies)
+      foreach (var dependency in pass.Dependencies)
         AddEdge(dependency, pass);
     }
   }
@@ -137,7 +137,7 @@ public class DependencyResolver
 
       foreach(var pass in p_passGraph.Nodes)
       {
-        foreach(var dependency in pass.Dependicies)
+        foreach(var dependency in pass.Dependencies)
         {
           if(!p_passGraph.ContainsNode(dependency))
             return false;

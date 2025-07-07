@@ -20,44 +20,6 @@ public class TextureDescription: ResourceDescription
   public uint SampleQuality { get; set; } = 0;
   public TextureUsage TextureUsage { get; set; } = TextureUsage.ShaderResource;
 
-  public override ulong GetMemorySize()
-  {
-    uint bytesPerPixel = GetBytesPerPixel(Format);
-
-    ulong levelSize = (ulong)(Width * Height * Depth * bytesPerPixel * SampleCount);
-
-    ulong totalSize = 0;
-    uint w = Width, h = Height, d = Depth;
-
-    for(uint mip = 0; mip < MipLevels; mip++)
-    {
-      totalSize += (ulong)(w * h * d * bytesPerPixel * SampleCount);
-
-      w = Math.Max(1, w / 2);
-      h = Math.Max(1, h / 2);
-      d = Math.Max(1, d / 2);
-    }
-
-    totalSize *= ArraySize;
-
-    return totalSize;
-  }
-
-  public override bool IsCompatible(ResourceDescription _other)
-  {
-    if(_other is not TextureDescription otherTexture)
-      return false;
-
-    return Width == otherTexture.Width &&
-           Height == otherTexture.Height &&
-           Depth == otherTexture.Depth &&
-           Format == otherTexture.Format &&
-           MipLevels == otherTexture.MipLevels &&
-           SampleCount == otherTexture.SampleCount &&
-           SampleQuality == otherTexture.SampleQuality &&
-           ArraySize == otherTexture.ArraySize;
-  }
-
   public List<TextureDescription> CreateMipChain()
   {
     var mipChain = new List<TextureDescription>();
@@ -136,6 +98,122 @@ public class TextureDescription: ResourceDescription
   public bool IsCubemap()
   {
     return (MiscFlags & ResourceMiscFlags.TextureCube) != 0;
+  }
+
+
+  public override string ToString()
+  {
+    return $"TextureDescription(Name: '{Name}', Size: {Width}x{Height}x{Depth}, Format: {Format}, Mips: {MipLevels}, Array: {ArraySize})";
+  }
+
+  public override ulong GetMemorySize()
+  {
+    uint bytesPerPixel = GetBytesPerPixel(Format);
+
+    ulong levelSize = (ulong)(Width * Height * Depth * bytesPerPixel * SampleCount);
+
+    ulong totalSize = 0;
+    uint w = Width, h = Height, d = Depth;
+
+    for(uint mip = 0; mip < MipLevels; mip++)
+    {
+      totalSize += (ulong)(w * h * d * bytesPerPixel * SampleCount);
+
+      w = Math.Max(1, w / 2);
+      h = Math.Max(1, h / 2);
+      d = Math.Max(1, d / 2);
+    }
+
+    totalSize *= ArraySize;
+
+    return totalSize;
+  }
+
+  public override ResourceDescription Clone()
+  {
+    return new TextureDescription
+    {
+      Name = Name,
+      Width = Width,
+      Height = Height,
+      Depth = Depth,
+      MipLevels = MipLevels,
+      ArraySize = ArraySize,
+      Format = Format,
+      SampleCount = SampleCount,
+      SampleQuality = SampleQuality,
+      TextureUsage = TextureUsage,
+      Usage = Usage,
+      BindFlags = BindFlags,
+      CPUAccessFlags = CPUAccessFlags,
+      MiscFlags = MiscFlags
+    };
+  }
+
+  public override bool IsCompatible(ResourceDescription _other)
+  {
+    if(_other is not TextureDescription otherTexture)
+      return false;
+
+    return Width == otherTexture.Width &&
+           Height == otherTexture.Height &&
+           Depth == otherTexture.Depth &&
+           Format == otherTexture.Format &&
+           MipLevels == otherTexture.MipLevels &&
+           SampleCount == otherTexture.SampleCount &&
+           SampleQuality == otherTexture.SampleQuality &&
+           ArraySize == otherTexture.ArraySize;
+  }
+
+  public override bool Validate(out string _errorMessage)
+  {
+
+    if(!base.Validate(out _errorMessage))
+      return false;
+
+    if(Width == 0 || Height == 0 || Depth == 0)
+    {
+      _errorMessage = "Texture dimensions must be greater than 0";
+      return false;
+    }
+
+    if(MipLevels == 0)
+    {
+      _errorMessage = "Texture must have at least 1 mip level";
+      return false;
+    }
+
+    if(ArraySize == 0)
+    {
+      _errorMessage = "Texture array size must be greater than 0";
+      return false;
+    }
+
+    if(SampleCount == 0)
+    {
+      _errorMessage = "Sample count must be greater than 0";
+      return false;
+    }
+
+    if(SampleCount > 1 && MipLevels > 1)
+    {
+      _errorMessage = "Multisampled textures cannot have multiple mip levels";
+      return false;
+    }
+
+    if(IsCubemap() && Width != Height)
+    {
+      _errorMessage = "Cube map textures must be square (Width == Height)";
+      return false;
+    }
+
+    if(IsCubemap() && ArraySize % 6 != 0)
+    {
+      _errorMessage = "Cube map array size must be multiple of 6";
+      return false;
+    }
+
+    return true;
   }
 
   private static uint GetBytesPerPixel(TextureFormat _format)
@@ -247,82 +325,5 @@ public class TextureDescription: ResourceDescription
 
       _ => 4 // Default fallback
     };
-  }
-
-  public override string ToString()
-  {
-    return $"TextureDescription(Name: '{Name}', Size: {Width}x{Height}x{Depth}, Format: {Format}, Mips: {MipLevels}, Array: {ArraySize})";
-  }
-
-  public override ResourceDescription Clone()
-  {
-    return new TextureDescription
-    {
-      Name = Name,
-      Width = Width,
-      Height = Height,
-      Depth = Depth,
-      MipLevels = MipLevels,
-      ArraySize = ArraySize,
-      Format = Format,
-      SampleCount = SampleCount,
-      SampleQuality = SampleQuality,
-      TextureUsage = TextureUsage,
-      Usage = Usage,
-      BindFlags = BindFlags,
-      CPUAccessFlags = CPUAccessFlags,
-      MiscFlags = MiscFlags
-    };
-  }
-
-  public override bool Validate(out string _errorMessage)
-  {
-
-    if(!base.Validate(out _errorMessage))
-      return false;
-
-    if(Width == 0 || Height == 0 || Depth == 0)
-    {
-      _errorMessage = "Texture dimensions must be greater than 0";
-      return false;
-    }
-
-    if(MipLevels == 0)
-    {
-      _errorMessage = "Texture must have at least 1 mip level";
-      return false;
-    }
-
-    if(ArraySize == 0)
-    {
-      _errorMessage = "Texture array size must be greater than 0";
-      return false;
-    }
-
-    if(SampleCount == 0)
-    {
-      _errorMessage = "Sample count must be greater than 0";
-      return false;
-    }
-
-    if(SampleCount > 1 && MipLevels > 1)
-    {
-      _errorMessage = "Multisampled textures cannot have multiple mip levels";
-      return false;
-    }
-
-    if(IsCubemap() && Width != Height)
-    {
-      _errorMessage = "Cube map textures must be square (Width == Height)";
-      return false;
-    }
-
-    if(IsCubemap() && ArraySize % 6 != 0)
-    {
-      _errorMessage = "Cube map array size must be multiple of 6";
-      return false;
-    }
-
-    return true;
   }
 }

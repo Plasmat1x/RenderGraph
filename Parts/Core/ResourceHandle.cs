@@ -12,12 +12,12 @@ public struct ResourceHandle
   public const uint INVALID_ID = 0;
   public const uint INVALID_GENERATION = 0;
 
-  public ResourceHandle(uint id, ResourceType type, uint generation, string name)
+  public ResourceHandle(uint _id, ResourceType _type, uint _generation, string _name)
   {
-    Id = id;
-    Type = type;
-    Generation = generation;
-    Name = name ?? string.Empty;
+    Id = _id;
+    Type = _type;
+    Generation = _generation;
+    Name = _name ?? string.Empty;
   }
 
   public static ResourceHandle Invalid => new ResourceHandle(INVALID_ID, ResourceType.Texture2D, INVALID_GENERATION, "Invalid");
@@ -38,9 +38,9 @@ public struct ResourceHandle
            string.Equals(_other.Name, Name, StringComparison.Ordinal);
   }
 
-  public override bool Equals(object obj)
+  public override bool Equals(object _obj)
   {
-    return obj is ResourceHandle other && Equals(other);
+    return _obj is ResourceHandle other && Equals(other);
   }
 
   public int GetHashCode()
@@ -64,13 +64,13 @@ public struct ResourceHandle
     return $"ResourceHandle(Id: {Id}, Type: {Type}, Gen: {Generation}, Name: '{Name}')";
   }
 
-  public static bool operator ==(ResourceHandle left, ResourceHandle right)
+  public static bool operator ==(ResourceHandle _left, ResourceHandle _right)
   {
-    return left.Equals(right);
+    return _left.Equals(_right);
   }
 
-  public static bool operator !=(ResourceHandle left, ResourceHandle right)
+  public static bool operator !=(ResourceHandle _left, ResourceHandle _right)
   {
-    return !left.Equals(right);
+    return !_left.Equals(_right);
   }
 }

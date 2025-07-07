@@ -1,11 +1,6 @@
 namespace Resources;
 public struct Rectangle
 {
-  public int X { get; set; }
-  public int Y { get; set; }
-  public int Width { get; set; }
-  public int Height { get; set; }
-
   public Rectangle(int _x, int _y, int _width, int _height)
   {
     X = _x;
@@ -13,6 +8,11 @@ public struct Rectangle
     Width = _width;
     Height = _height;
   }
+
+  public int X { get; set; }
+  public int Y { get; set; }
+  public int Width { get; set; }
+  public int Height { get; set; }
 
   public int Left => X;
   public int Top => Y;
@@ -66,7 +66,7 @@ public struct Rectangle
     return new Rectangle(x1, y1, x2 - x1, y2 - y1);
   }
 
-  public override bool Equals(object _obj)
+  public override bool Equals(object? _obj)
   {
     return _obj is Rectangle rectangle &&
            X == rectangle.X &&

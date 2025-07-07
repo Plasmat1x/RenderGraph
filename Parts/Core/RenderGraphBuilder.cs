@@ -5,10 +5,6 @@ using GraphicsAPI.Interfaces;
 
 using Resources;
 using Resources.Enums;
-using Resources.Interfaces;
-
-using System.Reflection.Metadata;
-using System.Xml.Linq;
 
 namespace Core;
 
@@ -78,7 +74,7 @@ public class RenderGraphBuilder
     };
 
     p_currentPassUsages.Add(usage);
-    p_currentPass.Inputs.Add(_handle);
+    p_currentPass.AddInput(_handle);
   }
 
   public void WriteTexture(ResourceHandle _handle)
@@ -98,7 +94,7 @@ public class RenderGraphBuilder
     };
 
     p_currentPassUsages.Add(usage);
-    p_currentPass.Outputs.Add(_handle);
+    p_currentPass.AddOutput(_handle);
   }
 
   public void ReadBuffer(ResourceHandle _handle)
@@ -118,7 +114,7 @@ public class RenderGraphBuilder
     };
 
     p_currentPassUsages.Add(usage);
-    p_currentPass.Inputs.Add(_handle);
+    p_currentPass.AddInput(_handle);
   }
 
   public void WriteBuffer(ResourceHandle _handle)
@@ -138,7 +134,7 @@ public class RenderGraphBuilder
     };
 
     p_currentPassUsages.Add(usage);
-    p_currentPass.Outputs.Add(_handle);
+    p_currentPass.AddOutput(_handle);
   }
 
   public ResourceHandle ImportTexture(string _name, ITexture _texture)
@@ -210,8 +206,8 @@ public class RenderGraphBuilder
     };
 
     p_currentPassUsages.Add(usage);
-    p_currentPass.Inputs.Add(_handle);
-    p_currentPass.Outputs.Add(_handle);
+    p_currentPass.AddInput(_handle);
+    p_currentPass.AddOutput(_handle);
   }
 
   public void ReadWriteBuffer(ResourceHandle _handle)
@@ -231,8 +227,8 @@ public class RenderGraphBuilder
     };
 
     p_currentPassUsages.Add(usage);
-    p_currentPass.Inputs.Add(_handle);
-    p_currentPass.Outputs.Add(_handle);
+    p_currentPass.AddInput(_handle);
+    p_currentPass.AddOutput(_handle);
   }
 
   public void ReadTextureAsDepth(ResourceHandle _handle)
@@ -252,7 +248,7 @@ public class RenderGraphBuilder
     };
 
     p_currentPassUsages.Add(usage);
-    p_currentPass.Inputs.Add(_handle);
+    p_currentPass.AddInput(_handle);
   }
 
   public void WriteTextureAsDepth(ResourceHandle _handle)
@@ -272,7 +268,7 @@ public class RenderGraphBuilder
     };
 
     p_currentPassUsages.Add(usage);
-    p_currentPass.Inputs.Add(_handle);
+    p_currentPass.AddInput(_handle);
   }
 
   public void ReadTextureAsRenderTarget(ResourceHandle _handle)
@@ -292,7 +288,7 @@ public class RenderGraphBuilder
     };
 
     p_currentPassUsages.Add(usage);
-    p_currentPass.Inputs.Add(_handle);
+    p_currentPass.AddInput(_handle);
   }
 
   public IEnumerable<ResourceUsageInfo> GetResourceUsages()
@@ -324,7 +320,7 @@ public class RenderGraphBuilder
     return p_namedResources.Keys;
   }
 
-  public IResourceDescription GetResourceDescription(ResourceHandle _handle)
+  public ResourceDescription GetResourceDescription(ResourceHandle _handle)
   {
     return p_resourceManager.GetResourceDescription(_handle);
   }

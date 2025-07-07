@@ -1,5 +1,6 @@
 using Core.Enums;
 
+using GraphicsAPI;
 using GraphicsAPI.Interfaces;
 
 using System.Numerics;
@@ -44,7 +45,7 @@ public class RenderGraph: IDisposable
       throw new InvalidOperationException($"Pass '{_pass.Name}' already added to the render graph");
     if(string.IsNullOrEmpty(_pass.Name))
       throw new InvalidOperationException($"RenderPass ,ust have a non-empty Name");
-    if(p_passes.Any(p => p.Name == _pass.Name))
+    if(p_passes.Any(_p => _p.Name == _pass.Name))
       throw new InvalidOperationException($"Pass with name'{_pass.Name}' already exists");
 
     p_passes.Add(_pass);
@@ -78,10 +79,10 @@ public class RenderGraph: IDisposable
 
   public RenderPass GetPass(string _name)
   {
-    return p_passes.FirstOrDefault(p => p.Name == _name);
+    return p_passes.FirstOrDefault(_p => _p.Name == _name);
   }
 
-  public void Execute(ICommandBuffer _commandBuffer)
+  public void Execute(CommandBuffer _commandBuffer)
   {
     if(_commandBuffer == null)
       throw new ArgumentNullException(nameof(_commandBuffer));
@@ -166,7 +167,7 @@ public class RenderGraph: IDisposable
 
       if(cycles.Count > 0)
       {
-        var cycleNames = string.Join("-->", cycles.Select(p => p.Name));
+        var cycleNames = string.Join("-->", cycles.Select(_p => _p.Name));
         throw new InvalidOperationException($"Circular dependency detected: {cycleNames}");
       }
       p_builder.ValidateResourceUsages();
@@ -239,7 +240,7 @@ public class RenderGraph: IDisposable
 
   public RenderGraphStatistics GetStatistics()
   {
-    var enabledPasses = p_passes.Count(p => p.Enabled);
+    var enabledPasses = p_passes.Count(_p => _p.Enabled);
     var totalResources = p_builder.GetResourceUsages().Count();
     var memoryUsage = p_resourceManager.GetMemoryUsage();
 
@@ -271,8 +272,7 @@ public class RenderGraph: IDisposable
 
     foreach(var pass in p_passes)
     {
-      pass.Inputs.Clear();
-      pass.Outputs.Clear();
+      pass.ClearInputsOutputs();
 
       p_builder.SetCurrentPass(pass);
 
@@ -343,7 +343,7 @@ public class RenderGraph: IDisposable
 
     foreach(var pass in p_passes)
     {
-      foreach(var dependency in pass.Dependicies)
+      foreach(var dependency in pass.Dependencies)
         p_dependencyResolver.AddEdge(dependency, pass);
     }
   }
@@ -378,7 +378,7 @@ public class RenderGraph: IDisposable
 
     if(missingResource.Count > 0)
     {
-      var missingNames = string.Join(", ", missingResource.Select(r => r.Name));
+      var missingNames = string.Join(", ", missingResource.Select(_r => _r.Name));
       throw new InvalidCastException($"Resources are consumed but not produced: {missingNames}");
     }
   }
@@ -395,7 +395,7 @@ public class RenderGraph: IDisposable
     p_resourceManager.OptimizeResourceUsage();
   }
 
-  private void TransitionResourcesForPass(RenderPass _pass, ICommandBuffer _commandBuffer)
+  private void TransitionResourcesForPass(RenderPass _pass, CommandBuffer _commandBuffer)
   {
     foreach(var input in _pass.Inputs)
     {

@@ -3,7 +3,7 @@ namespace Core.Enums;
 public enum ResourceLifetime
 {
   Transient,
-  Persistend,
+  Persistent,
   External,
   Imported,
 }

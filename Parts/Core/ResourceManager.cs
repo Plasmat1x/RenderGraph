@@ -5,7 +5,6 @@ using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
 using Resources;
-using Resources.Interfaces;
 
 using System.Resources;
 
@@ -31,7 +30,7 @@ namespace Core;
 public class ResourceManager: IDisposable
 {
   private readonly Dictionary<ResourceHandle, IResource> p_resources = [];
-  private readonly Dictionary<ResourceHandle, IResourceDescription> p_resourceDescriptions = [];
+  private readonly Dictionary<ResourceHandle, ResourceDescription> p_resourceDescriptions = [];
   private readonly ResourcePool<ITexture> p_texturePool;
   private readonly ResourcePool<IBuffer> p_bufferPool;
   private readonly Dictionary<ResourceHandle, ResourceHandle> p_alliasedResources = [];
@@ -138,7 +137,7 @@ public class ResourceManager: IDisposable
     //TODO: Implement actual resource transition
   }
 
-  public IResourceDescription GetResourceDescription(ResourceHandle _handle)
+  public ResourceDescription GetResourceDescription(ResourceHandle _handle)
   {
     if(!IsValidHandle(_handle))
       throw new ArgumentException($"Invalid resource handle: {_handle}");
@@ -218,7 +217,7 @@ public class ResourceManager: IDisposable
       {
         ReturnToPool(resource);
       }
-      else if(lifettime == ResourceLifetime.Persistend)
+      else if(lifettime == ResourceLifetime.Persistent)
       {
         return;
       }
@@ -317,7 +316,7 @@ public class ResourceManager: IDisposable
     if(!p_resourceDescriptions.TryGetValue(_target, out var targetDesc))
       return false;
 
-    return sourceDesc.IsComaptible(targetDesc);
+    return sourceDesc.IsCompatible(targetDesc);
   }
 
   private ITexture TryGetFromTexturePool(TextureDescription _desc)
@@ -326,7 +325,7 @@ public class ResourceManager: IDisposable
 
     foreach(var texture in availableTextures)
     {
-      if(texture.Description.IsComaptible(_desc))
+      if(texture.Description.IsCompatible(_desc))
         return p_texturePool.Rent();
     }
 
@@ -339,7 +338,7 @@ public class ResourceManager: IDisposable
 
     foreach(var buffer in availableBuffers)
     {
-      if(buffer.Description.IsComaptible(_desc))
+      if(buffer.Description.IsCompatible(_desc))
         return p_bufferPool.Rent();
     }
 

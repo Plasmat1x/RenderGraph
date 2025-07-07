@@ -11,7 +11,7 @@ public abstract class ResourceDescription
   public ResourceMiscFlags MiscFlags { get; set; } = ResourceMiscFlags.None;
 
   public abstract ulong GetMemorySize();
-  public abstract bool IsCompatible(ResourceDescription other);
+  public abstract bool IsCompatible(ResourceDescription _other);
 
   public virtual bool RequiresCPUAccess()
   {
@@ -103,25 +103,25 @@ public abstract class ResourceDescription
     return (MiscFlags & ResourceMiscFlags.GDICompatible) != 0;
   }
 
-  public virtual bool Validate(out string errorMessage)
+  public virtual bool Validate(out string _errorMessage)
   {
-    errorMessage = string.Empty;
+    _errorMessage = string.Empty;
 
     if(string.IsNullOrEmpty(Name))
     {
-      errorMessage = "Resource name cannot be empty";
+      _errorMessage = "Resource name cannot be empty";
       return false;
     }
 
     if(Usage == ResourceUsage.Immutable && CPUAccessFlags != CPUAccessFlags.None)
     {
-      errorMessage = "Immutable resources cannot have CPU access";
+      _errorMessage = "Immutable resources cannot have CPU access";
       return false;
     }
 
     if(Usage == ResourceUsage.Dynamic && CPUAccessFlags != CPUAccessFlags.Write)
     {
-      errorMessage = "Dynamic resources must have Write CPU access";
+      _errorMessage = "Dynamic resources must have Write CPU access";
       return false;
     }
 
@@ -130,20 +130,20 @@ public abstract class ResourceDescription
         CPUAccessFlags != CPUAccessFlags.Write &&
         CPUAccessFlags != CPUAccessFlags.ReadWrite)
     {
-      errorMessage = "Staging resources must have CPU access";
+      _errorMessage = "Staging resources must have CPU access";
       return false;
     }
 
     if((BindFlags & BindFlags.ConstantBuffer) != 0 &&
         (BindFlags & (BindFlags.VertexBuffer | BindFlags.IndexBuffer)) != 0)
     {
-      errorMessage = "Constant buffer cannot be bound as vertex/index buffer";
+      _errorMessage = "Constant buffer cannot be bound as vertex/index buffer";
       return false;
     }
 
     if(Usage == ResourceUsage.Staging && BindFlags != BindFlags.None)
     {
-      errorMessage = "Staging resources cannot have bind flags";
+      _errorMessage = "Staging resources cannot have bind flags";
       return false;
     }
 
@@ -236,13 +236,13 @@ public abstract class ResourceDescription
     return 16;
   }
 
-  public virtual bool CanAliasWith(ResourceDescription other)
+  public virtual bool CanAliasWith(ResourceDescription _other)
   {
-    if(other == null)
+    if(_other == null)
       return false;
 
-    return GetMemorySize() == other.GetMemorySize() &&
-           GetMemoryAlignment() == other.GetMemoryAlignment();
+    return GetMemorySize() == _other.GetMemorySize() &&
+           GetMemoryAlignment() == _other.GetMemoryAlignment();
   }
 
   public virtual ResourceDescription Clone()
@@ -250,9 +250,9 @@ public abstract class ResourceDescription
     throw new NotImplementedException("Clone must be implemented in derived classes");
   }
 
-  public virtual void ApplyModifications(Action<ResourceDescription> modifier)
+  public virtual void ApplyModifications(Action<ResourceDescription> _modifier)
   {
-    modifier?.Invoke(this);
+    _modifier?.Invoke(this);
 
     if(!Validate(out string error))
     {
@@ -260,9 +260,9 @@ public abstract class ResourceDescription
     }
   }
 
-  public override bool Equals(object obj)
+  public override bool Equals(object? _obj)
   {
-    if(obj is not ResourceDescription other)
+    if(_obj is not ResourceDescription other)
       return false;
 
     return Name == other.Name &&

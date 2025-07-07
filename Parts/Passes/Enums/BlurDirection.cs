@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Passes.Enums;
 public enum BlurDirection
 {
-  Horziontal,
+  Horizontal,
   Vertical,
   Both,
 }
