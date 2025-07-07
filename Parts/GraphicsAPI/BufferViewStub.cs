@@ -10,6 +10,8 @@ public class BufferViewStub: IBufferView
 
   public BufferViewType ViewType { get; }
 
+  public BufferViewDescription Description => throw new NotImplementedException();
+
   public BufferViewStub(IBuffer _buffer, BufferViewType _viewType)
   {
     Buffer = _buffer;
@@ -18,6 +20,11 @@ public class BufferViewStub: IBufferView
 
   public void Dispose()
   {
+  }
+
+  public nint GetNativeHandle()
+  {
+    throw new NotImplementedException();
   }
 }
 

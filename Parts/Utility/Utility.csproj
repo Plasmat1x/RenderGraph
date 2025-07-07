@@ -1,9 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Product>RenderGraph.Utility</Product>
+    <RootNamespace>Utility</RootNamespace>
+    <OutputType>Library</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <Description>Plasmat1xdev Render Graph Utility library</Description>
+    <Copyright>Copyright © Plasmat1xdev 2025</Copyright>
+    <Version>0.0.1</Version>
+    <Authors>Mikhail Mryasov</Authors>
+    <Company>Plasmat1xdev</Company>
+    <IsPackable>true</IsPackable>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!--<GenerateDocumentationFile>True</GenerateDocumentationFile>-->
   </PropertyGroup>
 
 </Project>

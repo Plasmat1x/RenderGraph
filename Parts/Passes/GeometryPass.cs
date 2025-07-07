@@ -1,123 +1,151 @@
 using Core;
 using Core.Enums;
-using Core.Extensions;
 
+using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
 using Resources.Enums;
 
 using System.Numerics;
-using System.Security.Cryptography.X509Certificates;
 
 namespace Passes;
 
 public class GeometryPass: RenderPass
 {
-  public GeometryPass() : base("GeometryPass")
-  {
-
-  }
-
   public ResourceHandle ColorTarget { get; private set; }
   public ResourceHandle DepthTarget { get; private set; }
   public ResourceHandle CameraBuffer { get; private set; }
 
-  public uint ViewportWidth { get; set; } = 1280;
-  public uint ViewportHeight { get; set; } = 720;
+  // Параметры прохода
+  public uint ViewportWidth { get; set; } = 1920;
+  public uint ViewportHeight { get; set; } = 1080;
   public bool ClearColor { get; set; } = true;
   public bool ClearDepth { get; set; } = true;
-  public Vector4 ClearColorValue { get; set; } = new Vector4(0f, 0f, 0f, 1f);
-  public float ClearDepthValue { get; set; } = 1f;
+  public Vector4 ClearColorValue { get; set; } = new Vector4(0.0f, 0.0f, 0.0f, 1.0f);
+  public float ClearDepthValue { get; set; } = 1.0f;
 
-  public List<RenderableObject> RenderableObjects { get; set; } = [];
+  // Данные для рендеринга (в реальной реализации это будет приходить из ECS)
+  public List<RenderableObject> RenderableObjects { get; set; } = new();
 
-  public override void Setup(RenderGraphBuilder _builder)
+  public GeometryPass() : base("GeometryPass")
   {
-    ColorTarget = _builder.CreateColorTarget("GeometryColor", ViewportWidth, ViewportHeight, TextureFormat.R8G8B8A8_UNORM);
-
-    DepthTarget = _builder.CreateDepthTarget("GeometryDepth", ViewportWidth, ViewportHeight, TextureFormat.D32_FLOAT);
-
-    CameraBuffer = _builder.CreateConstantBuffer("CameraConstants", 256); 
-
-    _builder.WriteTexture(ColorTarget);
-    _builder.WriteTextureAsDepth(DepthTarget);
-    _builder.WriteBuffer(CameraBuffer);
-
-    _builder.SetResourceLifetime(ColorTarget, ResourceLifetime.Persistent);
-    _builder.SetResourceLifetime(DepthTarget, ResourceLifetime.Persistent);
-    _builder.SetResourceLifetime(CameraBuffer, ResourceLifetime.Persistent);
+    Category = PassCategory.Rendering;
+    Priority = PassPriority.High;
   }
 
-  public override void Execute(RenderPassContext _ctx)
+  public override void Setup(RenderGraphBuilder builder)
   {
-    var commandBuffer = _ctx.CommandBuffer;
+    // Создаем color target
+    ColorTarget = builder.CreateColorTarget("GeometryColor", ViewportWidth, ViewportHeight, TextureFormat.R8G8B8A8_UNORM);
 
-    var colorTexture = _ctx.GetTexture(ColorTarget);
-    var depthTexture = _ctx.GetTexture(DepthTarget);
-    var cameraBuffer = _ctx.GetBuffer(CameraBuffer);
+    // Создаем depth target
+    DepthTarget = builder.CreateDepthTarget("GeometryDepth", ViewportWidth, ViewportHeight, TextureFormat.D32_FLOAT);
 
-    commandBuffer.SetRenderTargets(new[] { colorTexture }, depthTexture);
+    // Создаем константный буфер для камеры
+    CameraBuffer = builder.CreateConstantBuffer("CameraConstants", 256); // 256 байт для матриц камеры
 
-    _ctx.SetFullScreenViewport();
+    // Указываем что мы пишем в эти targets
+    builder.WriteTexture(ColorTarget);
+    builder.WriteTextureAsDepth(DepthTarget);
+    builder.WriteBuffer(CameraBuffer);
 
+    // Устанавливаем persistent lifetime для targets (могут использоваться в других проходах)
+    builder.SetResourceLifetime(ColorTarget, ResourceLifetime.Persistent);
+    builder.SetResourceLifetime(DepthTarget, ResourceLifetime.Persistent);
+    builder.SetResourceLifetime(CameraBuffer, ResourceLifetime.Persistent);
+  }
+
+  public override void Execute(RenderPassContext context)
+  {
+    var commandBuffer = context.CommandBuffer;
+
+    // Получаем ресурсы
+    var colorTexture = context.GetTexture(ColorTarget);
+    var depthTexture = context.GetTexture(DepthTarget);
+    var cameraBuffer = context.GetBuffer(CameraBuffer);
+
+    // Получаем views
+    var colorView = colorTexture.GetDefaultRenderTargetView();
+    var depthView = depthTexture.GetDefaultDepthStencilView();
+
+    // Устанавливаем render targets
+    commandBuffer.SetRenderTarget(colorView, depthView);
+
+    // Устанавливаем viewport
+    context.SetFullScreenViewport();
+
+    // Очищаем targets если нужно
     if(ClearColor)
     {
-      commandBuffer.ClearRenderTarget(colorTexture, ClearColorValue);
+      commandBuffer.ClearRenderTarget(colorView, ClearColorValue);
     }
 
     if(ClearDepth)
     {
-      commandBuffer.ClearDepthStencil(depthTexture, ClearDepthValue, 0);
+      commandBuffer.ClearDepthStencil(depthView, ClearFlags.DepthStencil, ClearDepthValue, 0);
     }
 
-    UpdateCameraConstants(_ctx, cameraBuffer);
+    // Обновляем camera constants
+    UpdateCameraConstants(context, cameraBuffer);
 
-    RenderObjects(_ctx);
+    // Рендерим все объекты
+    RenderObjects(context);
   }
 
-  private void UpdateCameraConstants(RenderPassContext _context, IBuffer _cameraBuffer)
+  private void UpdateCameraConstants(RenderPassContext context, IBuffer cameraBuffer)
   {
+    // Создаем структуру констант камеры
     var cameraConstants = new CameraConstants
     {
-      ViewMatrix = _context.FrameData.ViewMatrix,
-      ProjectionMatrix = _context.FrameData.ProjectionMatrix,
-      ViewProjectionMatrix = _context.FrameData.ViewProjectionMatrix,
-      CameraPosition = new Vector4(_context.FrameData.CameraPosition, 1.0f),
+      ViewMatrix = context.FrameData.ViewMatrix,
+      ProjectionMatrix = context.FrameData.ProjectionMatrix,
+      ViewProjectionMatrix = context.FrameData.ViewProjectionMatrix,
+      CameraPosition = new Vector4(context.FrameData.CameraPosition, 1.0f),
       ScreenResolution = new Vector4(ViewportWidth, ViewportHeight, 1.0f / ViewportWidth, 1.0f / ViewportHeight)
     };
 
-    var mappedData = _cameraBuffer.Map();
-
+    // Записываем константы в буфер
+    var mappedData = cameraBuffer.Map(MapMode.WriteDiscard);
     unsafe
     {
       *(CameraConstants*)mappedData = cameraConstants;
     }
-    _cameraBuffer.Unmap();
+    cameraBuffer.Unmap();
   }
 
-  private void RenderObjects(RenderPassContext _context)
+  private void RenderObjects(RenderPassContext context)
   {
-    var commandBuffer = _context.CommandBuffer;
+    var commandBuffer = context.CommandBuffer;
+
+    // В реальной реализации здесь будет:
+    // 1. Сортировка объектов по материалам/расстоянию
+    // 2. Установка шейдеров и состояний
+    // 3. Batch'инг draw calls
 
     foreach(var obj in RenderableObjects)
     {
       if(!obj.Visible)
         continue;
 
+      // Устанавливаем vertex/index буферы
       if(obj.VertexBuffer.IsValid())
       {
-        var vertexBuffer = _context.GetBuffer(obj.VertexBuffer);
-        commandBuffer.SetVertexBuffer(vertexBuffer, obj.VertexStride);
+        var vertexBuffer = context.GetBuffer(obj.VertexBuffer);
+        var vertexView = vertexBuffer.GetDefaultShaderResourceView(); // Для vertex buffer нужен специальный view
+        commandBuffer.SetVertexBuffer(vertexView, 0);
       }
 
       if(obj.IndexBuffer.IsValid())
       {
-        var indexBuffer = _context.GetBuffer(obj.IndexBuffer);
-        commandBuffer.SetIndexBuffer(indexBuffer, obj.IndexFormat);
+        var indexBuffer = context.GetBuffer(obj.IndexBuffer);
+        var indexView = indexBuffer.GetDefaultShaderResourceView();
+        commandBuffer.SetIndexBuffer(indexView, obj.IndexFormat);
       }
 
-      SetupMaterial(_context, obj.Material);
+      // Устанавливаем материал/текстуры
+      SetupMaterial(context, obj.Material);
 
+      // Draw call
       if(obj.IndexBuffer.IsValid())
       {
         commandBuffer.DrawIndexed(obj.IndexCount, obj.InstanceCount);
@@ -129,32 +157,46 @@ public class GeometryPass: RenderPass
     }
   }
 
-  private void SetupMaterial(RenderPassContext _context, Material _material)
+  private void SetupMaterial(RenderPassContext context, Material material)
   {
-    if(_material == null)
+    if(material == null)
       return;
 
-    var commandBuffer = _context.CommandBuffer;
+    var commandBuffer = context.CommandBuffer;
 
-    if(_material.VertexShader != null)
-      commandBuffer.SetVertexShader(_material.VertexShader);
+    // Устанавливаем шейдеры
+    if(material.VertexShader != null)
+      commandBuffer.SetVertexShader(material.VertexShader);
 
-    if(_material.PixelShader != null)
-      commandBuffer.SetPixelShader(_material.PixelShader);
+    if(material.PixelShader != null)
+      commandBuffer.SetPixelShader(material.PixelShader);
 
-    for(int i = 0; i < _material.Textures.Count; i++)
+    // Устанавливаем текстуры
+    for(int i = 0; i < material.Textures.Count; i++)
     {
-      if(_material.Textures[i].IsValid())
+      if(material.Textures[i].IsValid())
       {
-        var texture = _context.GetTexture(_material.Textures[i]);
-        commandBuffer.SetShaderResource(i, texture);
+        var texture = context.GetTexture(material.Textures[i]);
+        var textureView = texture.GetDefaultShaderResourceView();
+        commandBuffer.SetShaderResource(ShaderStage.Pixel, (uint)i, textureView);
       }
     }
 
-    if(_material.ConstantBuffer.IsValid())
+    // Устанавливаем константные буферы материала
+    if(material.ConstantBuffer.IsValid())
     {
-      var constantBuffer = _context.GetBuffer(_material.ConstantBuffer);
-      commandBuffer.SetConstantBuffer(1, constantBuffer);
+      var constantBuffer = context.GetBuffer(material.ConstantBuffer);
+      var constantView = constantBuffer.GetDefaultShaderResourceView();
+      commandBuffer.SetConstantBuffer(ShaderStage.Pixel, 1, constantView); // Slot 1, slot 0 для камеры
+    }
+
+    // Устанавливаем семплеры
+    for(int i = 0; i < material.Samplers.Count; i++)
+    {
+      if(material.Samplers[i] != null)
+      {
+        commandBuffer.SetSampler(ShaderStage.Pixel, (uint)i, material.Samplers[i]);
+      }
     }
   }
 }

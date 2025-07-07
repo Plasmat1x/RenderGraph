@@ -11,19 +11,19 @@ public class FrameData
   public Matrix4x4 ViewMatrix { get; set; }
   public Matrix4x4 ProjectionMatrix { get; set; }
   public Matrix4x4 ViewProjectionMatrix { get; private set; }
-  public Vector3 CameraPosition  { get; set; }
-  public uint ScreenWidth {  get; set; }
+  public Vector3 CameraPosition { get; set; }
+  public uint ScreenWidth { get; set; }
   public uint ScreenHeight { get; set; }
 
 
-  public T GetConstantBuffer<T>()where T : struct
+  public T GetConstantBuffer<T>() where T : struct
   {
     var key = typeof(T).Name;
     if(p_globalConstants.TryGetValue(key, out var value) && value is T typedValue)
       return typedValue;
 
     return default;
-  } 
+  }
 
   public void SetConstantBuffer<T>(T _data) where T : struct
   {

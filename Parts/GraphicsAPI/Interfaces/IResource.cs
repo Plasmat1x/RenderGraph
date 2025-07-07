@@ -1,6 +1,15 @@
+using Resources.Enums;
+
 namespace GraphicsAPI;
 
-public interface IResource : IDisposable
+/// <summary>
+/// Базовый интерфейс для всех GPU ресурсов
+/// </summary>
+public interface IResource: IDisposable
 {
-  nint GetNativeHandle();
+  IntPtr GetNativeHandle();
+  string Name { get; set; }
+  ResourceType ResourceType { get; }
+  ulong GetMemorySize();
+  bool IsDisposed { get; }
 }

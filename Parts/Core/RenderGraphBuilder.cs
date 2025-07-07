@@ -387,7 +387,7 @@ public class RenderGraphBuilder
 
     if(_handle.Type != ResourceType.Buffer &&
        _handle.Type != ResourceType.StructuredBuffer &&
-       _handle.Type != ResourceType.RawBuffer )
+       _handle.Type != ResourceType.RawBuffer)
       throw new ArgumentException($"Handle {_handle} is not a buffer handle", nameof(_handle));
   }
 

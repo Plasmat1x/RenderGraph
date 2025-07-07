@@ -1,4 +1,4 @@
-using Core.Enums;
+using Resources.Enums;
 
 namespace Core;
 

@@ -1,7 +1,5 @@
 using Resources.Enums;
 
-using System.Xml.Linq;
-
 namespace Resources;
 
 public class BufferDescription: ResourceDescription

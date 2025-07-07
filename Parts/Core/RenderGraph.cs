@@ -127,7 +127,7 @@ public class RenderGraph: IDisposable
   {
     if(p_passes.Count == 0)
     {
-      p_executionOrder = new List<RenderPass> ();
+      p_executionOrder = new List<RenderPass>();
       p_compiled = true;
       return;
     }

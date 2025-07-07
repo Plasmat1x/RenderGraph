@@ -1,4 +1,4 @@
-namespace Core.Enums;
+namespace Resources.Enums;
 
 public enum ResourceType
 {

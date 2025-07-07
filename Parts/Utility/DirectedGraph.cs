@@ -65,9 +65,9 @@ public class DirectedGraph<T>
 
   public void RemoveEdge(T _from, T _to)
   {
-    if(_from == null ||  _to == null) 
+    if(_from == null || _to == null)
       return;
-    
+
     if(p_edges.ContainsKey(_from))
       p_edges[_from].Remove(_to);
 
@@ -145,7 +145,7 @@ public class DirectedGraph<T>
       return false;
 
     if(_visited.Contains(_node))
-     return true;
+      return true;
 
     _visiting.Add(_node);
 

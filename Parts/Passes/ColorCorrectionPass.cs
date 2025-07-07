@@ -2,6 +2,7 @@ using Core;
 using Core.Enums;
 
 using GraphicsAPI;
+using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
 using Passes.Enums;
@@ -15,16 +16,11 @@ namespace Passes;
 
 public class ColorCorrectionPass: RenderPass
 {
-  private ResourceHandle p_colorCorrectionBuffer;
-
-  public ColorCorrectionPass() : base("ColorCorrectionPass")
-  {
-  }
-
   public ResourceHandle InputTexture { get; set; }
   public ResourceHandle OutputTexture { get; private set; }
+  private ResourceHandle _colorCorrectionBuffer;
 
-
+  // Параметры цветокоррекции
   public float Gamma { get; set; } = 2.2f;
   public float Contrast { get; set; } = 1.0f;
   public float Brightness { get; set; } = 0.0f;
@@ -34,55 +30,129 @@ public class ColorCorrectionPass: RenderPass
   public ToneMappingType ToneMappingType { get; set; } = ToneMappingType.ACES;
   public float Exposure { get; set; } = 1.0f;
 
-  public override void Setup(RenderGraphBuilder _builder)
+  // Шейдеры и состояния
+  private IShader _vertexShader;
+  private IShader _pixelShader;
+  private ISampler _pointSampler;
+
+  public ColorCorrectionPass() : base("ColorCorrectionPass")
+  {
+    Category = PassCategory.PostProcessing;
+    Priority = PassPriority.Low;
+  }
+
+  public override void Setup(RenderGraphBuilder builder)
   {
     if(!InputTexture.IsValid())
       throw new InvalidOperationException("ColorCorrectionPass requires valid InputTexture");
 
-    _builder.ReadTexture(InputTexture);
+    // Читаем входную текстуру
+    builder.ReadTexture(InputTexture);
 
-    var inputDesc = (TextureDescription)_builder.GetResourceDescription(InputTexture);
+    // Получаем описание входной текстуры
+    var inputDesc = (TextureDescription)builder.GetResourceDescription(InputTexture);
 
+    // Создаем выходную текстуру
     var outputDesc = (TextureDescription)inputDesc.Clone();
     outputDesc.Name = "ColorCorrectedOutput";
     outputDesc.TextureUsage = TextureUsage.RenderTarget;
     outputDesc.BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource;
 
-    OutputTexture = _builder.CreateTexture("ColorCorrectedOutput", outputDesc);
-    _builder.WriteTexture(OutputTexture);
+    OutputTexture = builder.CreateTexture("ColorCorrectedOutput", outputDesc);
+    builder.WriteTexture(OutputTexture);
 
-    p_colorCorrectionBuffer = _builder.CreateConstantBuffer("ColorCorrectionParams", 128);
-    _builder.WriteBuffer(p_colorCorrectionBuffer);
+    // Создаем буфер параметров цветокоррекции
+    _colorCorrectionBuffer = builder.CreateConstantBuffer("ColorCorrectionParams", 128);
+    builder.WriteBuffer(_colorCorrectionBuffer);
 
-    _builder.SetResourceLifetime(OutputTexture, ResourceLifetime.Persistent);
+    // Устанавливаем lifetime
+    builder.SetResourceLifetime(OutputTexture, ResourceLifetime.Persistent);
   }
 
-  public override void Execute(RenderPassContext _context)
+  public override void OnGraphCompiled(RenderGraph renderGraph)
   {
-    var commandBuffer = _context.CommandBuffer;
+    // Создаем шейдеры после компиляции графа
+    CreateShaders(renderGraph);
+  }
 
-    var inputTexture = _context.GetTexture(InputTexture);
-    var outputTexture = _context.GetTexture(OutputTexture);
+  public override void Execute(RenderPassContext context)
+  {
+    var commandBuffer = context.CommandBuffer;
 
-    UpdateColorCorrectionParameters(_context);
+    // Получаем ресурсы
+    var inputTexture = context.GetTexture(InputTexture);
+    var outputTexture = context.GetTexture(OutputTexture);
 
-    commandBuffer.SetRenderTargets(new[] { outputTexture }, null);
+    // Получаем views
+    var inputView = inputTexture.GetDefaultShaderResourceView();
+    var outputView = outputTexture.GetDefaultRenderTargetView();
 
-    _context.SetFullScreenViewport();
+    // Обновляем параметры цветокоррекции
+    UpdateColorCorrectionParameters(context);
 
+    // Устанавливаем render target
+    commandBuffer.SetRenderTarget(outputView);
+
+    // Устанавливаем viewport
+    context.SetFullScreenViewport();
+
+    // Устанавливаем шейдеры
     SetupColorCorrectionShaders(commandBuffer);
 
-    commandBuffer.SetShaderResource(0, inputTexture);
+    // Устанавливаем входную текстуру
+    commandBuffer.SetShaderResource(ShaderStage.Pixel, 0, inputView);
 
-    var colorCorrectionBuffer = _context.GetBuffer(p_colorCorrectionBuffer);
-    commandBuffer.SetConstantBuffer(0, colorCorrectionBuffer);
+    // Устанавливаем семплер
+    commandBuffer.SetSampler(ShaderStage.Pixel, 0, _pointSampler);
 
+    // Устанавливаем параметры
+    var colorCorrectionBuffer = context.GetBuffer(_colorCorrectionBuffer);
+    var paramsView = colorCorrectionBuffer.GetDefaultShaderResourceView();
+    commandBuffer.SetConstantBuffer(ShaderStage.Pixel, 0, paramsView);
+
+    // Рендерим fullscreen quad
     commandBuffer.DrawFullscreenQuad();
   }
 
-  private void UpdateColorCorrectionParameters(RenderPassContext _context)
+  private void CreateShaders(RenderGraph renderGraph)
   {
-    var buffer = _context.GetBuffer(p_colorCorrectionBuffer);
+    var device = renderGraph.GetGraphicsDevice();
+
+    // Vertex shader для fullscreen quad
+    var vsDesc = new ShaderDescription
+    {
+      Name = "ColorCorrectionVertexShader",
+      Stage = ShaderStage.Vertex,
+      Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
+      EntryPoint = "VSMain"
+    };
+    _vertexShader = device.CreateShader(vsDesc);
+
+    // Pixel shader для цветокоррекции
+    var psDesc = new ShaderDescription
+    {
+      Name = "ColorCorrectionPixelShader",
+      Stage = ShaderStage.Pixel,
+      Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
+      EntryPoint = "PSColorCorrection"
+    };
+    _pixelShader = device.CreateShader(psDesc);
+
+    // Point семплер для точного пиксельного доступа
+    var samplerDesc = new SamplerDescription
+    {
+      Name = "PointSampler",
+      MinFilter = FilterMode.Point,
+      MagFilter = FilterMode.Point,
+      AddressModeU = AddressMode.Clamp,
+      AddressModeV = AddressMode.Clamp
+    };
+    _pointSampler = device.CreateSampler(samplerDesc);
+  }
+
+  private void UpdateColorCorrectionParameters(RenderPassContext context)
+  {
+    var buffer = context.GetBuffer(_colorCorrectionBuffer);
 
     var colorParams = new ColorCorrectionParameters
     {
@@ -96,7 +166,8 @@ public class ColorCorrectionPass: RenderPass
       ToneMappingType = (int)ToneMappingType
     };
 
-    var mappedData = buffer.Map();
+    // Записываем параметры в буфер
+    var mappedData = buffer.Map(MapMode.WriteDiscard);
     unsafe
     {
       *(ColorCorrectionParameters*)mappedData = colorParams;
@@ -104,12 +175,17 @@ public class ColorCorrectionPass: RenderPass
     buffer.Unmap();
   }
 
-  private void SetupColorCorrectionShaders(CommandBuffer _commandBuffer)
+  private void SetupColorCorrectionShaders(CommandBuffer commandBuffer)
   {
-    _commandBuffer.SetVertexShader(GetColorCorrectionVertexShader());
-    _commandBuffer.SetPixelShader(GetColorCorrectionPixelShader());
+    commandBuffer.SetVertexShader(_vertexShader);
+    commandBuffer.SetPixelShader(_pixelShader);
   }
 
-  private IShader GetColorCorrectionVertexShader() => null;
-  private IShader GetColorCorrectionPixelShader() => null;
+  public override void Dispose()
+  {
+    _vertexShader?.Dispose();
+    _pixelShader?.Dispose();
+    _pointSampler?.Dispose();
+    base.Dispose();
+  }
 }

@@ -1,5 +1,3 @@
-using System.Linq.Expressions;
-
 using Utility;
 
 namespace Core;
@@ -73,7 +71,7 @@ public class DependencyResolver
         }
       }
 
-      foreach (var dependency in pass.Dependencies)
+      foreach(var dependency in pass.Dependencies)
         AddEdge(dependency, pass);
     }
   }
@@ -114,7 +112,7 @@ public class DependencyResolver
   public List<RenderPass> CullUnusedPasses()
   {
     var unusedPasses = new List<RenderPass>();
-    
+
     foreach(var pass in p_passGraph.Nodes)
     {
       var dependents = p_passGraph.GetDependicies(pass);
@@ -156,14 +154,14 @@ public class DependencyResolver
     var criticalPath = new List<RenderPass>();
     var longestPaths = new Dictionary<RenderPass, List<RenderPass>>();
 
-    foreach (var node in p_passGraph.Nodes)
+    foreach(var node in p_passGraph.Nodes)
     {
       var path = FindLongestPath(node, new HashSet<RenderPass>());
       longestPaths[node] = path;
     }
 
     var maxLength = 0;
-    foreach (var kvp in longestPaths)
+    foreach(var kvp in longestPaths)
     {
       if(kvp.Value.Count > maxLength)
       {
@@ -212,7 +210,7 @@ public class DependencyResolver
     if(_visited.Contains(_node))
       return false;
 
-    _visiting.Add(_node); 
+    _visiting.Add(_node);
 
     foreach(var neighbor in p_passGraph.GetDependicies(_node))
     {

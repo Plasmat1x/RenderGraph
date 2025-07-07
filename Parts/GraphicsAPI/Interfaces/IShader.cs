@@ -1,6 +1,19 @@
+using GraphicsAPI.Enums;
+
 namespace GraphicsAPI.Interfaces;
 
-public interface IShader: IDisposable
+/// <summary>
+/// Интерфейс шейдера
+/// </summary>
+public interface IShader: IResource
 {
-  string Name { get; }
+  ShaderStage Stage { get; }
+  ShaderDescription Description { get; }
+  byte[] Bytecode { get; }
+
+  // Рефлексия
+  ShaderReflection GetReflection();
+  bool HasConstantBuffer(string name);
+  bool HasTexture(string name);
+  bool HasSampler(string name);
 }

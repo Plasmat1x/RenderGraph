@@ -4,20 +4,14 @@ using GraphicsAPI.Enums;
 
 using Resources.Enums;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Core;
 public class ResourceUsageInfo
 {
-  public ResourceHandle Handle {get;set;}
-  public ResourceAccessType AccessType {get;set;}
-  public ResourceUsage Usage {get;set;}
-  public ResourceState State {get;set;}
-  public string PassName {get;set;} = string.Empty;
+  public ResourceHandle Handle { get; set; }
+  public ResourceAccessType AccessType { get; set; }
+  public ResourceUsage Usage { get; set; }
+  public ResourceState State { get; set; }
+  public string PassName { get; set; } = string.Empty;
 
   public bool IsRead()
   {
@@ -34,10 +28,10 @@ public class ResourceUsageInfo
     if(_other == null || Handle != _other.Handle)
       return false;
 
-    if(PassName == _other.PassName) 
+    if(PassName == _other.PassName)
       return false;
 
-    if(IsWrite() && _other.IsWrite()) 
+    if(IsWrite() && _other.IsWrite())
       return true;
 
     if((IsWrite() && _other.IsRead()) || (IsRead() && _other.IsWrite()))

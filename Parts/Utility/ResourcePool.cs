@@ -1,6 +1,6 @@
 namespace Utility;
 
-public class ResourcePool<T> : IDisposable where T : class, IDisposable
+public class ResourcePool<T>: IDisposable where T : class, IDisposable
 {
   private readonly Queue<T> p_availableResources = [];
   private readonly HashSet<T> p_usedResources = [];

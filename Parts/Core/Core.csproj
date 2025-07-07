@@ -8,7 +8,7 @@
 	  <ImplicitUsings>enable</ImplicitUsings>
 	  <InvariantGlobalization>true</InvariantGlobalization>
 	  <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-	  <Description>Plasmat1xdev Render Graph library</Description>
+	  <Description>Plasmat1xdev Render Graph Core library</Description>
 	  <Copyright>Copyright © Plasmat1xdev 2025</Copyright>
 	  <Version>0.0.1</Version>
 	  <Authors>Mikhail Mryasov</Authors>

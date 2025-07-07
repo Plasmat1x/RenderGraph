@@ -2,17 +2,13 @@ using GraphicsAPI.Interfaces;
 
 using Resources.Enums;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace GraphicsAPI;
-public class TextureViewStub : ITextureView
+public class TextureViewStub: ITextureView
 {
   public ITexture Texture { get; }
   public TextureViewType ViewType { get; }
+
+  public TextureViewDescription Description => throw new NotImplementedException();
 
   public TextureViewStub(ITexture _texture, TextureViewType _viewType)
   {
@@ -24,6 +20,9 @@ public class TextureViewStub : ITextureView
   {
 
   }
+
+  public nint GetNativeHandle()
+  {
+    throw new NotImplementedException();
+  }
 }
-
-

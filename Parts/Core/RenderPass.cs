@@ -1,7 +1,7 @@
 using Core.Enums;
 
 namespace Core;
-public abstract class RenderPass
+public abstract class RenderPass: IDisposable
 {
   private readonly List<ResourceHandle> p_inputs = new();
   private readonly List<ResourceHandle> p_outputs = new();
@@ -78,7 +78,7 @@ public abstract class RenderPass
   /// </summary>
   public virtual void OnGraphCompiled(RenderGraph _renderGraph)
   {
-  
+
   }
 
   /// <summary>
@@ -302,5 +302,19 @@ public abstract class RenderPass
   public override int GetHashCode()
   {
     return Name?.GetHashCode() ?? 0;
+  }
+
+  protected virtual void Dispose(bool disposing)
+  {
+    if(disposing)
+    {
+      // Освобождаем управляемые ресурсы
+    }
+  }
+
+  public virtual void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
   }
 }

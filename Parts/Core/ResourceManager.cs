@@ -5,8 +5,7 @@ using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
 using Resources;
-
-using System.Resources;
+using Resources.Enums;
 
 using Utility;
 
@@ -147,7 +146,7 @@ public class ResourceManager: IDisposable
     if(p_resourceDescriptions.TryGetValue(actualHandle, out var description))
       return description;
 
-    throw new KeyNotFoundException($"Resource description not found: { _handle }");
+    throw new KeyNotFoundException($"Resource description not found: {_handle}");
   }
 
   public void OptimizeResourceUsage()
@@ -282,7 +281,7 @@ public class ResourceManager: IDisposable
     if(p_disposed)
       return;
 
-    foreach (var resource in p_resources.Values)
+    foreach(var resource in p_resources.Values)
     {
       resource?.Dispose();
     }
@@ -311,7 +310,7 @@ public class ResourceManager: IDisposable
 
   private bool AreResourceComaptible(ResourceHandle _source, ResourceHandle _target)
   {
-    if (!p_resourceDescriptions.TryGetValue(_source, out var sourceDesc))
+    if(!p_resourceDescriptions.TryGetValue(_source, out var sourceDesc))
       return false;
     if(!p_resourceDescriptions.TryGetValue(_target, out var targetDesc))
       return false;

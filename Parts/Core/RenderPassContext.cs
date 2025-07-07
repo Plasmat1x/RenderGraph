@@ -4,9 +4,6 @@ using GraphicsAPI.Interfaces;
 using Resources;
 using Resources.Enums;
 
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices;
-
 namespace Core;
 public class RenderPassContext
 {
@@ -65,6 +62,6 @@ public class RenderPassContext
 
   public void SetFullScreenViewport()
   {
-    SetViewport(0,0, ViewportWidth, ViewportHeight);
+    SetViewport(0, 0, ViewportWidth, ViewportHeight);
   }
 }
