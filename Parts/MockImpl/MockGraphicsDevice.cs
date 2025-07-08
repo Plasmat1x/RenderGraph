@@ -14,7 +14,7 @@ public class MockGraphicsDevice: IGraphicsDevice
   private bool _disposed = false;
 
   public string Name => "Mock Graphics Device";
-  public GraphicsAPI.Enums.GraphicsAPI API => GraphicsAPI.Enums.GraphicsAPI.DirectX12;
+  public API API => API.DirectX12;
   public DeviceCapabilities Capabilities { get; }
 
   public MockGraphicsDevice()

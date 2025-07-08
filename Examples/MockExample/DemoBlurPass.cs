@@ -1,11 +1,16 @@
 using Core;
 using Core.Enums;
 
+using GraphicsAPI;
 using GraphicsAPI.Enums;
+using GraphicsAPI.Interfaces;
+
+using MockImpl;
 
 using Resources;
+using Resources.Enums;
 
-namespace MockImpl;
+using System.Xml.Linq;
 
 public class DemoBlurPass: RenderPass
 {

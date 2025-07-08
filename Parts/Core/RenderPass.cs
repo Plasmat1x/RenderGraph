@@ -39,10 +39,7 @@ public abstract class RenderPass: IDisposable
 
   protected RenderPass(string _name)
   {
-    if(string.IsNullOrEmpty(_name))
-      throw new ArgumentException("Pass name cannot be null or empty", nameof(_name));
-
-    Name = _name;
+    Name = _name ?? string.Empty;
   }
 
   public abstract void Setup(RenderGraphBuilder _builder);
@@ -55,6 +52,9 @@ public abstract class RenderPass: IDisposable
   {
     if(!Enabled)
       return false;
+
+    if(p_dependencies.Count == 0)
+      return true;
 
     foreach(var dependency in p_dependencies)
     {
@@ -249,6 +249,7 @@ public abstract class RenderPass: IDisposable
     p_executionOrder = _order;
   }
 
+  [assembly: InternalsVisibleTo("RenderGraphTests")]
   internal void InternalSetup(RenderGraphBuilder _builder)
   {
     try
@@ -269,6 +270,7 @@ public abstract class RenderPass: IDisposable
     }
   }
 
+  [assembly: InternalsVisibleTo("RenderGraphTests")]
   internal void InternalExecute(RenderPassContext _context)
   {
     try

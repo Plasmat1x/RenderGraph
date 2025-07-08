@@ -8,7 +8,7 @@ namespace GraphicsAPI.Interfaces;
 public interface IGraphicsDevice: IDisposable
 {
   string Name { get; }
-  GraphicsAPI.Enums.GraphicsAPI API { get; }
+  API API { get; }
   DeviceCapabilities Capabilities { get; }
 
   ITexture CreateTexture(TextureDescription description);

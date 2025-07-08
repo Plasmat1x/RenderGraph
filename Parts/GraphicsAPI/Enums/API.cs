@@ -1,6 +1,6 @@
 namespace GraphicsAPI.Enums;
 
-public enum GraphicsAPI
+public enum API
 {
   Unknown,
   DirectX11,

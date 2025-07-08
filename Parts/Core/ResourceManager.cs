@@ -7,25 +7,12 @@ using GraphicsAPI.Interfaces;
 using Resources;
 using Resources.Enums;
 
+using System.Reflection.Metadata;
+
 using Utility;
 
 namespace Core;
 
-
-/// <summary>
-/// Resource Manager
-/// </summary>
-/// <code>
-/// var resourceManager = new ResourceManager(graphicsDevice);
-/// var colorTexture = resourceManager.CreateTexture(colorDesc);
-/// var depthTexture = resourceManager.CreateTexture(depthDesc);
-/// var vertexBuffer = resourceManager.CreateBuffer(vertexDesc);
-/// var texture = resourceManager.GetTexture(colorTexture);
-/// var buffer = resourceManager.GetBuffer(vertexBuffer);
-/// resourceManager.AliasResource(colorTexture, aliasHandle);
-/// var memInfo = resourceManager.GetMemoryUsage();
-/// Console.WriteLine($"Memory used: {memInfo.TotalAllocated} bytes");
-/// </code>
 public class ResourceManager: IDisposable
 {
   private readonly Dictionary<ResourceHandle, IResource> p_resources = [];
@@ -83,8 +70,8 @@ public class ResourceManager: IDisposable
 
   public ITexture GetTexture(ResourceHandle _handle)
   {
-    if(!IsValidHandle(_handle))
-      throw new ArgumentException($"Invalid resources handle: {_handle}");
+    if(!_handle.IsValid())
+      throw new ArgumentException("Invalid resource handle provided", nameof(_handle));
 
     var actualHandle = GetActualHandle(_handle);
 
@@ -95,13 +82,14 @@ public class ResourceManager: IDisposable
       else
         throw new InvalidOperationException($"Resource {_handle} is not a texture");
     }
-    throw new KeyNotFoundException($"Texture resource not found: {_handle}");
+    throw new ArgumentException($"Resource not found: {_handle}", nameof(_handle));
+
   }
 
   public IBuffer GetBuffer(ResourceHandle _handle)
   {
-    if(!IsValidHandle(_handle))
-      throw new ArgumentNullException($"Invalid resource handle: {_handle}");
+    if(!_handle.IsValid())
+      throw new ArgumentException("Invalid resource handle provided", nameof(_handle));
 
     var actualHandle = GetActualHandle(_handle);
 
@@ -110,9 +98,10 @@ public class ResourceManager: IDisposable
       if(resource is IBuffer buffer)
         return buffer;
       else
-        throw new InvalidOperationException($"Resource {_handle} is not a Buffer");
+        throw new InvalidOperationException($"Resource {_handle} is not a buffer");
     }
-    throw new KeyNotFoundException($"Buffer resource not found: {_handle}");
+    throw new ArgumentException($"Resource not found: {_handle}", nameof(_handle));
+
   }
 
   public void AlliaseResource(ResourceHandle _source, ResourceHandle _target)

@@ -41,6 +41,12 @@ public class ColorCorrectionPass: RenderPass
     Priority = PassPriority.Low;
   }
 
+  public ColorCorrectionPass(string _name) : base(_name)
+  {
+    Category = PassCategory.PostProcessing;
+    Priority = PassPriority.Low;
+  }
+
   public override void Setup(RenderGraphBuilder builder)
   {
     if(!InputTexture.IsValid())

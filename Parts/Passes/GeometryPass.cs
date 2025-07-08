@@ -33,6 +33,12 @@ public class GeometryPass: RenderPass
     Priority = PassPriority.High;
   }
 
+  public GeometryPass(string _name) : base(_name)
+  {
+    Category = PassCategory.Rendering;
+    Priority = PassPriority.High;
+  }
+
   public override void Setup(RenderGraphBuilder builder)
   {
     // Создаем color target

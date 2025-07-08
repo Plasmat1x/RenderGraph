@@ -19,4 +19,12 @@
     <!--<GenerateDocumentationFile>True</GenerateDocumentationFile>-->
   </PropertyGroup>
 
+  <!-- Expose internals to test assemblies -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="RenderGraph.Tests" />
+    <InternalsVisibleTo Include="RenderGraph.IntegrationTests" />
+    <InternalsVisibleTo Include="RenderGraph.Mock" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
 </Project>

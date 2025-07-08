@@ -14,8 +14,6 @@ public class MockRenderState: IRenderState
   public bool IsDisposed { get; private set; }
   public RenderStateDescription Description { get; }
 
-  ResourceType IResource.ResourceType => throw new NotImplementedException();
-
   public MockRenderState(RenderStateDescription description)
   {
     Description = description;

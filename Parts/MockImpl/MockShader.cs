@@ -10,7 +10,7 @@ public class MockShader: IShader
 {
   public uint Id { get; }
   public string Name { get; set; }
-  public ResourceType ResourceType => ResourceType.Buffer;
+  public ResourceType ResourceType => ResourceType.Buffer; // Shaders stored as buffers
   public bool IsDisposed { get; private set; }
   public ShaderStage Stage { get; }
   public ShaderDescription Description { get; }

@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Parts\MockImpl\MockImpl.csproj" />
+    <ProjectReference Include="..\..\Parts\Passes\Passes.csproj" />
   </ItemGroup>
 
 </Project>

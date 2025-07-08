@@ -100,12 +100,26 @@ public class RenderGraph: IDisposable
       p_frameData.FrameIndex++;
       p_frameData.UpdateMatrices();
 
+      foreach(var pass in p_executionOrder)
+      {
+        pass.OnFrameBegin(p_frameData);
+      }
+
       for(int i = 0; i < p_executionOrder.Count; i++)
       {
         var pass = p_executionOrder[i];
 
-        if(!pass.Enabled || !pass.CanExecute())
+        if(!pass.Enabled) 
+        {
+          Console.WriteLine($"Skipping disabled pass: {pass.Name}");
           continue;
+        }
+
+        if(!pass.CanExecute())
+        {
+          Console.WriteLine($"Pass {pass.Name} cannot execute (dependencies not met)");
+          continue;
+        }
 
         var context = p_passContexts[pass];
         context.CommandBuffer = _commandBuffer;
@@ -113,8 +127,14 @@ public class RenderGraph: IDisposable
 
         TransitionResourcesForPass(pass, _commandBuffer);
 
-        pass.Execute(context);
+        pass.InternalExecute(context);
       }
+
+      foreach(var pass in p_executionOrder)
+      {
+        pass.OnFrameEnd(p_frameData);
+      }
+
       _commandBuffer.End();
     }
     catch(Exception ex)
@@ -278,7 +298,7 @@ public class RenderGraph: IDisposable
 
       try
       {
-        pass.Setup(p_builder);
+        pass.InternalSetup(p_builder);
       }
       catch(Exception ex)
       {
@@ -402,7 +422,7 @@ public class RenderGraph: IDisposable
       var usage = p_builder.GetResourceUsage(input, _pass.Name);
       if(usage != null)
       {
-        _commandBuffer.TrasinitionResource(p_resourceManager.GetTexture(input), usage.State);
+        _commandBuffer.TransitionResource(p_resourceManager.GetTexture(input), usage.State);
       }
     }
 
@@ -411,7 +431,7 @@ public class RenderGraph: IDisposable
       var usage = p_builder.GetResourceUsage(output, _pass.Name);
       if(usage != null)
       {
-        _commandBuffer.TrasinitionResource(p_resourceManager.GetTexture(output), usage.State);
+        _commandBuffer.TransitionResource(p_resourceManager.GetTexture(output), usage.State);
       }
     }
   }

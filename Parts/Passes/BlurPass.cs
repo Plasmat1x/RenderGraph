@@ -42,6 +42,12 @@ public class BlurPass: RenderPass
     Priority = PassPriority.Normal;
   }
 
+  public BlurPass(string _name) : base(_name)
+  {
+    Category = PassCategory.PostProcessing;
+    Priority = PassPriority.Normal;
+  }
+
   public override void Setup(RenderGraphBuilder builder)
   {
     if(!InputTexture.IsValid())

@@ -6,12 +6,14 @@ using GraphicsAPI.Interfaces;
 using Resources;
 using Resources.Enums;
 
+using System.Reflection.Metadata;
+
 namespace Core;
 
 public class RenderGraphBuilder
 {
   private readonly ResourceManager p_resourceManager;
-  private readonly Dictionary<ResourceHandle, ResourceUsageInfo> p_resourceUsages = [];
+  private readonly Dictionary<ResourceHandle, List<ResourceUsageInfo>> p_resourceUsages = [];
   private readonly Dictionary<string, ResourceHandle> p_namedResources = [];
   private readonly List<ResourceUsageInfo> p_currentPassUsages = [];
   private RenderPass p_currentPass;
@@ -293,21 +295,20 @@ public class RenderGraphBuilder
 
   public IEnumerable<ResourceUsageInfo> GetResourceUsages()
   {
-    return p_resourceUsages.Values;
+    return p_resourceUsages.Values.SelectMany(_list => _list);
   }
 
   public IEnumerable<ResourceUsageInfo> GetResourceUsages(ResourceHandle _handle)
   {
-    foreach(var usage in p_resourceUsages.Values)
-    {
-      if(usage.Handle == _handle)
-        yield return usage;
-    }
+    if(p_resourceUsages.TryGetValue(_handle, out var usages))
+      return usages;
+
+    return Enumerable.Empty<ResourceUsageInfo>();
   }
 
   public ResourceUsageInfo? GetResourceUsage(ResourceHandle _handle, string _passName)
   {
-    foreach(var usage in p_resourceUsages.Values)
+    foreach(var usage in p_resourceUsages.Values.SelectMany(_list => _list))
     {
       if(usage.Handle == _handle && usage.PassName == _passName)
         return usage;
@@ -325,37 +326,66 @@ public class RenderGraphBuilder
     return p_resourceManager.GetResourceDescription(_handle);
   }
 
+  //public void ValidateResourceUsages()
+  //{
+  //  var conflicts = new List<string>();
+
+  //  var resourcesByHandle = new Dictionary<ResourceHandle, List<ResourceUsageInfo>>();
+
+  //  foreach(var usage in p_resourceUsages.Values)
+  //  {
+  //    if(!resourcesByHandle.ContainsKey(usage.Handle))
+  //      resourcesByHandle[usage.Handle] = new List<ResourceUsageInfo>();
+
+  //    resourcesByHandle[usage.Handle].Add(usage);
+  //  }
+
+  //  foreach(var kvp in resourcesByHandle)
+  //  {
+  //    var handle = kvp.Key;
+  //    var usages = kvp.Value;
+
+  //    for(int i = 0; i < usages.Count; i++)
+  //    {
+  //      for(int j = i + 1; j < usages.Count; j++)
+  //      {
+  //        if(usages[i].ConflictsWith(usages[j]))
+  //          conflicts.Add($"Resource conflict: {handle} between passes '{usages[i].PassName}' and '{usages[j].PassName}'");
+  //      }
+  //    }
+  //  }
+
+  //  if(conflicts.Count > 0)
+  //    throw new InvalidOperationException($"Resource usage conflicts detected:\n{string.Join("\n", conflicts)}");
+  //}
+
   public void ValidateResourceUsages()
   {
     var conflicts = new List<string>();
 
-    var resourcesByHandle = new Dictionary<ResourceHandle, List<ResourceUsageInfo>>();
-
-    foreach(var usage in p_resourceUsages.Values)
-    {
-      if(!resourcesByHandle.ContainsKey(usage.Handle))
-        resourcesByHandle[usage.Handle] = new List<ResourceUsageInfo>();
-
-      resourcesByHandle[usage.Handle].Add(usage);
-    }
-
-    foreach(var kvp in resourcesByHandle)
+    // Проверяем конфликты read-write для одного ресурса в разных проходах
+    foreach(var kvp in p_resourceUsages)
     {
       var handle = kvp.Key;
       var usages = kvp.Value;
 
+      // Проверяем конфликты между разными проходами
       for(int i = 0; i < usages.Count; i++)
       {
         for(int j = i + 1; j < usages.Count; j++)
         {
           if(usages[i].ConflictsWith(usages[j]))
+          {
             conflicts.Add($"Resource conflict: {handle} between passes '{usages[i].PassName}' and '{usages[j].PassName}'");
+          }
         }
       }
     }
 
     if(conflicts.Count > 0)
+    {
       throw new InvalidOperationException($"Resource usage conflicts detected:\n{string.Join("\n", conflicts)}");
+    }
   }
 
   public void Clear()
@@ -404,7 +434,10 @@ public class RenderGraphBuilder
 
     foreach(var usage in p_currentPassUsages)
     {
-      p_resourceUsages[usage.Handle] = usage;
+      if(!p_resourceUsages.ContainsKey(usage.Handle))
+        p_resourceUsages[usage.Handle] = new List<ResourceUsageInfo>();
+
+      p_resourceUsages[usage.Handle].Add(usage);
     }
 
     p_currentPass = null;

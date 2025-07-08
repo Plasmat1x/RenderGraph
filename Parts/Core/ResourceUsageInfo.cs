@@ -34,8 +34,8 @@ public class ResourceUsageInfo
     if(IsWrite() && _other.IsWrite())
       return true;
 
-    if((IsWrite() && _other.IsRead()) || (IsRead() && _other.IsWrite()))
-      return true;
+    //if((IsWrite() && _other.IsRead()) || (IsRead() && _other.IsWrite()))
+    //  return true;
 
     return false;
   }
