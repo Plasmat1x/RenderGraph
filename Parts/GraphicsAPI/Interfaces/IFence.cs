@@ -7,7 +7,7 @@ public interface IFence: IDisposable
 {
   ulong Value { get; }
   bool IsSignaled { get; }
-  void Signal(ulong value);
-  void Wait(ulong value, uint timeoutMs = uint.MaxValue);
+  void Signal(ulong _value);
+  void Wait(ulong _value, uint _timeoutMs = uint.MaxValue);
   IntPtr GetNativeHandle();
 }

@@ -11,34 +11,24 @@ public interface IGraphicsDevice: IDisposable
   API API { get; }
   DeviceCapabilities Capabilities { get; }
 
-  ITexture CreateTexture(TextureDescription description);
-  IBuffer CreateBuffer(BufferDescription description);
-  IShader CreateShader(ShaderDescription description);
-  IRenderState CreateRenderState(RenderStateDescription description);
-  ISampler CreateSampler(SamplerDescription description);
-
-  // Command buffers
+  ITexture CreateTexture(TextureDescription _description);
+  IBuffer CreateBuffer(BufferDescription _description);
+  IShader CreateShader(ShaderDescription _description);
+  IRenderState CreateRenderState(RenderStateDescription _description);
+  ISampler CreateSampler(SamplerDescription _description);
   CommandBuffer CreateCommandBuffer();
-  CommandBuffer CreateCommandBuffer(CommandBufferType type);
-  void ExecuteCommandBuffer(CommandBuffer commandBuffer);
-  void ExecuteCommandBuffers(CommandBuffer[] commandBuffers);
-
-  // Синхронизация
+  CommandBuffer CreateCommandBuffer(CommandBufferType _type);
+  void ExecuteCommandBuffer(CommandBuffer _commandBuffer);
+  void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers);
   void WaitForGPU();
-  void WaitForFence(IFence fence);
-  IFence CreateFence(ulong initialValue = 0);
-
-  // Информация о памяти
+  void WaitForFence(IFence _fence);
+  IFence CreateFence(ulong _initialValue = 0);
   MemoryInfo GetMemoryInfo();
   ulong GetTotalMemory();
   ulong GetAvailableMemory();
-
-  // Swapchain (для презентации)
-  ISwapChain CreateSwapChain(SwapChainDescription description);
+  ISwapChain CreateSwapChain(SwapChainDescription _description);
   void Present();
-
-  // Утилиты
-  bool SupportsFormat(TextureFormat format, FormatUsage usage);
-  uint GetFormatBytesPerPixel(TextureFormat format);
-  SampleCountFlags GetSupportedSampleCounts(TextureFormat format);
+  bool SupportsFormat(TextureFormat _format, FormatUsage _usage);
+  uint GetFormatBytesPerPixel(TextureFormat _format);
+  SampleCountFlags GetSupportedSampleCounts(TextureFormat _format);
 }

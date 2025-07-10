@@ -4,30 +4,30 @@ namespace GraphicsAPI;
 
 public struct DeviceCapabilities
 {
-  public uint MaxTexture1DSize;
-  public uint MaxTexture2DSize;
-  public uint MaxTexture3DSize;
-  public uint MaxTextureCubeSize;
-  public uint MaxTextureArrayLayers;
-  public uint MaxColorAttachments;
-  public uint MaxVertexAttributes;
-  public uint MaxVertexBuffers;
-  public uint MaxUniformBufferBindings;
-  public uint MaxStorageBufferBindings;
-  public uint MaxSampledImageBindings;
-  public uint MaxStorageImageBindings;
-  public uint MaxSamplerBindings;
-  public uint MaxComputeWorkGroupSize;
-  public uint MaxComputeWorkGroupInvocations;
-  public SampleCountFlags SupportedSampleCounts;
-  public bool SupportsGeometryShader;
-  public bool SupportsTessellation;
-  public bool SupportsComputeShader;
-  public bool SupportsMultiDrawIndirect;
-  public bool SupportsDrawIndirect;
-  public bool SupportsDepthClamp;
-  public bool SupportsAnisotropicFiltering;
-  public bool SupportsTextureCompressionBC;
-  public bool SupportsTextureCompressionETC;
-  public bool SupportsTextureCompressionASTC;
+  public uint MaxTexture1DSize { get; set; }
+  public uint MaxTexture2DSize { get; set; }
+  public uint MaxTexture3DSize { get; set; }
+  public uint MaxTextureCubeSize { get; set; }
+  public uint MaxTextureArrayLayers { get; set; }
+  public uint MaxColorAttachments { get; set; }
+  public uint MaxVertexAttributes { get; set; }
+  public uint MaxVertexBuffers { get; set; }
+  public uint MaxUniformBufferBindings { get; set; }
+  public uint MaxStorageBufferBindings { get; set; }
+  public uint MaxSampledImageBindings { get; set; }
+  public uint MaxStorageImageBindings { get; set; }
+  public uint MaxSamplerBindings { get; set; }
+  public uint MaxComputeWorkGroupSize { get; set; }
+  public uint MaxComputeWorkGroupInvocations { get; set; }
+  public SampleCountFlags SupportedSampleCounts { get; set; }
+  public bool SupportsGeometryShader { get; set; }
+  public bool SupportsTessellation { get; set; }
+  public bool SupportsComputeShader { get; set; }
+  public bool SupportsMultiDrawIndirect { get; set; }
+  public bool SupportsDrawIndirect { get; set; }
+  public bool SupportsDepthClamp { get; set; }
+  public bool SupportsAnisotropicFiltering { get; set; }
+  public bool SupportsTextureCompressionBC { get; set; }
+  public bool SupportsTextureCompressionETC { get; set; }
+  public bool SupportsTextureCompressionASTC { get; set; }
 }

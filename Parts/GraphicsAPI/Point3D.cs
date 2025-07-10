@@ -2,14 +2,14 @@ namespace GraphicsAPI;
 
 public struct Point3D
 {
-  public uint X;
-  public uint Y;
-  public uint Z;
+  public uint X { get; init; }
+  public uint Y { get; init; }
+  public uint Z { get; init; }
 
-  public Point3D(uint x, uint y, uint z)
+  public Point3D(uint _x, uint _y, uint _z)
   {
-    X = x;
-    Y = y;
-    Z = z;
+    X = _x;
+    Y = _y;
+    Z = _z;
   }
 }
