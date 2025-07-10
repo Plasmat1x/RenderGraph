@@ -73,31 +73,16 @@ public class TextureDescription: ResourceDescription
            (BindFlags & BindFlags.UnorderedAccess) != 0;
   }
 
-  public bool IsMultisampled()
-  {
-    return SampleCount > 1;
-  }
+  public bool IsMultisampled() => SampleCount > 1;
 
-  public bool IsArray()
-  {
-    return ArraySize > 1;
-  }
+  public bool IsArray() => ArraySize > 1;
 
-  public bool IsVolume()
-  {
-    return Depth > 1;
-  }
+  public bool IsVolume() => Depth > 1;
 
-  public bool IsCubemap()
-  {
-    return (MiscFlags & ResourceMiscFlags.TextureCube) != 0;
-  }
+  public bool IsCubemap() => (MiscFlags & ResourceMiscFlags.TextureCube) != 0;
 
 
-  public override string ToString()
-  {
-    return $"TextureDescription(Name: '{Name}', Size: {Width}x{Height}x{Depth}, Format: {Format}, Mips: {MipLevels}, Array: {ArraySize})";
-  }
+  public override string ToString() => $"TextureDescription(Name: '{Name}', Size: {Width}x{Height}x{Depth}, Format: {Format}, Mips: {MipLevels}, Array: {ArraySize})";
 
   public override ulong GetMemorySize()
   {

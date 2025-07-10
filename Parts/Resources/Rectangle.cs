@@ -1,6 +1,10 @@
 namespace Resources;
 public struct Rectangle
 {
+  public static bool operator ==(Rectangle _left, Rectangle _right) => _left.Equals(_right);
+  public static bool operator !=(Rectangle _left, Rectangle _right) => !_left.Equals(_right);
+  public static readonly Rectangle Empty = new Rectangle(0, 0, 0, 0);
+
   public Rectangle(int _x, int _y, int _width, int _height)
   {
     X = _x;
@@ -88,20 +92,5 @@ public struct Rectangle
     }
   }
 
-  public override string ToString()
-  {
-    return $"Rectangle(X: {X}, Y: {Y}, Width: {Width}, Height: {Height})";
-  }
-
-  public static bool operator ==(Rectangle _left, Rectangle _right)
-  {
-    return _left.Equals(_right);
-  }
-
-  public static bool operator !=(Rectangle _left, Rectangle _right)
-  {
-    return !_left.Equals(_right);
-  }
-
-  public static readonly Rectangle Empty = new Rectangle(0, 0, 0, 0);
+  public override string ToString() => $"Rectangle(X: {X}, Y: {Y}, Width: {Width}, Height: {Height})";
 }

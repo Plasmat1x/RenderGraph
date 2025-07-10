@@ -13,95 +13,41 @@ public abstract class ResourceDescription
   public abstract ulong GetMemorySize();
   public abstract bool IsCompatible(ResourceDescription _other);
 
-  public virtual bool RequiresCPUAccess()
-  {
-    return CPUAccessFlags != CPUAccessFlags.None;
-  }
+  public virtual bool RequiresCPUAccess() => CPUAccessFlags != CPUAccessFlags.None;
 
-  public virtual bool IsReadOnlyCPU()
-  {
-    return CPUAccessFlags == CPUAccessFlags.Read;
-  }
+  public virtual bool IsReadOnlyCPU() => CPUAccessFlags == CPUAccessFlags.Read;
 
-  public virtual bool IsWriteOnlyCPU()
-  {
-    return CPUAccessFlags == CPUAccessFlags.Write;
-  }
+  public virtual bool IsWriteOnlyCPU() => CPUAccessFlags == CPUAccessFlags.Write;
 
-  public virtual bool IsReadWriteCPU()
-  {
-    return CPUAccessFlags == CPUAccessFlags.ReadWrite;
-  }
+  public virtual bool IsReadWriteCPU() => CPUAccessFlags == CPUAccessFlags.ReadWrite;
 
-  public virtual bool IsImmutable()
-  {
-    return Usage == ResourceUsage.Immutable;
-  }
+  public virtual bool IsImmutable() => Usage == ResourceUsage.Immutable;
 
-  public virtual bool IsDynamic()
-  {
-    return Usage == ResourceUsage.Dynamic;
-  }
+  public virtual bool IsDynamic() => Usage == ResourceUsage.Dynamic;
 
-  public virtual bool IsStaging()
-  {
-    return Usage == ResourceUsage.Staging;
-  }
+  public virtual bool IsStaging() => Usage == ResourceUsage.Staging;
 
-  public virtual bool IsDefault()
-  {
-    return Usage == ResourceUsage.Default;
-  }
+  public virtual bool IsDefault() => Usage == ResourceUsage.Default;
 
-  public virtual bool SupportsShaderResource()
-  {
-    return (BindFlags & BindFlags.ShaderResource) != 0;
-  }
+  public virtual bool SupportsShaderResource() => (BindFlags & BindFlags.ShaderResource) != 0;
 
-  public virtual bool SupportsRenderTarget()
-  {
-    return (BindFlags & BindFlags.RenderTarget) != 0;
-  }
+  public virtual bool SupportsRenderTarget() => (BindFlags & BindFlags.RenderTarget) != 0;
 
-  public virtual bool SupportsDepthStencil()
-  {
-    return (BindFlags & BindFlags.DepthStencil) != 0;
-  }
+  public virtual bool SupportsDepthStencil() => (BindFlags & BindFlags.DepthStencil) != 0;
 
-  public virtual bool SupportsUnorderedAccess()
-  {
-    return (BindFlags & BindFlags.UnorderedAccess) != 0;
-  }
+  public virtual bool SupportsUnorderedAccess() => (BindFlags & BindFlags.UnorderedAccess) != 0;
 
-  public virtual bool SupportsVertexBuffer()
-  {
-    return (BindFlags & BindFlags.VertexBuffer) != 0;
-  }
+  public virtual bool SupportsVertexBuffer() => (BindFlags & BindFlags.VertexBuffer) != 0;
 
-  public virtual bool SupportsIndexBuffer()
-  {
-    return (BindFlags & BindFlags.IndexBuffer) != 0;
-  }
+  public virtual bool SupportsIndexBuffer() => (BindFlags & BindFlags.IndexBuffer) != 0;
 
-  public virtual bool SupportsConstantBuffer()
-  {
-    return (BindFlags & BindFlags.ConstantBuffer) != 0;
-  }
+  public virtual bool SupportsConstantBuffer() => (BindFlags & BindFlags.ConstantBuffer) != 0;
 
-  public virtual bool IsShared()
-  {
-    return (MiscFlags & ResourceMiscFlags.Shared) != 0;
-  }
+  public virtual bool IsShared() => (MiscFlags & ResourceMiscFlags.Shared) != 0;
 
-  public virtual bool CanGenerateMips()
-  {
-    return (MiscFlags & ResourceMiscFlags.GenerateMips) != 0;
-  }
+  public virtual bool CanGenerateMips() => (MiscFlags & ResourceMiscFlags.GenerateMips) != 0;
 
-  public virtual bool IsGDICompatible()
-  {
-    return (MiscFlags & ResourceMiscFlags.GDICompatible) != 0;
-  }
+  public virtual bool IsGDICompatible() => (MiscFlags & ResourceMiscFlags.GDICompatible) != 0;
 
   public virtual bool Validate(out string _errorMessage)
   {
