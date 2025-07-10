@@ -2,7 +2,7 @@ namespace Utility;
 
 public struct PoolUsageStats
 {
-  public int AvailableCount { get; set; };
+  public int AvailableCount { get; set; }
   public int UsedCount { get; set; }
   public int TotalCount { get; set; }
 
