@@ -7,9 +7,9 @@ namespace GraphicsAPI;
 /// </summary>
 public interface IResource: IDisposable
 {
-  IntPtr GetNativeHandle();
   string Name { get; set; }
   ResourceType ResourceType { get; }
-  ulong GetMemorySize();
   bool IsDisposed { get; }
+  ulong GetMemorySize();
+  IntPtr GetNativeHandle();
 }

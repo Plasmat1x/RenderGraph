@@ -60,8 +60,5 @@ public class RenderPassContext
     CommandBuffer.SetViewport(viewport);
   }
 
-  public void SetFullScreenViewport()
-  {
-    SetViewport(0, 0, ViewportWidth, ViewportHeight);
-  }
+  public void SetFullScreenViewport() => SetViewport(0, 0, ViewportWidth, ViewportHeight);
 }

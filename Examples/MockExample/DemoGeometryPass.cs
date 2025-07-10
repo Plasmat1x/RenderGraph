@@ -21,30 +21,30 @@ public class DemoGeometryPass: RenderPass
     Priority = PassPriority.High;
   }
 
-  public override void Setup(RenderGraphBuilder builder)
+  public override void Setup(RenderGraphBuilder _builder)
   {
     Console.WriteLine($"[PASS] Setting up {Name}");
 
-    ColorTarget = builder.CreateColorTarget("MainColor", 1920, 1080);
-    DepthTarget = builder.CreateDepthTarget("MainDepth", 1920, 1080);
+    ColorTarget = _builder.CreateColorTarget("MainColor", 1920, 1080);
+    DepthTarget = _builder.CreateDepthTarget("MainDepth", 1920, 1080);
 
-    builder.WriteTexture(ColorTarget);
-    builder.WriteTextureAsDepth(DepthTarget);
+    _builder.WriteTexture(ColorTarget);
+    _builder.WriteTextureAsDepth(DepthTarget);
 
-    builder.SetResourceLifetime(ColorTarget, ResourceLifetime.Persistent);
-    builder.SetResourceLifetime(DepthTarget, ResourceLifetime.Persistent);
+    _builder.SetResourceLifetime(ColorTarget, ResourceLifetime.Persistent);
+    _builder.SetResourceLifetime(DepthTarget, ResourceLifetime.Persistent);
   }
 
-  public override void Execute(RenderPassContext context)
+  public override void Execute(RenderPassContext _context)
   {
     Console.WriteLine($"[PASS] Executing {Name}");
 
-    var commandBuffer = context.CommandBuffer;
-    var colorTexture = context.GetTexture(ColorTarget);
-    var depthTexture = context.GetTexture(DepthTarget);
+    var commandBuffer = _context.CommandBuffer;
+    var colorTexture = _context.GetTexture(ColorTarget);
+    var depthTexture = _context.GetTexture(DepthTarget);
 
     commandBuffer.SetRenderTarget(colorTexture.GetDefaultRenderTargetView(), depthTexture.GetDefaultDepthStencilView());
-    context.SetFullScreenViewport();
+    _context.SetFullScreenViewport();
 
     commandBuffer.ClearRenderTarget(colorTexture.GetDefaultRenderTargetView(), ClearColor);
     commandBuffer.ClearDepthStencil(depthTexture.GetDefaultDepthStencilView(), ClearFlags.DepthStencil, 1.0f, 0);

@@ -4,8 +4,8 @@ namespace Passes;
 
 public struct BlurParameters
 {
-  public float BlurRadius;
-  public float BlurSigma;
-  public Vector2 TexelSize;
-  public int KernelSize;
+  public float BlurRadius { get; set; }
+  public float BlurSigma { get; set; }
+  public Vector2 TexelSize { get; set; }
+  public int KernelSize { get; set; }
 }

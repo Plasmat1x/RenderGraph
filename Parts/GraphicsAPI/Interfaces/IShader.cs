@@ -13,7 +13,7 @@ public interface IShader: IResource
 
   // Рефлексия
   ShaderReflection GetReflection();
-  bool HasConstantBuffer(string name);
-  bool HasTexture(string name);
-  bool HasSampler(string name);
+  bool HasConstantBuffer(string _name);
+  bool HasTexture(string _name);
+  bool HasSampler(string _name);
 }

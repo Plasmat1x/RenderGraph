@@ -2,11 +2,11 @@ namespace Utility;
 
 public struct MemoryUsageInfo
 {
-  public ulong TotalAllocated;
-  public ulong TotalUsed;
-  public ulong TextureMemory;
-  public ulong BufferMemory;
-  public ulong PeakUsage;
+  public ulong TotalAllocated { get; set; }
+  public ulong TotalUsed { get; set; }
+  public ulong TextureMemory { get; set; }
+  public ulong BufferMemory { get; set; }
+  public ulong PeakUsage { get; set; }
 
   public float GetFragmentation()
   {

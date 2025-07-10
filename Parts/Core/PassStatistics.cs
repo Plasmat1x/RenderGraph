@@ -21,10 +21,7 @@ public class PassStatistics
   public TimeSpan AverageSetupTime => SetupCount > 0 ? TimeSpan.FromTicks(TotalSetupTime.Ticks / SetupCount) : TimeSpan.Zero;
   public TimeSpan AverageExecutionTime => ExecutionCount > 0 ? TimeSpan.FromTicks(TotalExecutionTime.Ticks / ExecutionCount) : TimeSpan.Zero;
 
-  public void StartSetup()
-  {
-    p_setupStartTime = DateTime.UtcNow;
-  }
+  public void StartSetup() => p_setupStartTime = DateTime.UtcNow;
 
   public void EndSetup()
   {
@@ -34,10 +31,7 @@ public class PassStatistics
     SetupCount++;
   }
 
-  public void StartExecution()
-  {
-    p_executionStartTime = DateTime.UtcNow;
-  }
+  public void StartExecution() => p_executionStartTime = DateTime.UtcNow;
 
   public void EndExecution()
   {
@@ -47,10 +41,7 @@ public class PassStatistics
     ExecutionCount++;
   }
 
-  public void MarkExecutedThisFrame()
-  {
-    WasExecutedThisFrame = true;
-  }
+  public void MarkExecutedThisFrame() => WasExecutedThisFrame = true;
 
   public void StartFrame()
   {
@@ -71,15 +62,9 @@ public class PassStatistics
     }
   }
 
-  public IReadOnlyList<Exception> GetErrors()
-  {
-    return p_errors.AsReadOnly();
-  }
+  public IReadOnlyList<Exception> GetErrors() => p_errors.AsReadOnly();
 
-  public Exception GetLastError()
-  {
-    return p_errors.LastOrDefault();
-  }
+  public Exception GetLastError() => p_errors.LastOrDefault();
 
   public void Reset()
   {
@@ -94,10 +79,7 @@ public class PassStatistics
     p_errors.Clear();
   }
 
-  public void ClearErrors()
-  {
-    p_errors.Clear();
-  }
+  public void ClearErrors() => p_errors.Clear();
 
   public override string ToString()
   {

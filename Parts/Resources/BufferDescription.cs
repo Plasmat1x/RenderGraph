@@ -10,10 +10,7 @@ public class BufferDescription: ResourceDescription
   public uint ElementCount { get; set; } = 0;
   public uint StructureByteStride { get; set; } = 0;
 
-  public override ulong GetMemorySize()
-  {
-    return Size;
-  }
+  public override ulong GetMemorySize() => Size;
 
   public override bool IsCompatible(ResourceDescription _other)
   {
@@ -96,10 +93,7 @@ public class BufferDescription: ResourceDescription
       Size = (ulong)(_count * Stride);
   }
 
-  public override string ToString()
-  {
-    return $"BufferDescription(Name: '{Name}', Size: {Size}, Usage: {BufferUsage}, Stride: {Stride})";
-  }
+  public override string ToString() => $"BufferDescription(Name: '{Name}', Size: {Size}, Usage: {BufferUsage}, Stride: {Stride})";
 
   public override ResourceDescription Clone()
   {

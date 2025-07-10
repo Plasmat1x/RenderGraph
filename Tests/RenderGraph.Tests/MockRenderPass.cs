@@ -13,20 +13,20 @@ public class MockRenderPass: RenderPass
   public bool SetupCalled { get; private set; }
   public bool ExecuteCalled { get; private set; }
 
-  public MockRenderPass(string name) : base(name)
+  public MockRenderPass(string _name) : base(_name)
   {
     Category = PassCategory.Rendering;
     Priority = PassPriority.Normal;
   }
 
-  public override void Setup(RenderGraphBuilder builder)
+  public override void Setup(RenderGraphBuilder _builder)
   {
     SetupCalled = true;
     Console.WriteLine($"[TEST] MockRenderPass '{Name}' Setup called");
     // Mock passes don't create resources by default
   }
 
-  public override void Execute(RenderPassContext context)
+  public override void Execute(RenderPassContext _context)
   {
     ExecuteCalled = true;
     Console.WriteLine($"[TEST] MockRenderPass '{Name}' Execute called");

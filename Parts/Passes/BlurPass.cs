@@ -16,25 +16,19 @@ namespace Passes;
 
 public class BlurPass: RenderPass
 {
+  private ResourceHandle p_intermediateTexture;
+  private ResourceHandle p_blurParamsBuffer;
+
   public ResourceHandle InputTexture { get; set; }
   public ResourceHandle OutputTexture { get; private set; }
-  private ResourceHandle _intermediateTexture;
-  private ResourceHandle _blurParamsBuffer;
 
-  // Параметры размытия
-  public float BlurRadius { get; set; } = 5.0f;
-  public float BlurSigma { get; set; } = 2.0f;
-  public BlurDirection BlurDirection { get; set; } = BlurDirection.Both;
-  public BlurQuality Quality { get; set; } = BlurQuality.High;
+  private uint p_textureWidth;
+  private uint p_textureHeight;
 
-  private uint _textureWidth;
-  private uint _textureHeight;
-
-  // Шейдеры
-  private IShader _vertexShader;
-  private IShader _horizontalBlurShader;
-  private IShader _verticalBlurShader;
-  private ISampler _linearSampler;
+  private IShader p_vertexShader;
+  private IShader p_horizontalBlurShader;
+  private IShader p_verticalBlurShader;
+  private ISampler p_linearSampler;
 
   public BlurPass() : base("BlurPass")
   {
@@ -42,102 +36,90 @@ public class BlurPass: RenderPass
     Priority = PassPriority.Normal;
   }
 
-  public BlurPass(string _name) : base(_name)
-  {
-    Category = PassCategory.PostProcessing;
-    Priority = PassPriority.Normal;
-  }
+  public float BlurRadius { get; set; } = 5.0f;
+  public float BlurSigma { get; set; } = 2.0f;
+  public BlurDirection BlurDirection { get; set; } = BlurDirection.Both;
+  public BlurQuality Quality { get; set; } = BlurQuality.High;
 
-  public override void Setup(RenderGraphBuilder builder)
+  public override void Setup(RenderGraphBuilder _builder)
   {
     if(!InputTexture.IsValid())
       throw new InvalidOperationException("BlurPass requires valid InputTexture");
 
-    // Получаем размеры входной текстуры
-    var inputDesc = (TextureDescription)builder.GetResourceDescription(InputTexture);
-    _textureWidth = inputDesc.Width;
-    _textureHeight = inputDesc.Height;
+    var inputDesc = (TextureDescription)_builder.GetResourceDescription(InputTexture);
+    p_textureWidth = inputDesc.Width;
+    p_textureHeight = inputDesc.Height;
 
-    // Читаем входную текстуру
-    builder.ReadTexture(InputTexture);
+    _builder.ReadTexture(InputTexture);
 
-    // Создаем выходную текстуру того же формата и размера
     var outputDesc = (TextureDescription)inputDesc.Clone();
     outputDesc.Name = "BlurOutput";
     outputDesc.TextureUsage = TextureUsage.RenderTarget;
     outputDesc.BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource;
 
-    OutputTexture = builder.CreateTexture("BlurOutput", outputDesc);
-    builder.WriteTexture(OutputTexture);
+    OutputTexture = _builder.CreateTexture("BlurOutput", outputDesc);
+    _builder.WriteTexture(OutputTexture);
 
-    // Для двухпроходного размытия создаем промежуточную текстуру
     if(BlurDirection == BlurDirection.Both)
     {
       var intermediateDesc = (TextureDescription)outputDesc.Clone();
       intermediateDesc.Name = "BlurIntermediate";
-      _intermediateTexture = builder.CreateTexture("BlurIntermediate", intermediateDesc);
-      builder.WriteTexture(_intermediateTexture);
-      builder.ReadTexture(_intermediateTexture);
+      p_intermediateTexture = _builder.CreateTexture("BlurIntermediate", intermediateDesc);
+      _builder.WriteTexture(p_intermediateTexture);
+      _builder.ReadTexture(p_intermediateTexture);
     }
 
-    // Создаем буфер параметров размытия
-    _blurParamsBuffer = builder.CreateConstantBuffer("BlurParams", 64);
-    builder.WriteBuffer(_blurParamsBuffer);
+    p_blurParamsBuffer = _builder.CreateConstantBuffer("BlurParams", 64);
+    _builder.WriteBuffer(p_blurParamsBuffer);
 
-    // Устанавливаем lifetime
-    builder.SetResourceLifetime(OutputTexture, ResourceLifetime.Persistent);
+    _builder.SetResourceLifetime(OutputTexture, ResourceLifetime.Persistent);
   }
 
-  public override void OnGraphCompiled(RenderGraph renderGraph)
+  public override void OnGraphCompiled(RenderGraph _renderGraph) => CreateShaders(_renderGraph);
+
+  public override void Execute(RenderPassContext _context)
   {
-    // Создаем шейдеры после компиляции графа
-    CreateShaders(renderGraph);
-  }
+    var commandBuffer = _context.CommandBuffer;
+    UpdateBlurParameters(_context);
 
-  public override void Execute(RenderPassContext context)
-  {
-    var commandBuffer = context.CommandBuffer;
-
-    // Обновляем параметры размытия
-    UpdateBlurParameters(context);
-
-    // Выполняем размытие в зависимости от направления
     switch(BlurDirection)
     {
       case BlurDirection.Horizontal:
-        PerformBlur(context, InputTexture, OutputTexture, BlurDirection.Horizontal);
+        PerformBlur(_context, InputTexture, OutputTexture, BlurDirection.Horizontal);
         break;
 
       case BlurDirection.Vertical:
-        PerformBlur(context, InputTexture, OutputTexture, BlurDirection.Vertical);
+        PerformBlur(_context, InputTexture, OutputTexture, BlurDirection.Vertical);
         break;
 
       case BlurDirection.Both:
-        // Два прохода: сначала горизонтальное, затем вертикальное
-        PerformBlur(context, InputTexture, _intermediateTexture, BlurDirection.Horizontal);
-        PerformBlur(context, _intermediateTexture, OutputTexture, BlurDirection.Vertical);
+        PerformBlur(_context, InputTexture, p_intermediateTexture, BlurDirection.Horizontal);
+        PerformBlur(_context, p_intermediateTexture, OutputTexture, BlurDirection.Vertical);
         break;
     }
   }
-
-  private void CreateShaders(RenderGraph renderGraph)
+  public override void Dispose()
   {
-    // В реальной реализации здесь будут загружены шейдеры из файлов
-    // Для демо создаем заглушки
+    p_vertexShader?.Dispose();
+    p_horizontalBlurShader?.Dispose();
+    p_verticalBlurShader?.Dispose();
+    p_linearSampler?.Dispose();
+    base.Dispose();
+  }
 
-    var device = renderGraph.GetGraphicsDevice(); // Предполагаем что такой метод есть
+  private void CreateShaders(RenderGraph _renderGraph)
+  {
 
-    // Vertex shader для fullscreen quad
+    var device = _renderGraph.GetGraphicsDevice();
     var vsDesc = new ShaderDescription
     {
       Name = "BlurVertexShader",
       Stage = ShaderStage.Vertex,
-      Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 }, // Fake DXBC
+      Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
       EntryPoint = "VSMain"
     };
-    _vertexShader = device.CreateShader(vsDesc);
+    p_vertexShader = device.CreateShader(vsDesc);
 
-    // Pixel shaders для горизонтального и вертикального размытия
     var hBlurDesc = new ShaderDescription
     {
       Name = "HorizontalBlurShader",
@@ -145,7 +127,7 @@ public class BlurPass: RenderPass
       Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
       EntryPoint = "PSHorizontalBlur"
     };
-    _horizontalBlurShader = device.CreateShader(hBlurDesc);
+    p_horizontalBlurShader = device.CreateShader(hBlurDesc);
 
     var vBlurDesc = new ShaderDescription
     {
@@ -154,9 +136,8 @@ public class BlurPass: RenderPass
       Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
       EntryPoint = "PSVerticalBlur"
     };
-    _verticalBlurShader = device.CreateShader(vBlurDesc);
+    p_verticalBlurShader = device.CreateShader(vBlurDesc);
 
-    // Линейный семплер
     var samplerDesc = new SamplerDescription
     {
       Name = "LinearSampler",
@@ -165,16 +146,15 @@ public class BlurPass: RenderPass
       AddressModeU = AddressMode.Clamp,
       AddressModeV = AddressMode.Clamp
     };
-    _linearSampler = device.CreateSampler(samplerDesc);
+    p_linearSampler = device.CreateSampler(samplerDesc);
   }
 
-  private void UpdateBlurParameters(RenderPassContext context)
+  private void UpdateBlurParameters(RenderPassContext _context)
   {
-    var blurBuffer = context.GetBuffer(_blurParamsBuffer);
+    var blurBuffer = _context.GetBuffer(p_blurParamsBuffer);
 
-    // Вычисляем параметры Gaussian blur
     var kernelSize = GetKernelSize();
-    var texelSize = new Vector2(1.0f / _textureWidth, 1.0f / _textureHeight);
+    var texelSize = new Vector2(1.0f / p_textureWidth, 1.0f / p_textureHeight);
 
     var blurParams = new BlurParameters
     {
@@ -184,7 +164,6 @@ public class BlurPass: RenderPass
       KernelSize = kernelSize
     };
 
-    // Записываем параметры в буфер
     var mappedData = blurBuffer.Map(MapMode.WriteDiscard);
     unsafe
     {
@@ -193,56 +172,41 @@ public class BlurPass: RenderPass
     blurBuffer.Unmap();
   }
 
-  private void PerformBlur(RenderPassContext context, ResourceHandle input, ResourceHandle output, BlurDirection direction)
+  private void PerformBlur(RenderPassContext _context, ResourceHandle _input, ResourceHandle _output, BlurDirection _direction)
   {
-    var commandBuffer = context.CommandBuffer;
+    var commandBuffer = _context.CommandBuffer;
 
-    // Получаем ресурсы
-    var inputTexture = context.GetTexture(input);
-    var outputTexture = context.GetTexture(output);
-    var blurParamsBuffer = context.GetBuffer(_blurParamsBuffer);
+    var inputTexture = _context.GetTexture(_input);
+    var outputTexture = _context.GetTexture(_output);
+    var blurParamsBuffer = _context.GetBuffer(p_blurParamsBuffer);
 
-    // Получаем views
     var inputView = inputTexture.GetDefaultShaderResourceView();
     var outputView = outputTexture.GetDefaultRenderTargetView();
     var paramsView = blurParamsBuffer.GetDefaultShaderResourceView();
 
-    // Устанавливаем render target
     commandBuffer.SetRenderTarget(outputView);
-
-    // Устанавливаем viewport
-    context.SetFullScreenViewport();
-
-    // Устанавливаем шейдеры для размытия
-    SetupBlurShaders(commandBuffer, direction);
-
-    // Устанавливаем входную текстуру
+    _context.SetFullScreenViewport();
+    SetupBlurShaders(commandBuffer, _direction);
     commandBuffer.SetShaderResource(ShaderStage.Pixel, 0, inputView);
-
-    // Устанавливаем семплер
-    commandBuffer.SetSampler(ShaderStage.Pixel, 0, _linearSampler);
-
-    // Устанавливаем параметры размытия
+    commandBuffer.SetSampler(ShaderStage.Pixel, 0, p_linearSampler);
     commandBuffer.SetConstantBuffer(ShaderStage.Pixel, 0, paramsView);
-
-    // Рендерим fullscreen quad
     commandBuffer.DrawFullscreenQuad();
   }
 
-  private void SetupBlurShaders(CommandBuffer commandBuffer, BlurDirection direction)
+  private void SetupBlurShaders(CommandBuffer _commandBuffer, BlurDirection _direction)
   {
-    commandBuffer.SetVertexShader(_vertexShader);
+    _commandBuffer.SetVertexShader(p_vertexShader);
 
-    switch(direction)
+    switch(_direction)
     {
       case BlurDirection.Horizontal:
-        commandBuffer.SetPixelShader(_horizontalBlurShader);
+        _commandBuffer.SetPixelShader(p_horizontalBlurShader);
         break;
       case BlurDirection.Vertical:
-        commandBuffer.SetPixelShader(_verticalBlurShader);
+        _commandBuffer.SetPixelShader(p_verticalBlurShader);
         break;
       default:
-        commandBuffer.SetPixelShader(_horizontalBlurShader); // Fallback
+        _commandBuffer.SetPixelShader(p_horizontalBlurShader);
         break;
     }
   }
@@ -258,12 +222,4 @@ public class BlurPass: RenderPass
     };
   }
 
-  public override void Dispose()
-  {
-    _vertexShader?.Dispose();
-    _horizontalBlurShader?.Dispose();
-    _verticalBlurShader?.Dispose();
-    _linearSampler?.Dispose();
-    base.Dispose();
-  }
 }

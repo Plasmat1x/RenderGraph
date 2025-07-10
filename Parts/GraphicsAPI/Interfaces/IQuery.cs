@@ -8,6 +8,6 @@ namespace GraphicsAPI.Interfaces;
 public interface IQuery: IDisposable
 {
   QueryType Type { get; }
-  bool GetData<T>(out T data) where T : struct;
+  bool GetData<T>(out T _data) where T : struct;
   IntPtr GetNativeHandle();
 }

@@ -9,13 +9,13 @@ namespace ResourcesTests;
 
 public class ResourceManagerTests: IDisposable
 {
-  private readonly MockGraphicsDevice _device;
-  private readonly ResourceManager _resourceManager;
+  private readonly MockGraphicsDevice p_device;
+  private readonly ResourceManager p_resourceManager;
 
   public ResourceManagerTests()
   {
-    _device = new MockGraphicsDevice();
-    _resourceManager = new ResourceManager(_device);
+    p_device = new MockGraphicsDevice();
+    p_resourceManager = new ResourceManager(p_device);
   }
 
   [Fact]
@@ -26,8 +26,8 @@ public class ResourceManagerTests: IDisposable
 
     // When trying to get a texture with invalid handle
     // Then it should throw ArgumentException (не ArgumentNullException)
-    Assert.Throws<ArgumentException>(() => _resourceManager.GetTexture(invalidHandle));
-    Assert.Throws<ArgumentException>(() => _resourceManager.GetBuffer(invalidHandle));
+    Assert.Throws<ArgumentException>(() => p_resourceManager.GetTexture(invalidHandle));
+    Assert.Throws<ArgumentException>(() => p_resourceManager.GetBuffer(invalidHandle));
   }
 
   [Fact]
@@ -41,13 +41,13 @@ public class ResourceManagerTests: IDisposable
       Height = 256,
       Format = TextureFormat.R8G8B8A8_UNORM
     };
-    var handle = _resourceManager.CreateTexture(desc);
+    var handle = p_resourceManager.CreateTexture(desc);
 
     // When releasing the resource
-    _resourceManager.ReleaseResource(handle);
+    p_resourceManager.ReleaseResource(handle);
 
     // Then getting the texture should throw ArgumentException (не KeyNotFoundException)
-    Assert.Throws<ArgumentException>(() => _resourceManager.GetTexture(handle));
+    Assert.Throws<ArgumentException>(() => p_resourceManager.GetTexture(handle));
   }
 
   [Fact]
@@ -58,8 +58,8 @@ public class ResourceManagerTests: IDisposable
 
     // When trying to get a texture with invalid handle
     // Then it should throw ArgumentException
-    var ex1 = Assert.Throws<ArgumentException>(() => _resourceManager.GetTexture(invalidHandle));
-    var ex2 = Assert.Throws<ArgumentException>(() => _resourceManager.GetBuffer(invalidHandle));
+    var ex1 = Assert.Throws<ArgumentException>(() => p_resourceManager.GetTexture(invalidHandle));
+    var ex2 = Assert.Throws<ArgumentException>(() => p_resourceManager.GetBuffer(invalidHandle));
 
     // Verify the exception type is correct
     Assert.IsType<ArgumentException>(ex1);
@@ -68,7 +68,7 @@ public class ResourceManagerTests: IDisposable
 
   public void Dispose()
   {
-    _resourceManager?.Dispose();
-    _device?.Dispose();
+    p_resourceManager?.Dispose();
+    p_device?.Dispose();
   }
 }

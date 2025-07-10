@@ -67,8 +67,5 @@ public class ResourcePool<T>: IDisposable where T : class, IDisposable
     };
   }
 
-  public void Dispose()
-  {
-    Clear();
-  }
+  public void Dispose() => Clear();
 }

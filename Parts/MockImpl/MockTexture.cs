@@ -8,6 +8,15 @@ namespace MockImpl;
 
 public class MockTexture: ITexture
 {
+  private readonly Dictionary<TextureViewType, ITextureView> _defaultViews = new();
+
+  public MockTexture(uint _id, TextureDescription _description)
+  {
+    Id = _id;
+    Description = _description;
+    Name = _description.Name;
+  }
+
   public uint Id { get; }
   public TextureDescription Description { get; }
   public string Name { get; set; }
@@ -22,19 +31,10 @@ public class MockTexture: ITexture
   public TextureFormat Format => Description.Format;
   public uint SampleCount => Description.SampleCount;
 
-  private readonly Dictionary<TextureViewType, ITextureView> _defaultViews = new();
-
-  public MockTexture(uint id, TextureDescription description)
+  public ITextureView CreateView(TextureViewDescription _description)
   {
-    Id = id;
-    Description = description;
-    Name = description.Name;
-  }
-
-  public ITextureView CreateView(TextureViewDescription description)
-  {
-    Console.WriteLine($"    [Resource] Creating texture view for {Name} ({description.ViewType})");
-    return new MockTextureView(this, description);
+    Console.WriteLine($"    [Resource] Creating texture view for {Name} ({_description.ViewType})");
+    return new MockTextureView(this, _description);
   }
 
   public ITextureView GetDefaultShaderResourceView()
@@ -101,20 +101,20 @@ public class MockTexture: ITexture
     return _defaultViews[TextureViewType.UnorderedAccess];
   }
 
-  public void SetData<T>(T[] data, uint mipLevel = 0, uint arraySlice = 0) where T : struct
+  public void SetData<T>(T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : struct
   {
-    Console.WriteLine($"    [Resource] Setting data for texture {Name} (mip: {mipLevel}, slice: {arraySlice}, {data.Length} elements)");
+    Console.WriteLine($"    [Resource] Setting data for texture {Name} (mip: {_mipLevel}, slice: {_arraySlice}, {_data.Length} elements)");
   }
 
-  public T[] GetData<T>(uint mipLevel = 0, uint arraySlice = 0) where T : struct
+  public T[] GetData<T>(uint _mipLevel = 0, uint _arraySlice = 0) where T : struct
   {
-    Console.WriteLine($"    [Resource] Getting data from texture {Name} (mip: {mipLevel}, slice: {arraySlice})");
+    Console.WriteLine($"    [Resource] Getting data from texture {Name} (mip: {_mipLevel}, slice: {_arraySlice})");
     return new T[Width * Height];
   }
 
-  public uint GetSubresourceIndex(uint mipLevel, uint arraySlice)
+  public uint GetSubresourceIndex(uint _mipLevel, uint _arraySlice)
   {
-    return mipLevel + arraySlice * MipLevels;
+    return _mipLevel + _arraySlice * MipLevels;
   }
 
   public void GenerateMips()
@@ -134,15 +134,15 @@ public class MockTexture: ITexture
 
   public void Dispose()
   {
-    if(!IsDisposed)
+    if(IsDisposed)
+      return;
+
+    Console.WriteLine($"    [Resource] Disposed texture {Name} (ID: {Id})");
+    foreach(var view in _defaultViews.Values)
     {
-      Console.WriteLine($"    [Resource] Disposed texture {Name} (ID: {Id})");
-      foreach(var view in _defaultViews.Values)
-      {
-        view?.Dispose();
-      }
-      _defaultViews.Clear();
-      IsDisposed = true;
+      view?.Dispose();
     }
+    _defaultViews.Clear();
+    IsDisposed = true;
   }
 }

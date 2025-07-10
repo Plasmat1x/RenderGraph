@@ -186,10 +186,7 @@ public class RenderGraphBuilder
     throw new KeyNotFoundException($"Named resource '{_name}' not found");
   }
 
-  public bool HasNamedResource(string _name)
-  {
-    return !string.IsNullOrEmpty(_name) && p_namedResources.ContainsKey(_name);
-  }
+  public bool HasNamedResource(string _name) => !string.IsNullOrEmpty(_name) && p_namedResources.ContainsKey(_name);
 
   public void ReadWriteTexture(ResourceHandle _handle)
   {
@@ -293,10 +290,7 @@ public class RenderGraphBuilder
     p_currentPass.AddInput(_handle);
   }
 
-  public IEnumerable<ResourceUsageInfo> GetResourceUsages()
-  {
-    return p_resourceUsages.Values.SelectMany(_list => _list);
-  }
+  public IEnumerable<ResourceUsageInfo> GetResourceUsages() => p_resourceUsages.Values.SelectMany(_list => _list);
 
   public IEnumerable<ResourceUsageInfo> GetResourceUsages(ResourceHandle _handle)
   {
@@ -316,15 +310,9 @@ public class RenderGraphBuilder
     return null;
   }
 
-  public IEnumerable<string> GetNameResourceNames()
-  {
-    return p_namedResources.Keys;
-  }
+  public IEnumerable<string> GetNameResourceNames() => p_namedResources.Keys;
 
-  public ResourceDescription GetResourceDescription(ResourceHandle _handle)
-  {
-    return p_resourceManager.GetResourceDescription(_handle);
-  }
+  public ResourceDescription GetResourceDescription(ResourceHandle _handle) => p_resourceManager.GetResourceDescription(_handle);
 
   //public void ValidateResourceUsages()
   //{
@@ -363,13 +351,11 @@ public class RenderGraphBuilder
   {
     var conflicts = new List<string>();
 
-    // Проверяем конфликты read-write для одного ресурса в разных проходах
     foreach(var kvp in p_resourceUsages)
     {
       var handle = kvp.Key;
       var usages = kvp.Value;
 
-      // Проверяем конфликты между разными проходами
       for(int i = 0; i < usages.Count; i++)
       {
         for(int j = i + 1; j < usages.Count; j++)

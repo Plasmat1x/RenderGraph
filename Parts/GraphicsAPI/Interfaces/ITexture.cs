@@ -16,19 +16,13 @@ public interface ITexture: IResource
   uint ArraySize { get; }
   TextureFormat Format { get; }
   uint SampleCount { get; }
-
-  // Views
-  ITextureView CreateView(TextureViewDescription description);
+  ITextureView CreateView(TextureViewDescription _description);
   ITextureView GetDefaultShaderResourceView();
   ITextureView GetDefaultRenderTargetView();
   ITextureView GetDefaultDepthStencilView();
   ITextureView GetDefaultUnorderedAccessView();
-
-  // Данные
-  void SetData<T>(T[] data, uint mipLevel = 0, uint arraySlice = 0) where T : struct;
-  T[] GetData<T>(uint mipLevel = 0, uint arraySlice = 0) where T : struct;
-
-  // Субресурсы
-  uint GetSubresourceIndex(uint mipLevel, uint arraySlice);
+  void SetData<T>(T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : struct;
+  T[] GetData<T>(uint _mipLevel = 0, uint _arraySlice = 0) where T : struct;
+  uint GetSubresourceIndex(uint _mipLevel, uint _arraySlice);
   void GenerateMips();
 }

@@ -9,26 +9,25 @@ namespace MockImpl;
 
 public class MockSampler: ISampler
 {
+  public MockSampler(SamplerDescription _description)
+  {
+    Description = _description;
+    Name = _description.Name;
+  }
+
   public string Name { get; set; }
   public ResourceType ResourceType => ResourceType.Buffer;
   public bool IsDisposed { get; private set; }
   public SamplerDescription Description { get; }
-
-  public MockSampler(SamplerDescription description)
-  {
-    Description = description;
-    Name = description.Name;
-  }
-
   public IntPtr GetNativeHandle() => new IntPtr(12345);
-  public ulong GetMemorySize() => 64; // Small sampler object
+  public ulong GetMemorySize() => 64;
 
   public void Dispose()
   {
-    if(!IsDisposed)
-    {
-      Console.WriteLine($"    [Resource] Disposed sampler {Name}");
-      IsDisposed = true;
-    }
+    if(IsDisposed)
+      return;
+
+    Console.WriteLine($"    [Resource] Disposed sampler {Name}");
+    IsDisposed = true;
   }
 }

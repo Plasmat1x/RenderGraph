@@ -285,10 +285,7 @@ public class ResourceManager: IDisposable
     p_disposed = true;
   }
 
-  private bool IsValidHandle(ResourceHandle _handle)
-  {
-    return _handle.IsValid() && p_handleGenerator.IsHandleValid(_handle);
-  }
+  private bool IsValidHandle(ResourceHandle _handle) => _handle.IsValid() && p_handleGenerator.IsHandleValid(_handle);
 
   private ResourceHandle GetActualHandle(ResourceHandle _handle)
   {

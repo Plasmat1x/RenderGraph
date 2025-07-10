@@ -2,12 +2,12 @@ namespace GraphicsAPI;
 
 public struct Box
 {
-  public uint Left;
-  public uint Top;
-  public uint Front;
-  public uint Right;
-  public uint Bottom;
-  public uint Back;
+  public uint Left { get; set; }
+  public uint Top { get; set; }
+  public uint Front { get; set; }
+  public uint Right { get; set; }
+  public uint Bottom { get; set; }
+  public uint Back { get; set; }
 
   public uint Width => Right - Left;
   public uint Height => Bottom - Top;

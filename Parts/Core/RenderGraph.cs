@@ -23,11 +23,6 @@ public class RenderGraph: IDisposable
   private List<RenderPass> p_executionOrder;
   private readonly Dictionary<RenderPass, RenderPassContext> p_passContexts = new();
 
-  public bool IsCompilded => p_compiled;
-  public IReadOnlyList<RenderPass> Passes => p_passes.AsReadOnly();
-  public IReadOnlyList<RenderPass> ExecutionOrder => p_executionOrder?.AsReadOnly();
-  public FrameData FrameData => p_frameData;
-
   public RenderGraph(IGraphicsDevice _device)
   {
     p_device = _device ?? throw new ArgumentNullException(nameof(_device));
@@ -36,6 +31,11 @@ public class RenderGraph: IDisposable
     p_builder = new RenderGraphBuilder(p_resourceManager);
     p_frameData = new FrameData();
   }
+
+  public bool IsCompilded => p_compiled;
+  public IReadOnlyList<RenderPass> Passes => p_passes.AsReadOnly();
+  public IReadOnlyList<RenderPass> ExecutionOrder => p_executionOrder?.AsReadOnly();
+  public FrameData FrameData => p_frameData;
 
   public void AddPass<T>(T _pass) where T : RenderPass
   {
@@ -72,15 +72,9 @@ public class RenderGraph: IDisposable
     }
   }
 
-  public T GetPass<T>() where T : RenderPass
-  {
-    return p_passes.OfType<T>().FirstOrDefault();
-  }
+  public T GetPass<T>() where T : RenderPass => p_passes.OfType<T>().FirstOrDefault();
 
-  public RenderPass GetPass(string _name)
-  {
-    return p_passes.FirstOrDefault(_p => _p.Name == _name);
-  }
+  public RenderPass GetPass(string _name) => p_passes.FirstOrDefault(_p => _p.Name == _name);
 
   public void Execute(CommandBuffer _commandBuffer)
   {
@@ -219,44 +213,20 @@ public class RenderGraph: IDisposable
     }
   }
 
-  public void SetViewMatrix(Matrix4x4 _viewMatrix)
-  {
-    p_frameData.ViewMatrix = _viewMatrix;
-  }
+  public void SetViewMatrix(Matrix4x4 _viewMatrix) => p_frameData.ViewMatrix = _viewMatrix;
 
-  public void SetProjectionMatrix(Matrix4x4 _projectionMatrix)
-  {
-    p_frameData.ProjectionMatrix = _projectionMatrix;
-  }
+  public void SetProjectionMatrix(Matrix4x4 _projectionMatrix) => p_frameData.ProjectionMatrix = _projectionMatrix;
 
-  public void SetCameraPosition(Vector3 _position)
-  {
-    p_frameData.CameraPosition = _position;
-  }
-  public ResourceHandle ImportTexture(string _name, ITexture _texture)
-  {
-    return p_builder.ImportTexture(_name, _texture);
-  }
+  public void SetCameraPosition(Vector3 _position) => p_frameData.CameraPosition = _position;
+  public ResourceHandle ImportTexture(string _name, ITexture _texture) => p_builder.ImportTexture(_name, _texture);
 
-  public ResourceHandle ImportBuffer(string _name, IBuffer _buffer)
-  {
-    return p_builder.ImportBuffer(_name, _buffer);
-  }
+  public ResourceHandle ImportBuffer(string _name, IBuffer _buffer) => p_builder.ImportBuffer(_name, _buffer);
 
-  public ResourceHandle GetNamedResource(string _name)
-  {
-    return p_builder.GetNamedReource(_name);
-  }
+  public ResourceHandle GetNamedResource(string _name) => p_builder.GetNamedReource(_name);
 
-  public bool HasNamedResource(string _name)
-  {
-    return p_builder.HasNamedResource(_name);
-  }
+  public bool HasNamedResource(string _name) => p_builder.HasNamedResource(_name);
 
-  public MemoryUsageInfo GetMemoryUsage()
-  {
-    return p_resourceManager.GetMemoryUsage();
-  }
+  public MemoryUsageInfo GetMemoryUsage() => p_resourceManager.GetMemoryUsage();
 
   public RenderGraphStatistics GetStatistics()
   {

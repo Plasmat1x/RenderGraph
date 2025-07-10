@@ -7,16 +7,16 @@ namespace MockImpl;
 
 public class MockBufferView: IBufferView
 {
+  public MockBufferView(IBuffer _buffer, BufferViewDescription _description)
+  {
+    Buffer = _buffer;
+    ViewType = _description.ViewType;
+    Description = _description;
+  }
   public IBuffer Buffer { get; }
   public BufferViewType ViewType { get; }
   public BufferViewDescription Description { get; }
 
-  public MockBufferView(IBuffer buffer, BufferViewDescription description)
-  {
-    Buffer = buffer;
-    ViewType = description.ViewType;
-    Description = description;
-  }
 
   public IntPtr GetNativeHandle() => new IntPtr(((MockBuffer)Buffer).Id + (uint)ViewType * 10000);
 

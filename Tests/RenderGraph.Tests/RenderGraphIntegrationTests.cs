@@ -6,13 +6,13 @@ namespace ResourcesTests;
 
 public class RenderGraphIntegrationTests: IDisposable
 {
-  private readonly MockGraphicsDevice _device;
-  private readonly RenderGraph _renderGraph;
+  private readonly MockGraphicsDevice p_device;
+  private readonly RenderGraph p_renderGraph;
 
   public RenderGraphIntegrationTests()
   {
-    _device = new MockGraphicsDevice();
-    _renderGraph = new RenderGraph(_device);
+    p_device = new MockGraphicsDevice();
+    p_renderGraph = new RenderGraph(p_device);
   }
 
   [Fact]
@@ -32,14 +32,14 @@ public class RenderGraphIntegrationTests: IDisposable
     pass2.AddDependency(pass1);
     pass3.AddDependency(pass2);
 
-    _renderGraph.AddPass(pass1);
-    _renderGraph.AddPass(pass2);
-    _renderGraph.AddPass(pass3);
-    _renderGraph.Compile();
+    p_renderGraph.AddPass(pass1);
+    p_renderGraph.AddPass(pass2);
+    p_renderGraph.AddPass(pass3);
+    p_renderGraph.Compile();
 
     // When executing
-    using var commandBuffer = _device.CreateCommandBuffer();
-    _renderGraph.Execute(commandBuffer);
+    using var commandBuffer = p_device.CreateCommandBuffer();
+    p_renderGraph.Execute(commandBuffer);
 
     // Then passes should execute in dependency order
     Assert.Equal(new[] { "Pass1", "Pass2", "Pass3" }, executionOrder);
@@ -64,21 +64,21 @@ public class RenderGraphIntegrationTests: IDisposable
     pass3.AddDependency(pass2);
 
     Console.WriteLine("[DEBUG] Adding passes to render graph...");
-    _renderGraph.AddPass(pass1);
-    _renderGraph.AddPass(pass2);
-    _renderGraph.AddPass(pass3);
+    p_renderGraph.AddPass(pass1);
+    p_renderGraph.AddPass(pass2);
+    p_renderGraph.AddPass(pass3);
 
     Console.WriteLine("[DEBUG] Compiling render graph...");
-    _renderGraph.Compile();
+    p_renderGraph.Compile();
 
     // Проверяем порядок компиляции
-    var compiledOrder = _renderGraph.GetExecutionOrder();
-    Console.WriteLine($"[DEBUG] Compiled execution order: {string.Join(" -> ", compiledOrder.Select(p => p.Name))}");
+    var compiledOrder = p_renderGraph.GetExecutionOrder();
+    Console.WriteLine($"[DEBUG] Compiled execution order: {string.Join(" -> ", compiledOrder.Select(_p => _p.Name))}");
 
     // When executing
     Console.WriteLine("[DEBUG] Executing render graph...");
-    using var commandBuffer = _device.CreateCommandBuffer();
-    _renderGraph.Execute(commandBuffer);
+    using var commandBuffer = p_device.CreateCommandBuffer();
+    p_renderGraph.Execute(commandBuffer);
 
     Console.WriteLine($"[DEBUG] Actual execution order: [{string.Join(", ", executionOrder)}]");
 
@@ -99,14 +99,14 @@ public class RenderGraphIntegrationTests: IDisposable
     pass2.OnExecute = () => executionOrder.Add("Pass2");
     pass3.OnExecute = () => executionOrder.Add("Pass3");
 
-    _renderGraph.AddPass(pass1);
-    _renderGraph.AddPass(pass2);
-    _renderGraph.AddPass(pass3);
-    _renderGraph.Compile();
+    p_renderGraph.AddPass(pass1);
+    p_renderGraph.AddPass(pass2);
+    p_renderGraph.AddPass(pass3);
+    p_renderGraph.Compile();
 
     // When executing
-    using var commandBuffer = _device.CreateCommandBuffer();
-    _renderGraph.Execute(commandBuffer);
+    using var commandBuffer = p_device.CreateCommandBuffer();
+    p_renderGraph.Execute(commandBuffer);
 
     // Then disabled pass should be skipped
     Assert.Equal(new[] { "Pass1", "Pass3" }, executionOrder);
@@ -126,15 +126,15 @@ public class RenderGraphIntegrationTests: IDisposable
     pass3.OnExecute = () => executionOrder.Add("Pass3");
 
     Console.WriteLine("[DEBUG] Adding passes (Pass2 is disabled)...");
-    _renderGraph.AddPass(pass1);
-    _renderGraph.AddPass(pass2);
-    _renderGraph.AddPass(pass3);
-    _renderGraph.Compile();
+    p_renderGraph.AddPass(pass1);
+    p_renderGraph.AddPass(pass2);
+    p_renderGraph.AddPass(pass3);
+    p_renderGraph.Compile();
 
     // When executing
     Console.WriteLine("[DEBUG] Executing render graph...");
-    using var commandBuffer = _device.CreateCommandBuffer();
-    _renderGraph.Execute(commandBuffer);
+    using var commandBuffer = p_device.CreateCommandBuffer();
+    p_renderGraph.Execute(commandBuffer);
 
     Console.WriteLine($"[DEBUG] Actual execution order: [{string.Join(", ", executionOrder)}]");
 
@@ -150,12 +150,12 @@ public class RenderGraphIntegrationTests: IDisposable
     var pass = new DebugMockRenderPass("SimplePass");
     pass.OnExecute = () => executionLog.Add("SimplePass");
 
-    _renderGraph.AddPass(pass);
-    _renderGraph.Compile();
+    p_renderGraph.AddPass(pass);
+    p_renderGraph.Compile();
 
     // When executing
-    using var commandBuffer = _device.CreateCommandBuffer();
-    _renderGraph.Execute(commandBuffer);
+    using var commandBuffer = p_device.CreateCommandBuffer();
+    p_renderGraph.Execute(commandBuffer);
 
     // Then pass should execute
     Assert.Single(executionLog);
@@ -166,7 +166,7 @@ public class RenderGraphIntegrationTests: IDisposable
 
   public void Dispose()
   {
-    _renderGraph?.Dispose();
-    _device?.Dispose();
+    p_renderGraph?.Dispose();
+    p_device?.Dispose();
   }
 }
