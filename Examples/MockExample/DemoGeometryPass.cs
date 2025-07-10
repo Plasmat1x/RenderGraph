@@ -49,10 +49,9 @@ public class DemoGeometryPass: RenderPass
     commandBuffer.ClearRenderTarget(colorTexture.GetDefaultRenderTargetView(), ClearColor);
     commandBuffer.ClearDepthStencil(depthTexture.GetDefaultDepthStencilView(), ClearFlags.DepthStencil, 1.0f, 0);
 
-    // Simulate rendering some geometry
     for(int i = 0; i < 3; i++)
     {
-      commandBuffer.DrawIndexed(1200, 1); // Simulate drawing 3 objects
+      commandBuffer.DrawIndexed(1200, 1);
     }
   }
 }

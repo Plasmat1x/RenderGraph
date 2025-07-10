@@ -169,6 +169,4 @@ public class RenderGraphIntegrationTests: IDisposable
     _renderGraph?.Dispose();
     _device?.Dispose();
   }
-
-
 }
