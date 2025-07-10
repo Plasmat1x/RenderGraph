@@ -11,6 +11,16 @@ namespace MockImpl;
 
 public class MockBuffer: IBuffer
 {
+  private IntPtr p_mappedPointer = IntPtr.Zero;
+  private readonly Dictionary<BufferViewType, IBufferView> p_defaultViews = new();
+
+  public MockBuffer(uint _id, BufferDescription _description)
+  {
+    Id = _id;
+    Description = _description;
+    Name = _description.Name;
+  }
+
   public uint Id { get; }
   public BufferDescription Description { get; }
   public string Name { get; set; }
@@ -22,25 +32,16 @@ public class MockBuffer: IBuffer
   public BufferUsage Usage => Description.BufferUsage;
   public bool IsMapped { get; private set; }
 
-  private IntPtr _mappedPointer = IntPtr.Zero;
-  private readonly Dictionary<BufferViewType, IBufferView> _defaultViews = new();
 
-  public MockBuffer(uint id, BufferDescription description)
+  public IBufferView CreateView(BufferViewDescription _description)
   {
-    Id = id;
-    Description = description;
-    Name = description.Name;
-  }
-
-  public IBufferView CreateView(BufferViewDescription description)
-  {
-    Console.WriteLine($"    [Resource] Creating buffer view for {Name} ({description.ViewType})");
-    return new MockBufferView(this, description);
+    Console.WriteLine($"    [Resource] Creating buffer view for {Name} ({_description.ViewType})");
+    return new MockBufferView(this, _description);
   }
 
   public IBufferView GetDefaultShaderResourceView()
   {
-    if(!_defaultViews.ContainsKey(BufferViewType.ShaderResource))
+    if(!p_defaultViews.ContainsKey(BufferViewType.ShaderResource))
     {
       var desc = new BufferViewDescription
       {
@@ -48,14 +49,14 @@ public class MockBuffer: IBuffer
         Size = Size,
         Stride = Stride
       };
-      _defaultViews[BufferViewType.ShaderResource] = CreateView(desc);
+      p_defaultViews[BufferViewType.ShaderResource] = CreateView(desc);
     }
-    return _defaultViews[BufferViewType.ShaderResource];
+    return p_defaultViews[BufferViewType.ShaderResource];
   }
 
   public IBufferView GetDefaultUnorderedAccessView()
   {
-    if(!_defaultViews.ContainsKey(BufferViewType.UnorderedAccess))
+    if(!p_defaultViews.ContainsKey(BufferViewType.UnorderedAccess))
     {
       var desc = new BufferViewDescription
       {
@@ -63,70 +64,59 @@ public class MockBuffer: IBuffer
         Size = Size,
         Stride = Stride
       };
-      _defaultViews[BufferViewType.UnorderedAccess] = CreateView(desc);
+      p_defaultViews[BufferViewType.UnorderedAccess] = CreateView(desc);
     }
-    return _defaultViews[BufferViewType.UnorderedAccess];
+    return p_defaultViews[BufferViewType.UnorderedAccess];
   }
 
-  public IntPtr Map(MapMode mode = MapMode.Write)
+  public IntPtr Map(MapMode _mode = MapMode.Write)
   {
-    Console.WriteLine($"    [Resource] Mapping buffer {Name} ({mode})");
-    _mappedPointer = new IntPtr(0x1000 + Id * 0x100); // Fake pointer
+    Console.WriteLine($"    [Resource] Mapping buffer {Name} ({_mode})");
+    p_mappedPointer = new IntPtr(0x1000 + Id * 0x100);
     IsMapped = true;
-    return _mappedPointer;
+    return p_mappedPointer;
   }
 
   public void Unmap()
   {
     Console.WriteLine($"    [Resource] Unmapping buffer {Name}");
-    _mappedPointer = IntPtr.Zero;
+    p_mappedPointer = IntPtr.Zero;
     IsMapped = false;
   }
 
-  public void SetData<T>(T[] data, ulong offset = 0) where T : struct
-  {
-    Console.WriteLine($"    [Resource] Setting data for buffer {Name} ({data.Length} elements, offset: {offset})");
-  }
+  public void SetData<T>(T[] _data, ulong _offset = 0) where T : struct => Console.WriteLine($"    [Resource] Setting data for buffer {Name} ({_data.Length} elements, offset: {_offset})");
 
-  public void SetData<T>(T data, ulong offset = 0) where T : struct
-  {
-    Console.WriteLine($"    [Resource] Setting single data element for buffer {Name} (offset: {offset})");
-  }
+  public void SetData<T>(T _data, ulong _offset = 0) where T : struct => Console.WriteLine($"    [Resource] Setting single data element for buffer {Name} (offset: {_offset})");
 
-  public T[] GetData<T>(ulong offset = 0, ulong count = 0) where T : struct
+  public T[] GetData<T>(ulong _offset = 0, ulong _count = 0) where T : struct
   {
-    var elementCount = count > 0 ? (int)count : (int)(Size / (ulong)System.Runtime.InteropServices.Marshal.SizeOf<T>());
-    Console.WriteLine($"    [Resource] Getting data from buffer {Name} (offset: {offset}, count: {elementCount})");
+    var elementCount = _count > 0 ? (int)_count : (int)(Size / (ulong)System.Runtime.InteropServices.Marshal.SizeOf<T>());
+    Console.WriteLine($"    [Resource] Getting data from buffer {Name} (offset: {_offset}, count: {elementCount})");
     return new T[elementCount];
   }
 
-  public T GetData<T>(ulong offset = 0) where T : struct
+  public T GetData<T>(ulong _offset = 0) where T : struct
   {
-    Console.WriteLine($"    [Resource] Getting single data element from buffer {Name} (offset: {offset})");
+    Console.WriteLine($"    [Resource] Getting single data element from buffer {Name} (offset: {_offset})");
     return default(T);
   }
 
-  public IntPtr GetNativeHandle()
-  {
-    return new IntPtr(Id + 1000);
-  }
+  public IntPtr GetNativeHandle() => new IntPtr(Id + 1000);
 
-  public ulong GetMemorySize()
-  {
-    return Size;
-  }
+  public ulong GetMemorySize() => Size;
 
   public void Dispose()
   {
-    if(!IsDisposed)
+    if(IsDisposed)
+      return;
+
+    Console.WriteLine($"    [Resource] Disposed buffer {Name} (ID: {Id})");
+    foreach(var view in p_defaultViews.Values)
     {
-      Console.WriteLine($"    [Resource] Disposed buffer {Name} (ID: {Id})");
-      foreach(var view in _defaultViews.Values)
-      {
-        view?.Dispose();
-      }
-      _defaultViews.Clear();
-      IsDisposed = true;
+      view?.Dispose();
     }
+    p_defaultViews.Clear();
+    IsDisposed = true;
+
   }
 }

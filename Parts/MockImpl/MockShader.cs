@@ -8,22 +8,23 @@ namespace MockImpl;
 
 public class MockShader: IShader
 {
+  public MockShader(uint _id, ShaderDescription _description)
+  {
+    Id = _id;
+    Description = _description;
+    Name = _description.Name;
+    Stage = _description.Stage;
+    Bytecode = _description.Bytecode ?? new byte[0];
+  }
+
   public uint Id { get; }
   public string Name { get; set; }
-  public ResourceType ResourceType => ResourceType.Buffer; // Shaders stored as buffers
+  public ResourceType ResourceType => ResourceType.Buffer;
   public bool IsDisposed { get; private set; }
   public ShaderStage Stage { get; }
   public ShaderDescription Description { get; }
   public byte[] Bytecode { get; }
 
-  public MockShader(uint id, ShaderDescription description)
-  {
-    Id = id;
-    Description = description;
-    Name = description.Name;
-    Stage = description.Stage;
-    Bytecode = description.Bytecode ?? new byte[0];
-  }
 
   public ShaderReflection GetReflection()
   {
@@ -41,19 +42,20 @@ public class MockShader: IShader
     };
   }
 
-  public bool HasConstantBuffer(string name) => true;
-  public bool HasTexture(string name) => true;
-  public bool HasSampler(string name) => true;
+  public bool HasConstantBuffer(string _name) => true;
+  public bool HasTexture(string _name) => true;
+  public bool HasSampler(string _name) => true;
 
   public IntPtr GetNativeHandle() => new IntPtr(Id + 2000);
   public ulong GetMemorySize() => (ulong)Bytecode.Length;
 
   public void Dispose()
   {
-    if(!IsDisposed)
-    {
-      Console.WriteLine($"    [Resource] Disposed shader {Name} (ID: {Id})");
-      IsDisposed = true;
-    }
+    if(IsDisposed)
+      return;
+
+    Console.WriteLine($"    [Resource] Disposed shader {Name} (ID: {Id})");
+    IsDisposed = true;
+
   }
 }

@@ -8,51 +8,50 @@ namespace MockImpl;
 
 public class MockSwapChain: ISwapChain
 {
-  public SwapChainDescription Description { get; }
-  public uint CurrentBackBufferIndex { get; private set; }
-  private readonly List<ITexture> _backBuffers;
+  private readonly List<ITexture> p_backBuffers;
 
-  public MockSwapChain(SwapChainDescription description)
+  public MockSwapChain(SwapChainDescription _description)
   {
-    Description = description;
-    _backBuffers = new List<ITexture>();
+    Description = _description;
+    p_backBuffers = new List<ITexture>();
 
-    // Create back buffers
-    for(uint i = 0; i < description.BufferCount; i++)
+    for(uint i = 0; i < _description.BufferCount; i++)
     {
       var texDesc = new TextureDescription
       {
         Name = $"BackBuffer{i}",
-        Width = description.Width,
-        Height = description.Height,
+        Width = _description.Width,
+        Height = _description.Height,
         Depth = 1,
         MipLevels = 1,
         ArraySize = 1,
-        Format = description.Format,
-        SampleCount = description.SampleCount,
+        Format = _description.Format,
+        SampleCount = _description.SampleCount,
         TextureUsage = TextureUsage.RenderTarget
       };
-      _backBuffers.Add(new MockTexture(i + 100, texDesc));
+      p_backBuffers.Add(new MockTexture(i + 100, texDesc));
     }
   }
 
-  public ITexture GetBackBuffer(uint index)
+  public SwapChainDescription Description { get; }
+  public uint CurrentBackBufferIndex { get; private set; }
+
+  public ITexture GetBackBuffer(uint _index)
   {
-    if(index >= _backBuffers.Count)
-      throw new ArgumentOutOfRangeException(nameof(index));
-    return _backBuffers[(int)index];
+    if(_index >= p_backBuffers.Count)
+      throw new ArgumentOutOfRangeException(nameof(_index));
+    return p_backBuffers[(int)_index];
   }
 
-  public void Present(uint syncInterval = 0)
+  public void Present(uint _syncInterval = 0)
   {
     CurrentBackBufferIndex = (CurrentBackBufferIndex + 1) % Description.BufferCount;
-    Console.WriteLine($"    [SwapChain] Present (sync: {syncInterval}, next buffer: {CurrentBackBufferIndex})");
+    Console.WriteLine($"    [SwapChain] Present (sync: {_syncInterval}, next buffer: {CurrentBackBufferIndex})");
   }
 
-  public void Resize(uint width, uint height)
+  public void Resize(uint _width, uint _height)
   {
-    Console.WriteLine($"    [SwapChain] Resize to {width}x{height}");
-    // В реальной реализации пересоздали бы back buffers
+    Console.WriteLine($"    [SwapChain] Resize to {_width}x{_height}");
   }
 
   public IntPtr GetNativeHandle() => new IntPtr(11111);
@@ -60,10 +59,10 @@ public class MockSwapChain: ISwapChain
   public void Dispose()
   {
     Console.WriteLine($"    [SwapChain] Disposed swapchain");
-    foreach(var buffer in _backBuffers)
+    foreach(var buffer in p_backBuffers)
     {
       buffer?.Dispose();
     }
-    _backBuffers.Clear();
+    p_backBuffers.Clear();
   }
 }
