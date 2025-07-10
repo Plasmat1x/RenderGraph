@@ -9,6 +9,11 @@ public abstract class RenderPass: IDisposable
   private bool p_enabled = true;
   private int p_executionOrder = 0;
 
+  protected RenderPass(string _name)
+  {
+    Name = _name ?? string.Empty;
+  }
+
   public string Name { get; protected set; }
   public bool Enabled
   {
@@ -37,11 +42,6 @@ public abstract class RenderPass: IDisposable
   public event Action<RenderPass> OnPassExecuted;
   public event Action<RenderPass, Exception> OnPassError;
 
-  protected RenderPass(string _name)
-  {
-    Name = _name ?? string.Empty;
-  }
-
   public abstract void Setup(RenderGraphBuilder _builder);
   public abstract void Execute(RenderPassContext _context);
 
@@ -68,34 +68,22 @@ public abstract class RenderPass: IDisposable
   /// <summary>
   /// Выполняется перед Setup для инициализации прохода
   /// </summary>
-  public virtual void Initialize()
-  {
-    Statistics.Reset();
-  }
+  public virtual void Initialize() => Statistics.Reset();
 
   /// <summary>
   /// Выполняется после компиляции render graph для финальной настройки
   /// </summary>
-  public virtual void OnGraphCompiled(RenderGraph _renderGraph)
-  {
-
-  }
+  public virtual void OnGraphCompiled(RenderGraph _renderGraph){}
 
   /// <summary>
   /// Выполняется в начале каждого кадра
   /// </summary>
-  public virtual void OnFrameBegin(FrameData _frameData)
-  {
-    Statistics.StartFrame();
-  }
+  public virtual void OnFrameBegin(FrameData _frameData) => Statistics.StartFrame();
 
   /// <summary>
   /// Выполняется в конце каждого кадра
   /// </summary>
-  public virtual void OnFrameEnd(FrameData _frameData)
-  {
-    Statistics.EndFrame();
-  }
+  public virtual void OnFrameEnd(FrameData _frameData) => Statistics.EndFrame();
 
   /// <summary>
   /// Возвращает информацию об использовании ресурсов этим проходом
@@ -166,10 +154,7 @@ public abstract class RenderPass: IDisposable
     }
   }
 
-  public void ClearDependencies()
-  {
-    p_dependencies.Clear();
-  }
+  public void ClearDependencies() => p_dependencies.Clear();
 
   public bool HasDependency(RenderPass _dependency)
   {
@@ -191,6 +176,26 @@ public abstract class RenderPass: IDisposable
     }
 
     return false;
+  }
+
+  public override string ToString() => $"RenderPass(Name: '{Name}', Enabled: {Enabled}, Inputs: {Inputs.Count}, Outputs: {Outputs.Count}, Dependencies: {Dependencies.Count})";
+
+  public override bool Equals(object? _obj) => _obj is RenderPass other && Name == other.Name;
+
+  public override int GetHashCode() => Name?.GetHashCode() ?? 0;
+
+  public virtual void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
+  }
+
+  protected virtual void Dispose(bool disposing)
+  {
+    if(disposing)
+    {
+      // Освобождаем управляемые ресурсы
+    }
   }
 
   private bool HasCircularDependency()
@@ -244,12 +249,8 @@ public abstract class RenderPass: IDisposable
     p_outputs.Clear();
   }
 
-  internal void SetExecutionOrder(int _order)
-  {
-    p_executionOrder = _order;
-  }
+  internal void SetExecutionOrder(int _order) => p_executionOrder = _order;
 
-  [assembly: InternalsVisibleTo("RenderGraphTests")]
   internal void InternalSetup(RenderGraphBuilder _builder)
   {
     try
@@ -270,7 +271,6 @@ public abstract class RenderPass: IDisposable
     }
   }
 
-  [assembly: InternalsVisibleTo("RenderGraphTests")]
   internal void InternalExecute(RenderPassContext _context)
   {
     try
@@ -289,34 +289,5 @@ public abstract class RenderPass: IDisposable
       OnPassError?.Invoke(this, ex);
       throw;
     }
-  }
-
-  public override string ToString()
-  {
-    return $"RenderPass(Name: '{Name}', Enabled: {Enabled}, Inputs: {Inputs.Count}, Outputs: {Outputs.Count}, Dependencies: {Dependencies.Count})";
-  }
-
-  public override bool Equals(object? _obj)
-  {
-    return _obj is RenderPass other && Name == other.Name;
-  }
-
-  public override int GetHashCode()
-  {
-    return Name?.GetHashCode() ?? 0;
-  }
-
-  protected virtual void Dispose(bool disposing)
-  {
-    if(disposing)
-    {
-      // Освобождаем управляемые ресурсы
-    }
-  }
-
-  public virtual void Dispose()
-  {
-    Dispose(true);
-    GC.SuppressFinalize(this);
   }
 }

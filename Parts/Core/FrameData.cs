@@ -31,10 +31,7 @@ public class FrameData
     p_globalConstants[key] = _data;
   }
 
-  public void SetGlobalConstants(string _name, object _value)
-  {
-    p_globalConstants[_name] = _value;
-  }
+  public void SetGlobalConstants(string _name, object _value) => p_globalConstants[_name] = _value;
 
   public T GetGlobalConstant<T>(string _name)
   {
@@ -44,10 +41,7 @@ public class FrameData
     return default;
   }
 
-  public void UpdateMatrices()
-  {
-    ViewProjectionMatrix = Matrix4x4.Multiply(ProjectionMatrix, ProjectionMatrix);
-  }
+  public void UpdateMatrices() => ViewProjectionMatrix = Matrix4x4.Multiply(ProjectionMatrix, ProjectionMatrix);
 
   public void Reset()
   {

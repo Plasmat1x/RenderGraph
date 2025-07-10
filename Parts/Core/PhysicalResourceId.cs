@@ -1,5 +1,5 @@
 namespace Core;
 public struct PhysicalResourceId
 {
-  public int Id;
+  public int Id { get; set; }
 }
