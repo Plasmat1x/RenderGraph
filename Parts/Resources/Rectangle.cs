@@ -57,7 +57,7 @@ public struct Rectangle
     if(x2 >= x1 && y2 >= y1)
       return new Rectangle(x1, y1, x2 - x1, y2 - y1);
     else
-      return new Rectangle(0, 0, 0, 0); // Empty rectangle
+      return new Rectangle(0, 0, 0, 0);
   }
 
   public Rectangle Union(Rectangle _rect)
