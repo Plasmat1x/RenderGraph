@@ -1,41 +1,410 @@
-@startuml
-actor Developer
+@startuml RenderGraphSequence
+
+actor "Application" as App
 participant "RenderGraph" as RG
-participant "RenderEngine" as RE
-participant "RenderGraphCompiler" as Compiler
-participant "CompiledRenderGraph" as Compiled
-participant "GPU"
+participant "ResourceManager" as RM
+participant "RenderGraphBuilder" as RGB
+participant "DependencyResolver" as DR
+participant "GeometryPass" as GP
+participant "BlurPass" as BP
+participant "ColorCorrectionPass" as CP
+participant "IGraphicsDevice" as Device
+participant "CommandBuffer" as CB
 
-== Setup ==
+== Initialization Phase ==
 
-Developer -> RG : CreateRenderGraph()
-Developer -> RG : DeclareResource()
-Developer -> RG : AddRenderPass()
-Developer -> RG : SetPassCallback()
-Developer -> RG : ImportExternalResource()
+App -> Device : CreateGraphicsDevice()
+activate Device
+Device --> App : device
+deactivate Device
 
-== Compilation ==
+App -> RG : new RenderGraph(device)
+activate RG
+RG -> RM : new ResourceManager(device)
+activate RM
+RG -> RGB : new RenderGraphBuilder(resourceManager)
+activate RGB
+RG -> DR : new DependencyResolver()
+activate DR
+RG --> App : renderGraph
+deactivate DR
+deactivate RGB
+deactivate RM
 
-RE -> Compiler : CompileRenderGraph(RG)
-Compiler -> Compiler : AnalyzeResourceLifetimes()
-Compiler -> Compiler : ResolveResourceAliasing()
-Compiler -> Compiler : AllocatePhysicalResources()
-Compiler -> Compiler : InsertBarriers()
-Compiler -> Compiled : BuildCompiledGraph()
-Compiler --> RE : return CompiledRenderGraph
+== Pass Creation & Setup ==
 
-== Execution (per frame) ==
+App -> GP : new GeometryPass()
+activate GP
+GP --> App : geometryPass
 
-RE -> Compiled : ExecuteCompiledGraph()
-loop for each pass
-    Compiled -> RE : PreparePass()
-    RE -> RG : Call PassCallback()
-    RE -> GPU : RecordCommands()
-    RE -> GPU : SubmitPass()
+App -> BP : new BlurPass()
+activate BP
+BP --> App : blurPass
+
+App -> CP : new ColorCorrectionPass()
+activate CP
+CP --> App : colorCorrectionPass
+
+note over App : Configure pass connections
+App -> BP : InputTexture = geometryPass.ColorTarget
+App -> CP : InputTexture = blurPass.OutputTexture
+
+== Graph Building ==
+
+App -> RG : AddPass(geometryPass)
+RG -> RG : _passes.Add(geometryPass)
+RG -> RG : CreatePassContext(geometryPass)
+
+App -> RG : AddPass(blurPass)
+RG -> RG : _passes.Add(blurPass)
+RG -> RG : CreatePassContext(blurPass)
+
+App -> RG : AddPass(colorCorrectionPass)
+RG -> RG : _passes.Add(colorCorrectionPass)
+RG -> RG : CreatePassContext(colorCorrectionPass)
+
+== Compilation Phase ==
+
+App -> RG : Compile()
+activate RG
+
+group Pass Setup Phase
+    RG -> RG : SetupPasses()
+    
+    RG -> RGB : SetCurrentPass(geometryPass)
+    RG -> GP : Setup(builder)
+    activate GP
+    
+    GP -> RGB : CreateColorTarget("MainColor", 1920, 1080)
+    RGB -> RM : CreateTexture(colorDesc)
+    activate RM
+    RM -> Device : CreateTexture(colorDesc)
+    Device --> RM : ITexture
+    RM --> RGB : colorHandle
+    deactivate RM
+    
+    GP -> RGB : CreateDepthTarget("MainDepth", 1920, 1080)
+    RGB -> RM : CreateTexture(depthDesc)
+    activate RM
+    RM -> Device : CreateTexture(depthDesc)
+    Device --> RM : ITexture
+    RM --> RGB : depthHandle
+    deactivate RM
+    
+    GP -> RGB : WriteTexture(colorHandle)
+    RGB -> GP : AddOutput(colorHandle)
+    
+    GP -> RGB : WriteTextureAsDepth(depthHandle)
+    RGB -> GP : AddOutput(depthHandle)
+    deactivate GP
+    
+    RG -> RGB : FinishCurrentPass()
+    
+    RG -> RGB : SetCurrentPass(blurPass)
+    RG -> BP : Setup(builder)
+    activate BP
+    
+    BP -> RGB : ReadTexture(geometryPass.ColorTarget)
+    RGB -> BP : AddInput(colorHandle)
+    
+    BP -> RGB : CreateTexture("BlurOutput", outputDesc)
+    RGB -> RM : CreateTexture(outputDesc)
+    activate RM
+    RM -> Device : CreateTexture(outputDesc)
+    Device --> RM : ITexture
+    RM --> RGB : blurHandle
+    deactivate RM
+    
+    BP -> RGB : WriteTexture(blurHandle)
+    RGB -> BP : AddOutput(blurHandle)
+    deactivate BP
+    
+    RG -> RGB : FinishCurrentPass()
+    
+    RG -> RGB : SetCurrentPass(colorCorrectionPass)
+    RG -> CP : Setup(builder)
+    activate CP
+    
+    CP -> RGB : ReadTexture(blurPass.OutputTexture)
+    RGB -> CP : AddInput(blurHandle)
+    
+    CP -> RGB : CreateTexture("FinalOutput", finalDesc)
+    RGB -> RM : CreateTexture(finalDesc)
+    activate RM
+    RM -> Device : CreateTexture(finalDesc)
+    Device --> RM : ITexture
+    RM --> RGB : finalHandle
+    deactivate RM
+    
+    CP -> RGB : WriteTexture(finalHandle)
+    RGB -> CP : AddOutput(finalHandle)
+    deactivate CP
+    
+    RG -> RGB : FinishCurrentPass()
 end
 
-== Debug (optional) ==
+group Dependency Resolution
+    RG -> DR : BuildDependencyGraph(_passes)
+    activate DR
+    
+    DR -> DR : AddNode(geometryPass)
+    DR -> DR : AddNode(blurPass)
+    DR -> DR : AddNode(colorCorrectionPass)
+    
+    note over DR : Analyze resource dependencies:\ngeometryPass.output -> blurPass.input\nblurPass.output -> colorCorrectionPass.input
+    
+    DR -> DR : AddEdge(geometryPass, blurPass)
+    DR -> DR : AddEdge(blurPass, colorCorrectionPass)
+    
+    DR -> DR : TopologicalSort()
+    DR --> RG : executionOrder[geometryPass, blurPass, colorCorrectionPass]
+    deactivate DR
+end
 
-Developer -> Compiled : ExportGraphStats()
+group Validation & Optimization
+    RG -> RG : ValidateGraph()
+    RG -> DR : DetectCycles()
+    activate DR
+    DR --> RG : []  // No cycles
+    deactivate DR
+    
+    RG -> RGB : ValidateResourceUsages()
+    activate RGB
+    RGB -> RGB : CheckResourceConflicts()
+    RGB --> RG : validation successful
+    deactivate RGB
+    
+    RG -> RM : OptimizeResourceUsage()
+    activate RM
+    RM -> RM : AnalyzeResourceLifetimes()
+    RM -> RM : SetupResourcePooling()
+    deactivate RM
+end
+
+group Post-Compilation Setup
+    RG -> GP : OnGraphCompiled(renderGraph)
+    activate GP
+    GP -> GP : CreateShaders()
+    GP -> GP : CreateSamplers()
+    deactivate GP
+    
+    RG -> BP : OnGraphCompiled(renderGraph)
+    activate BP
+    BP -> Device : CreateShader(blurVertexShader)
+    BP -> Device : CreateShader(blurPixelShader)
+    BP -> Device : CreateSampler(linearSampler)
+    deactivate BP
+    
+    RG -> CP : OnGraphCompiled(renderGraph)
+    activate CP
+    CP -> Device : CreateShader(colorCorrectionShader)
+    CP -> Device : CreateSampler(pointSampler)
+    deactivate CP
+end
+
+RG --> App : compilation successful
+deactivate RG
+
+== Execution Phase (Per Frame) ==
+
+loop Every Frame
+    
+    group Frame Setup
+        App -> RG : UpdateFrameData(deltaTime, width, height)
+        RG -> RG : _frameData.FrameIndex++
+        RG -> RG : _frameData.UpdateMatrices()
+        
+        App -> RG : SetViewMatrix(viewMatrix)
+        App -> RG : SetProjectionMatrix(projMatrix)
+        App -> RG : SetCameraPosition(cameraPos)
+    end
+    
+    group Execution
+        App -> Device : CreateCommandBuffer()
+        Device --> App : commandBuffer
+        activate CB
+        
+        App -> RG : Execute(commandBuffer)
+        activate RG
+        
+        RG -> CB : Begin()
+        
+        group Frame Begin Callbacks
+            RG -> GP : OnFrameBegin(frameData)
+            activate GP
+            GP -> GP : Statistics.StartFrame()
+            deactivate GP
+            
+            RG -> BP : OnFrameBegin(frameData)
+            activate BP
+            BP -> BP : Statistics.StartFrame()
+            deactivate BP
+            
+            RG -> CP : OnFrameBegin(frameData)
+            activate CP
+            CP -> CP : Statistics.StartFrame()
+            deactivate CP
+        end
+        
+        group Execute Geometry Pass
+            RG -> GP : CanExecute()
+            GP --> RG : true
+            
+            RG -> GP : Execute(passContext)
+            activate GP
+            
+            GP -> GP : Statistics.StartExecution()
+            
+            GP -> RM : GetTexture(colorHandle)
+            activate RM
+            RM --> GP : colorTexture
+            deactivate RM
+            
+            GP -> RM : GetTexture(depthHandle)
+            activate RM
+            RM --> GP : depthTexture
+            deactivate RM
+            
+            GP -> CB : SetRenderTarget(colorTexture, depthTexture)
+            GP -> CB : SetViewport(fullscreen)
+            GP -> CB : ClearRenderTarget(colorTexture, clearColor)
+            GP -> CB : ClearDepthStencil(depthTexture, 1.0f, 0)
+            
+            loop For each renderable object
+                GP -> CB : SetVertexBuffer(vertexBuffer)
+                GP -> CB : SetIndexBuffer(indexBuffer)
+                GP -> CB : SetShaderResource(texture)
+                GP -> CB : DrawIndexed(indexCount, instanceCount)
+            end
+            
+            GP -> GP : Statistics.EndExecution()
+            GP -> GP : Statistics.MarkExecutedThisFrame()
+            deactivate GP
+        end
+        
+        group Execute Blur Pass
+            RG -> BP : CanExecute()
+            BP --> RG : true
+            
+            RG -> BP : Execute(passContext)
+            activate BP
+            
+            BP -> BP : Statistics.StartExecution()
+            
+            BP -> RM : GetTexture(colorHandle)  // Input from geometry
+            activate RM
+            RM --> BP : inputTexture
+            deactivate RM
+            
+            BP -> RM : GetTexture(blurHandle)   // Output
+            activate RM
+            RM --> BP : outputTexture
+            deactivate RM
+            
+            BP -> CB : SetRenderTarget(outputTexture)
+            BP -> CB : SetViewport(fullscreen)
+            BP -> CB : SetShaderResource(inputTexture)
+            BP -> CB : SetSampler(linearSampler)
+            BP -> CB : DrawFullscreenQuad()
+            
+            BP -> BP : Statistics.EndExecution()
+            BP -> BP : Statistics.MarkExecutedThisFrame()
+            deactivate BP
+        end
+        
+        group Execute Color Correction Pass
+            RG -> CP : CanExecute()
+            CP --> RG : true
+            
+            RG -> CP : Execute(passContext)
+            activate CP
+            
+            CP -> CP : Statistics.StartExecution()
+            
+            CP -> RM : GetTexture(blurHandle)   // Input from blur
+            activate RM
+            RM --> CP : inputTexture
+            deactivate RM
+            
+            CP -> RM : GetTexture(finalHandle)  // Final output
+            activate RM
+            RM --> CP : outputTexture
+            deactivate RM
+            
+            CP -> CB : SetRenderTarget(outputTexture)
+            CP -> CB : SetViewport(fullscreen)
+            CP -> CB : SetShaderResource(inputTexture)
+            CP -> CB : SetSampler(pointSampler)
+            CP -> CB : DrawFullscreenQuad()
+            
+            CP -> CP : Statistics.EndExecution()
+            CP -> CP : Statistics.MarkExecutedThisFrame()
+            deactivate CP
+        end
+        
+        RG -> CB : End()
+        deactivate RG
+        
+        App -> Device : ExecuteCommandBuffer(commandBuffer)
+        Device -> Device : Submit to GPU
+        Device -> Device : Present frame
+        
+        App -> CB : Dispose()
+        deactivate CB
+        
+        group Frame End Callbacks
+            App -> GP : OnFrameEnd(frameData)
+            activate GP
+            GP -> GP : Statistics.EndFrame()
+            deactivate GP
+            
+            App -> BP : OnFrameEnd(frameData)
+            activate BP
+            BP -> BP : Statistics.EndFrame()
+            deactivate BP
+            
+            App -> CP : OnFrameEnd(frameData)
+            activate CP
+            CP -> CP : Statistics.EndFrame()
+            deactivate CP
+        end
+    end    
+end
+
+== Cleanup Phase ==
+
+App -> RG : Dispose()
+activate RG
+
+RG -> GP : Dispose()
+activate GP
+GP -> GP : DisposeShaders()
+GP -> GP : DisposeSamplers()
+deactivate GP
+
+RG -> BP : Dispose()
+activate BP
+BP -> BP : DisposeShaders()
+BP -> BP : DisposeSamplers()
+deactivate BP
+
+RG -> CP : Dispose()
+activate CP
+CP -> CP : DisposeShaders()
+CP -> CP : DisposeSamplers()
+deactivate CP
+
+RG -> RM : Dispose()
+activate RM
+RM -> RM : DisposeAllResources()
+RM -> RM : ClearPools()
+deactivate RM
+
+deactivate RG
+
+App -> Device : Dispose()
+activate Device
+Device -> Device : ReleaseDeviceResources()
+deactivate Device
 
 @enduml

@@ -1,0 +1,152 @@
+@startuml RenderGraphPackages
+
+package "RenderGraph.Core" as Core <<Framework>> {
+    component "RenderGraph" as RG {
+    }
+    
+    component "RenderPass" as RP {
+    }
+    
+    component "RenderGraphBuilder" as RGB {
+    }
+    
+    component "ResourceManager" as RM {
+    }
+    
+    component "DependencyResolver" as DR {
+    }
+
+    component RenderPassContext as RPC {
+
+    }
+}
+
+package "RenderGraph.GraphicsAPI" as GraphicsAPI <<Hardware Abstraction>> {
+    component "IGraphicsDevice" as IGD {
+    }
+    
+    component "CommandBuffer" as CB {
+    }
+    
+    component "Resources" as Res {
+    }
+    
+    component "ResourceDescriptions" as RD {
+    }
+}
+
+package "RenderGraph.Passes" as Passes <<Application Layer>> {
+    component "GeometryPass" as GP {
+    }
+    
+    component "PostProcessPasses" as PPP {
+    }
+    
+    component "ShadowPasses" as SP {
+    }
+    
+    component "ComputePasses" as CP {
+    }
+}
+
+package "RenderGraph.Platform" as Platform <<Platform Specific>> {
+    component "DirectX12" as D3D12 {
+    }
+    
+    component "Vulkan" as VK {
+    }
+}
+
+package "RenderGraph.Utilities" as Utilities <<Support Library>> {
+    component "Collections" as Coll {
+    }
+    
+    component "Memory" as Mem {
+    }
+    
+    component "Extensions" as Ext {
+    }
+}
+
+' Dependencies between packages
+Core --> GraphicsAPI : uses
+Core --> Utilities : uses
+
+Passes --> Core : extends
+Passes --> GraphicsAPI : uses
+Passes --> Utilities : uses
+
+Platform --> GraphicsAPI : implements
+Platform --> Utilities : uses
+
+' Internal dependencies within Core
+RG --> RM : manages
+RG --> DR : uses
+RG --> RGB : uses
+RGB --> RM : creates resources
+RP --> RGB : setup
+RP --> RPC : execute
+
+' GraphicsAPI internal dependencies
+IGD --> Res : creates
+IGD --> CB : creates
+CB --> Res : uses
+Res --> RD : described by
+
+' Detailed dependency arrows with labels
+Core ..> GraphicsAPI : <<abstraction>>
+Passes ..> Core : <<extension>>
+Platform ..> GraphicsAPI : <<implementation>>
+Integration ..> Core : <<orchestration>>
+App ..> Integration : <<usage>>
+
+' Notes
+note top of Core
+    **Core Framework**
+    • Main render graph engine
+    • Hardware agnostic
+    • Dependency resolution
+    • Resource management
+end note
+
+note top of GraphicsAPI
+    **Hardware Abstraction**
+    • GPU API abstraction
+    • Cross-platform support
+    • Resource management
+    • Command recording
+end note
+
+note top of Passes
+    **Rendering Algorithms**
+    • Specific render techniques
+    • Configurable effects
+    • Extensible pipeline
+    • Performance optimized
+end note
+
+note top of Platform
+    **Platform Backends**
+    • Hardware specific code
+    • Driver optimizations
+    • Platform features
+    • Performance tuning
+end note
+
+note top of Integration
+    **Engine Integration**
+    • Higher-level systems
+    • Scene management
+    • Asset pipeline
+    • Developer experience
+end note
+
+note bottom of App
+    **User Application**
+    • Game/Application code
+    • Custom render passes
+    • Resource setup
+    • Configuration
+end note
+
+@enduml

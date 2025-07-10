@@ -8,7 +8,7 @@
 	  <ImplicitUsings>enable</ImplicitUsings>
 	  <InvariantGlobalization>true</InvariantGlobalization>
 	  <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-	  <Description>Plasmat1xdev Render Graph library</Description>
+	  <Description>Plasmat1xdev Render Graph Core library</Description>
 	  <Copyright>Copyright © Plasmat1xdev 2025</Copyright>
 	  <Version>0.0.1</Version>
 	  <Authors>Mikhail Mryasov</Authors>
@@ -18,5 +18,19 @@
 	  <LangVersion>latest</LangVersion>
 	  <!--<GenerateDocumentationFile>True</GenerateDocumentationFile>-->
   </PropertyGroup>
+
+  <!-- Expose internals to test assemblies -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="RenderGraph.Tests" />
+    <InternalsVisibleTo Include="RenderGraph.IntegrationTests" />
+    <InternalsVisibleTo Include="RenderGraph.Mock" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GraphicsAPI\GraphicsAPI.csproj" />
+    <ProjectReference Include="..\Resources\Resources.csproj" />
+    <ProjectReference Include="..\Utility\Utility.csproj" />
+  </ItemGroup>
 
 </Project>

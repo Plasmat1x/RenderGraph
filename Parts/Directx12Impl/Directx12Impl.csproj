@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Product>RenderGraph.Directx12Impl</Product>
+    <RootNamespace>Directx12Impl</RootNamespace>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <Description>Plasmat1xdev Render Graph DirectX12 Implementation library</Description>
+    <Copyright>Copyright © Plasmat1xdev 2025</Copyright>
+    <Version>0.0.1</Version>
+    <Authors>Mikhail Mryasov</Authors>
+    <Company>Plasmat1xdev</Company>
+    <IsPackable>true</IsPackable>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <!--<GenerateDocumentationFile>True</GenerateDocumentationFile>-->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GraphicsAPI\GraphicsAPI.csproj" />
+  </ItemGroup>
+
+</Project>

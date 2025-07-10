@@ -1,29 +1,296 @@
-@startuml
-left to right direction
+@startuml RenderGraphUseCases
+
+!theme plain
+skinparam actorStyle awesome
 skinparam packageStyle rectangle
+skinparam usecaseBackgroundColor #E8F4FD
+skinparam usecaseBorderColor #4A90E2
+skinparam actorBackgroundColor #FFE6CC
+skinparam actorBorderColor #FF8C00
+skinparam packageBackgroundColor #F8F8F8
+skinparam packageBorderColor #666666
+skinparam arrowColor #4A90E2
+skinparam noteBackgroundColor #FFFACD
+skinparam noteBorderColor #DAA520
 
-actor Developer
-actor RenderEngine
+left to right direction
 
-rectangle "RenderGraph System" {
-    Developer --> (Create RenderGraph)
-    Developer --> (Add RenderPass)
-    Developer --> (Declare Resource)
-    Developer --> (Import External Resource)
-    Developer --> (Set Pass Callback)
+' Actors
+actor "Game Developer" as GameDev
+actor "Engine Developer" as EngineDev
+actor "Graphics Programmer" as GraphicsProg
+actor "Technical Artist" as TechArtist
+actor "Performance Engineer" as PerfEng
+actor "Platform Engineer" as PlatformEng
 
-    RenderEngine --> (Compile RenderGraph)
-    (Compile RenderGraph) --> (Analyze Resource Lifetimes)
-    (Compile RenderGraph) --> (Allocate Physical Resources)
-    (Compile RenderGraph) --> (Insert Barriers)
-    (Compile RenderGraph) --> (Resolve Resource Aliasing)
+' External Systems
+actor "ECS System" as ECS
+actor "Asset Pipeline" as AssetPipeline
+actor "Profiling Tools" as Profiler
 
-    RenderEngine --> (Execute Compiled Graph)
-    (Execute Compiled Graph) --> (Prepare Pass)
-    (Execute Compiled Graph) --> (Record Commands)
-    (Execute Compiled Graph) --> (Submit Pass)
-
-    Developer --> (Export Graph Stats)
+package "Core Render Graph System" {
+    
+    package "Graph Management" {
+        usecase "Create Render Graph" as UC_CreateGraph
+        usecase "Add Render Pass" as UC_AddPass
+        usecase "Remove Render Pass" as UC_RemovePass
+        usecase "Configure Pass Dependencies" as UC_ConfigDeps
+        usecase "Compile Graph" as UC_Compile
+        usecase "Validate Graph" as UC_Validate
+        usecase "Execute Graph" as UC_Execute
+        usecase "Reset Graph" as UC_Reset
+    }
+    
+    package "Pass Development" {
+        usecase "Create Custom Pass" as UC_CreatePass
+        usecase "Setup Pass Resources" as UC_SetupResources
+        usecase "Implement Pass Logic" as UC_ImplementPass
+        usecase "Configure Pass Parameters" as UC_ConfigParams
+        usecase "Handle Pass Dependencies" as UC_HandleDeps
+        usecase "Optimize Pass Performance" as UC_OptimizePass
+    }
+    
+    package "Resource Management" {
+        usecase "Create Textures" as UC_CreateTextures
+        usecase "Create Buffers" as UC_CreateBuffers
+        usecase "Import External Resources" as UC_ImportResources
+        usecase "Manage Resource Lifetime" as UC_ManageLifetime
+        usecase "Alias Resources" as UC_AliasResources
+        usecase "Pool Resources" as UC_PoolResources
+        usecase "Track Memory Usage" as UC_TrackMemory
+    }
+    
+    package "Shader Management" {
+        usecase "Load Shaders" as UC_LoadShaders
+        usecase "Compile Shaders" as UC_CompileShaders
+        usecase "Bind Shader Resources" as UC_BindShaderRes
+        usecase "Manage Shader Variants" as UC_ShaderVariants
+        usecase "Hot-Reload Shaders" as UC_HotReload
+    }
+    
+    package "Graphics API Integration" {
+        usecase "Abstract Graphics API" as UC_AbstractAPI
+        usecase "Create Command Buffers" as UC_CreateCmdBuffers
+        usecase "Manage GPU Resources" as UC_ManageGPURes
+        usecase "Handle Resource States" as UC_ResourceStates
+        usecase "Synchronize GPU Work" as UC_SyncGPU
+        usecase "Support Multiple APIs" as UC_MultiAPI
+    }
 }
+
+package "Built-in Render Passes" {
+    
+    package "Geometry Rendering" {
+        usecase "Render Opaque Objects" as UC_RenderOpaque
+        usecase "Render Transparent Objects" as UC_RenderTransparent
+        usecase "Depth Pre-Pass" as UC_DepthPrepass
+        usecase "Shadow Mapping" as UC_ShadowMap
+        usecase "Instanced Rendering" as UC_Instanced
+    }
+    
+    package "Lighting" {
+        usecase "Forward Lighting" as UC_ForwardLight
+        usecase "Deferred Lighting" as UC_DeferredLight
+        usecase "Clustered Lighting" as UC_ClusteredLight
+        usecase "Light Culling" as UC_LightCulling
+        usecase "Global Illumination" as UC_GI
+    }
+    
+    package "Post-Processing" {
+        usecase "Tone Mapping" as UC_ToneMap
+        usecase "Color Grading" as UC_ColorGrade
+        usecase "Bloom Effect" as UC_Bloom
+        usecase "Motion Blur" as UC_MotionBlur
+        usecase "Depth of Field" as UC_DOF
+        usecase "Anti-Aliasing (TAA/FXAA)" as UC_AA
+        usecase "Screen Space Reflections" as UC_SSR
+    }
+    
+    package "Compute Effects" {
+        usecase "Particle Systems" as UC_Particles
+        usecase "GPU Culling" as UC_GPUCulling
+        usecase "Texture Streaming" as UC_TextureStream
+        usecase "Mesh LOD Generation" as UC_MeshLOD
+        usecase "Physics Simulation" as UC_Physics
+    }
+}
+
+package "Performance & Debugging" {
+    usecase "Profile Pass Performance" as UC_ProfilePass
+    usecase "Monitor Memory Usage" as UC_MonitorMemory
+    usecase "Debug Resource Usage" as UC_DebugResources
+    usecase "Analyze Dependencies" as UC_AnalyzeDeps
+    usecase "Optimize Execution Order" as UC_OptimizeOrder
+    usecase "Generate Performance Reports" as UC_PerfReports
+    usecase "Visualize Render Graph" as UC_Visualize
+    usecase "Hot-Swap Passes" as UC_HotSwap
+}
+
+package "Platform Support" {
+    usecase "Support DirectX 12" as UC_D3D12
+    usecase "Support Vulkan" as UC_Vulkan
+    usecase "Support Metal" as UC_Metal
+    usecase "Support OpenGL" as UC_OpenGL
+    usecase "Cross-Platform Rendering" as UC_CrossPlatform
+    usecase "Platform-Specific Optimizations" as UC_PlatformOpt
+    usecase "Capability Detection" as UC_CapDetection
+}
+
+package "Integration Features" {
+    usecase "Integrate with ECS" as UC_ECSIntegration
+    usecase "Asset System Integration" as UC_AssetIntegration
+    usecase "Scene Graph Integration" as UC_SceneIntegration
+    usecase "Material System Integration" as UC_MaterialIntegration
+    usecase "Animation System Integration" as UC_AnimIntegration
+}
+
+' Primary User Relationships
+
+' Game Developer
+GameDev --> UC_CreateGraph
+GameDev --> UC_AddPass
+GameDev --> UC_ConfigParams
+GameDev --> UC_Execute
+GameDev --> UC_RenderOpaque
+GameDev --> UC_RenderTransparent
+GameDev --> UC_ToneMap
+GameDev --> UC_ColorGrade
+GameDev --> UC_ECSIntegration
+GameDev --> UC_AssetIntegration
+
+' Engine Developer
+EngineDev --> UC_CreateGraph
+EngineDev --> UC_Compile
+EngineDev --> UC_Validate
+EngineDev --> UC_ManageLifetime
+EngineDev --> UC_AbstractAPI
+EngineDev --> UC_MultiAPI
+EngineDev --> UC_CrossPlatform
+EngineDev --> UC_ECSIntegration
+EngineDev --> UC_SceneIntegration
+EngineDev --> UC_MaterialIntegration
+
+' Graphics Programmer
+GraphicsProg --> UC_CreatePass
+GraphicsProg --> UC_SetupResources
+GraphicsProg --> UC_ImplementPass
+GraphicsProg --> UC_HandleDeps
+GraphicsProg --> UC_LoadShaders
+GraphicsProg --> UC_CompileShaders
+GraphicsProg --> UC_BindShaderRes
+GraphicsProg --> UC_ForwardLight
+GraphicsProg --> UC_DeferredLight
+GraphicsProg --> UC_ShadowMap
+GraphicsProg --> UC_SSR
+GraphicsProg --> UC_GI
+
+' Technical Artist
+TechArtist --> UC_ConfigParams
+TechArtist --> UC_ShaderVariants
+TechArtist --> UC_HotReload
+TechArtist --> UC_ToneMap
+TechArtist --> UC_ColorGrade
+TechArtist --> UC_Bloom
+TechArtist --> UC_DOF
+TechArtist --> UC_AA
+TechArtist --> UC_HotSwap
+TechArtist --> UC_Visualize
+
+' Performance Engineer
+PerfEng --> UC_OptimizePass
+PerfEng --> UC_PoolResources
+PerfEng --> UC_TrackMemory
+PerfEng --> UC_ProfilePass
+PerfEng --> UC_MonitorMemory
+PerfEng --> UC_AnalyzeDeps
+PerfEng --> UC_OptimizeOrder
+PerfEng --> UC_PerfReports
+PerfEng --> UC_GPUCulling
+PerfEng --> UC_MeshLOD
+
+' Platform Engineer
+PlatformEng --> UC_D3D12
+PlatformEng --> UC_Vulkan
+PlatformEng --> UC_Metal
+PlatformEng --> UC_OpenGL
+PlatformEng --> UC_PlatformOpt
+PlatformEng --> UC_CapDetection
+PlatformEng --> UC_ManageGPURes
+PlatformEng --> UC_ResourceStates
+PlatformEng --> UC_SyncGPU
+
+' External System Relationships
+ECS --> UC_ECSIntegration
+AssetPipeline --> UC_AssetIntegration
+AssetPipeline --> UC_TextureStream
+Profiler --> UC_ProfilePass
+Profiler --> UC_MonitorMemory
+Profiler --> UC_PerfReports
+
+' Use Case Dependencies (includes)
+UC_CreateGraph ..> UC_Validate : <<include>>
+UC_AddPass ..> UC_ConfigDeps : <<include>>
+UC_Execute ..> UC_Compile : <<include>>
+UC_CreatePass ..> UC_SetupResources : <<include>>
+UC_ImplementPass ..> UC_BindShaderRes : <<include>>
+UC_RenderOpaque ..> UC_LoadShaders : <<include>>
+UC_ShadowMap ..> UC_CreateTextures : <<include>>
+UC_PostProcessing ..> UC_CreateBuffers : <<include>>
+UC_OptimizePass ..> UC_ProfilePass : <<include>>
+
+' Use Case Extensions (extends)
+UC_HotReload ..> UC_LoadShaders : <<extend>>
+UC_HotSwap ..> UC_AddPass : <<extend>>
+UC_AliasResources ..> UC_ManageLifetime : <<extend>>
+UC_ShaderVariants ..> UC_CompileShaders : <<extend>>
+UC_PlatformOpt ..> UC_AbstractAPI : <<extend>>
+
+' Complex Workflows (includes)
+UC_DeferredLight ..> UC_CreateTextures : <<include>>
+UC_DeferredLight ..> UC_RenderOpaque : <<include>>
+UC_DeferredLight ..> UC_LightCulling : <<include>>
+
+UC_ClusteredLight ..> UC_GPUCulling : <<include>>
+UC_ClusteredLight ..> UC_CreateBuffers : <<include>>
+
+UC_Particles ..> UC_Physics : <<include>>
+UC_Particles ..> UC_GPUCulling : <<include>>
+
+' Notes for complex relationships
+note right of UC_Execute
+    Executes all passes in
+    dependency-resolved order.
+    Handles resource transitions
+    and synchronization automatically.
+end note
+
+note right of UC_CreatePass
+    Custom passes inherit from
+    RenderPass base class and
+    implement Setup() and Execute()
+    methods with full access to
+    resource management.
+end note
+
+note bottom of UC_MultiAPI
+    Single codebase supports
+    multiple graphics APIs through
+    abstraction layer. Platform-specific
+    optimizations available.
+end note
+
+note top of UC_ECSIntegration
+    Seamless integration with
+    Entity Component Systems.
+    Automatic data gathering
+    from components for rendering.
+end note
+
+note bottom of UC_PerfReports
+    Detailed performance analytics
+    including pass timing, memory
+    usage, GPU utilization, and
+    bottleneck identification.
+end note
 
 @enduml
