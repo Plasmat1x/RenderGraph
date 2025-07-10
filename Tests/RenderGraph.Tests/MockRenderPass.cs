@@ -3,10 +3,6 @@ using Core.Enums;
 
 namespace ResourcesTests;
 
-// ================================================================================================
-// MOCK CLASSES FOR TESTING
-// ================================================================================================
-
 public class MockRenderPass: RenderPass
 {
   public Action OnExecute { get; set; }
@@ -23,7 +19,6 @@ public class MockRenderPass: RenderPass
   {
     SetupCalled = true;
     Console.WriteLine($"[TEST] MockRenderPass '{Name}' Setup called");
-    // Mock passes don't create resources by default
   }
 
   public override void Execute(RenderPassContext _context)
