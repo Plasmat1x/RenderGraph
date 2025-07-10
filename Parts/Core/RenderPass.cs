@@ -190,9 +190,9 @@ public abstract class RenderPass: IDisposable
     GC.SuppressFinalize(this);
   }
 
-  protected virtual void Dispose(bool disposing)
+  protected virtual void Dispose(bool _disposing)
   {
-    if(disposing)
+    if(_disposing)
     {
       // Освобождаем управляемые ресурсы
     }

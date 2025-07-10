@@ -5,24 +5,24 @@ namespace ResourcesTests;
 
 public class DebugMockRenderPass: RenderPass
 {
+  public DebugMockRenderPass(string _name) : base(_name)
+  {
+    Category = PassCategory.Rendering;
+    Priority = PassPriority.Normal;
+    Console.WriteLine($"[DEBUG] Created MockRenderPass: {_name}");
+  }
+
   public Action OnExecute { get; set; }
   public bool SetupCalled { get; private set; }
   public bool ExecuteCalled { get; private set; }
 
-  public DebugMockRenderPass(string name) : base(name)
-  {
-    Category = PassCategory.Rendering;
-    Priority = PassPriority.Normal;
-    Console.WriteLine($"[DEBUG] Created MockRenderPass: {name}");
-  }
-
-  public override void Setup(RenderGraphBuilder builder)
+  public override void Setup(RenderGraphBuilder _builder)
   {
     SetupCalled = true;
     Console.WriteLine($"[DEBUG] {Name}.Setup() called");
   }
 
-  public override void Execute(RenderPassContext context)
+  public override void Execute(RenderPassContext _context)
   {
     ExecuteCalled = true;
     Console.WriteLine($"[DEBUG] {Name}.Execute() called");
@@ -34,7 +34,6 @@ public class DebugMockRenderPass: RenderPass
     var canExecute = base.CanExecute();
     Console.WriteLine($"[DEBUG] {Name}.CanExecute() = {canExecute} (Enabled: {Enabled}, Dependencies: {Dependencies.Count})");
 
-    // Проверяем каждую зависимость
     foreach(var dep in Dependencies)
     {
       Console.WriteLine($"[DEBUG]   Dependency {dep.Name}: Enabled={dep.Enabled}, WasExecuted={dep.Statistics.WasExecutedThisFrame}");
