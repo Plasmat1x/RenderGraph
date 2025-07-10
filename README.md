@@ -280,16 +280,16 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE.txt
 - ✅ Basic render passes
 - ✅ Resource management system
 
-### Version 1.1 (Q2 2024)
+### Version 1.1 (Q3 2025)
 - 📋 Vulkan backend completion
 - 📋 Advanced post-processing passes
 - 📋 Compute shader integration
 - 📋 Performance profiling tools
 
-### Version 1.2 (Q3 2024)
+### Version 1.2 (Q4 2025)
 - 📋 Ray tracing support
 - 📋 Visual graph editor
 - 📋 GLTF 2.0 integration
 
-### Version 2.0 (Q4 2024)
+### Version 2.0 (Q1 2026)
 - 📋 Multi-GPU rendering
