@@ -1,0 +1,328 @@
+@startuml DirectX12Implementation
+
+package "DirectX12 Implementation" {
+    class DX12GraphicsDevice {
+        - _device: ComPtr<ID3D12Device>
+        - _dxgiFactory: ComPtr<IDXGIFactory4>
+        - _directQueue: ComPtr<ID3D12CommandQueue>
+        - _computeQueue: ComPtr<ID3D12CommandQueue>
+        - _copyQueue: ComPtr<ID3D12CommandQueue>
+        - _rtvDescriptorSize: UINT
+        - _dsvDescriptorSize: UINT
+        - _cbvSrvUavDescriptorSize: UINT
+        - _samplerDescriptorSize: UINT
+        - _rtvHeap: ComPtr<ID3D12DescriptorHeap>
+        - _dsvHeap: ComPtr<ID3D12DescriptorHeap>
+        - _shaderVisibleHeaps: ComPtr<ID3D12DescriptorHeap>[]
+        - _currentFrameIndex: UINT
+        - _fenceValues: UINT64[]
+        - _fence: ComPtr<ID3D12Fence>
+        - _fenceEvent: HANDLE
+        --
+        + CreateTexture(description: TextureDescription): ITexture
+        + CreateBuffer(description: BufferDescription): IBuffer
+        + CreateShader(description: ShaderDescription): IShader
+        + CreateRenderState(description: RenderStateDescription): IRenderState
+        + CreateSampler(description: SamplerDescription): ISampler
+        + CreateCommandBuffer(): CommandBuffer
+        + CreateCommandBuffer(type: CommandBufferType): CommandBuffer
+        + ExecuteCommandBuffer(commandBuffer: CommandBuffer): void
+        + WaitForGPU(): void
+        + CreateSwapChain(description: SwapChainDescription): ISwapChain
+        + Present(): void
+        + Dispose(): void
+        - CreateDevice(): void
+        - CreateCommandQueues(): void
+        - CreateDescriptorHeaps(): void
+        - CreateFence(): void
+        - WaitForFenceValue(fenceValue: UINT64): void
+        - GetD3D12Device(): ComPtr<ID3D12Device>
+        - AllocateDescriptor(type: D3D12_DESCRIPTOR_HEAP_TYPE): D3D12_CPU_DESCRIPTOR_HANDLE
+    }
+
+    class DX12Texture {
+        - _resource: ComPtr<ID3D12Resource>
+        - _description: TextureDescription
+        - _dxgiFormat: DXGI_FORMAT
+        - _resourceDesc: D3D12_RESOURCE_DESC
+        - _currentState: D3D12_RESOURCE_STATES
+        - _device: ComPtr<ID3D12Device>
+        - _srvDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _rtvDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _dsvDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _uavDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _views: Dictionary<TextureViewDescription, DX12TextureView>
+        --
+        + Description: TextureDescription
+        + Width: uint
+        + Height: uint
+        + Depth: uint
+        + MipLevels: uint
+        + ArraySize: uint
+        + Format: TextureFormat
+        + CreateView(description: TextureViewDescription): ITextureView
+        + GetDefaultShaderResourceView(): ITextureView
+        + GetDefaultRenderTargetView(): ITextureView
+        + GetDefaultDepthStencilView(): ITextureView
+        + SetData<T>(data: T[], mipLevel: uint, arraySlice: uint): void
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+        - ConvertFormat(format: TextureFormat): DXGI_FORMAT
+        - CreateResource(): void
+        - CreateDefaultViews(): void
+        - GetSubresourceIndex(mipLevel: uint, arraySlice: uint): UINT
+    }
+
+    class DX12Buffer {
+        - _resource: ComPtr<ID3D12Resource>
+        - _description: BufferDescription
+        - _resourceDesc: D3D12_RESOURCE_DESC
+        - _currentState: D3D12_RESOURCE_STATES
+        - _device: ComPtr<ID3D12Device>
+        - _mappedData: void*
+        - _srvDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _uavDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _cbvDescriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _views: Dictionary<BufferViewDescription, DX12BufferView>
+        --
+        + Description: BufferDescription
+        + Size: ulong
+        + Stride: uint
+        + Usage: BufferUsage
+        + CreateView(description: BufferViewDescription): IBufferView
+        + Map(mode: MapMode): IntPtr
+        + Unmap(): void
+        + SetData<T>(data: T[], offset: ulong): void
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+        - CreateResource(): void
+        - CreateDefaultViews(): void
+        - DetermineResourceStates(): D3D12_RESOURCE_STATES
+    }
+
+    class DX12CommandBuffer {
+        - _commandList: ComPtr<ID3D12GraphicsCommandList>
+        - _commandAllocator: ComPtr<ID3D12CommandAllocator>
+        - _device: ComPtr<ID3D12Device>
+        - _type: CommandBufferType
+        - _currentPipelineState: ComPtr<ID3D12PipelineState>
+        - _currentRootSignature: ComPtr<ID3D12RootSignature>
+        - _resourceBarriers: List<D3D12_RESOURCE_BARRIER>
+        - _currentRenderTargets: D3D12_CPU_DESCRIPTOR_HANDLE[]
+        - _currentDepthStencil: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _isDirty: bool
+        --
+        + Begin(): void
+        + End(): void
+        + Reset(): void
+        + SetRenderTargets(colorTargets: ITextureView[], depthTarget: ITextureView): void
+        + SetViewport(viewport: Viewport): void
+        + ClearRenderTarget(target: ITextureView, color: Vector4): void
+        + ClearDepthStencil(target: ITextureView, flags: ClearFlags, depth: float, stencil: byte): void
+        + TransitionResource(resource: IResource, newState: ResourceState): void
+        + Draw(vertexCount: uint, instanceCount: uint, startVertex: uint, startInstance: uint): void
+        + DrawIndexed(indexCount: uint, instanceCount: uint, startIndex: uint, baseVertex: int, startInstance: uint): void
+        + Dispatch(groupCountX: uint, groupCountY: uint, groupCountZ: uint): void
+        + SetVertexBuffer(buffer: IBufferView, slot: uint): void
+        + SetIndexBuffer(buffer: IBufferView, format: IndexFormat): void
+        + SetShaderResource(stage: ShaderStage, slot: uint, resource: ITextureView): void
+        + SetConstantBuffer(stage: ShaderStage, slot: uint, buffer: IBufferView): void
+        + SetSampler(stage: ShaderStage, slot: uint, sampler: ISampler): void
+        + CopyTexture(src: ITexture, dst: ITexture): void
+        + CopyBuffer(src: IBuffer, dst: IBuffer): void
+        + Dispose(): void
+        - ConvertResourceState(state: ResourceState): D3D12_RESOURCE_STATES
+        - ConvertCommandListType(type: CommandBufferType): D3D12_COMMAND_LIST_TYPE
+        - FlushResourceBarriers(): void
+        - GetDX12Resource(resource: IResource): ID3D12Resource
+    }
+
+    class DX12Shader {
+        - _shaderBytecode: D3DBlob
+        - _stage: ShaderStage
+        - _description: ShaderDescription
+        - _reflection: ID3D12ShaderReflection
+        - _inputLayout: D3D12_INPUT_ELEMENT_DESC[]
+        - _rootSignature: ComPtr<ID3D12RootSignature>
+        --
+        + Stage: ShaderStage
+        + Description: ShaderDescription
+        + Bytecode: byte[]
+        + GetReflection(): ShaderReflection
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+        - CompileShader(): void
+        - CreateReflection(): void
+        - CreateRootSignature(): void
+    }
+
+    class DX12Sampler {
+        - _device: ComPtr<ID3D12Device>
+        - _description: SamplerDescription
+        - _samplerDesc: D3D12_SAMPLER_DESC
+        - _descriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        --
+        + Description: SamplerDescription
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+        - ConvertFilter(filter: TextureFilter): D3D12_FILTER
+        - ConvertAddressMode(mode: TextureAddressMode): D3D12_TEXTURE_ADDRESS_MODE
+    }
+
+    class DX12RenderState {
+        - _pipelineState: ComPtr<ID3D12PipelineState>
+        - _description: RenderStateDescription
+        - _device: ComPtr<ID3D12Device>
+        - _blendDesc: D3D12_BLEND_DESC
+        - _depthStencilDesc: D3D12_DEPTH_STENCIL_DESC
+        - _rasterizerDesc: D3D12_RASTERIZER_DESC
+        --
+        + Description: RenderStateDescription
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+        - CreatePipelineState(): void
+        - ConvertBlendState(desc: BlendStateDescription): D3D12_BLEND_DESC
+        - ConvertDepthStencilState(desc: DepthStencilStateDescription): D3D12_DEPTH_STENCIL_DESC
+        - ConvertRasterizerState(desc: RasterizerStateDescription): D3D12_RASTERIZER_DESC
+    }
+
+    class DX12SwapChain {
+        - _swapChain: ComPtr<IDXGISwapChain3>
+        - _device: ComPtr<ID3D12Device>
+        - _description: SwapChainDescription
+        - _backBuffers: DX12Texture[]
+        - _currentBackBufferIndex: UINT
+        - _frameCount: UINT
+        --
+        + Description: SwapChainDescription
+        + CurrentBackBufferIndex: uint
+        + GetBackBuffer(index: uint): ITexture
+        + Present(syncInterval: uint): void
+        + Resize(width: uint, height: uint): void
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+        - CreateBackBuffers(): void
+        - ReleaseBackBuffers(): void
+    }
+
+    class DX12TextureView {
+        - _texture: DX12Texture
+        - _viewType: TextureViewType
+        - _description: TextureViewDescription
+        - _descriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        - _format: DXGI_FORMAT
+        --
+        + Texture: ITexture
+        + ViewType: TextureViewType
+        + Description: TextureViewDescription
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+        - CreateView(): void
+    }
+
+    class DX12BufferView {
+        - _buffer: DX12Buffer
+        - _viewType: BufferViewType
+        - _description: BufferViewDescription
+        - _descriptor: D3D12_CPU_DESCRIPTOR_HANDLE
+        --
+        + Buffer: IBuffer
+        + ViewType: BufferViewType
+        + Description: BufferViewDescription
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+        - CreateView(): void
+    }
+
+    class DX12Fence {
+        - _fence: ComPtr<ID3D12Fence>
+        - _fenceEvent: HANDLE
+        - _fenceValue: UINT64
+        --
+        + Value: ulong
+        + IsSignaled: bool
+        + Signal(value: ulong): void
+        + Wait(value: ulong, timeoutMs: uint): void
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+    }
+
+    ' Helper classes
+    class DX12ResourceStateTracker {
+        - _globalResourceStates: Dictionary<ID3D12Resource, D3D12_RESOURCE_STATES>
+        - _pendingBarriers: List<D3D12_RESOURCE_BARRIER>
+        --
+        + TransitionResource(resource: ID3D12Resource, newState: D3D12_RESOURCE_STATES): void
+        + FlushPendingBarriers(commandList: ID3D12GraphicsCommandList): void
+        + CommitResourceStates(): void
+        + Reset(): void
+    }
+
+    class DX12DescriptorAllocator {
+        - _heap: ComPtr<ID3D12DescriptorHeap>
+        - _descriptorSize: UINT
+        - _numDescriptors: UINT
+        - _numAllocated: UINT
+        - _freeList: Stack<UINT>
+        --
+        + Allocate(): D3D12_CPU_DESCRIPTOR_HANDLE
+        + Free(descriptor: D3D12_CPU_DESCRIPTOR_HANDLE): void
+        + Reset(): void
+        + GetHeap(): ID3D12DescriptorHeap
+    }
+
+    class DX12RootSignatureCache {
+        - _cache: Dictionary<RootSignatureDesc, ComPtr<ID3D12RootSignature>>
+        - _device: ComPtr<ID3D12Device>
+        --
+        + GetOrCreate(desc: RootSignatureDesc): ID3D12RootSignature
+        + Clear(): void
+    }
+
+    class DX12PipelineStateCache {
+        - _graphicsCache: Dictionary<GraphicsPipelineDesc, ComPtr<ID3D12PipelineState>>
+        - _computeCache: Dictionary<ComputePipelineDesc, ComPtr<ID3D12PipelineState>>
+        - _device: ComPtr<ID3D12Device>
+        --
+        + GetOrCreateGraphicsPipeline(desc: GraphicsPipelineDesc): ID3D12PipelineState
+        + GetOrCreateComputePipeline(desc: ComputePipelineDesc): ID3D12PipelineState
+        + Clear(): void
+    }
+}
+
+' Реализация интерфейсов
+IGraphicsDevice <|.. DX12GraphicsDevice
+ITexture <|.. DX12Texture
+IBuffer <|.. DX12Buffer
+CommandBuffer <|-- DX12CommandBuffer
+IShader <|.. DX12Shader
+ISampler <|.. DX12Sampler
+IRenderState <|.. DX12RenderState
+ISwapChain <|.. DX12SwapChain
+ITextureView <|.. DX12TextureView
+IBufferView <|.. DX12BufferView
+IFence <|.. DX12Fence
+
+' Внутренние связи
+DX12GraphicsDevice --> DX12Texture : creates
+DX12GraphicsDevice --> DX12Buffer : creates
+DX12GraphicsDevice --> DX12CommandBuffer : creates
+DX12GraphicsDevice --> DX12Shader : creates
+DX12GraphicsDevice --> DX12Sampler : creates
+DX12GraphicsDevice --> DX12RenderState : creates
+DX12GraphicsDevice --> DX12SwapChain : creates
+DX12GraphicsDevice --> DX12Fence : creates
+DX12GraphicsDevice --> DX12DescriptorAllocator : uses
+DX12GraphicsDevice --> DX12RootSignatureCache : uses
+DX12GraphicsDevice --> DX12PipelineStateCache : uses
+
+DX12Texture --> DX12TextureView : creates
+DX12Buffer --> DX12BufferView : creates
+
+DX12CommandBuffer --> DX12ResourceStateTracker : uses
+DX12CommandBuffer --> DX12Texture : references
+DX12CommandBuffer --> DX12Buffer : references
+
+DX12SwapChain --> DX12Texture : contains
+
+@enduml

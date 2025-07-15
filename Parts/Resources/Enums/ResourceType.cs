@@ -11,4 +11,5 @@ public enum ResourceType
   Buffer,
   StructuredBuffer,
   RawBuffer,
+  Sampler,
 }

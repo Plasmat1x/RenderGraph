@@ -1,0 +1,1194 @@
+```
+@startuml Core
+
+package "RenderGraph Core" {
+    class RenderGraph {
+        - _passes: List<RenderPass>
+        - _resourceManager: ResourceManager
+        - _dependencyResolver: DependencyResolver
+        - _device: IGraphicsDevice
+        - _builder: RenderGraphBuilder
+        - _frameData: FrameData
+        - _compiled: bool
+        - _executionOrder: List<RenderPass>
+        - _passContexts: Dictionary<RenderPass, RenderPassContext>
+        --
+        + AddPass<T>(pass: T): void
+        + RemovePass(pass: RenderPass): void
+        + GetPass<T>(): T
+        + GetPass(name: string): RenderPass
+        + Execute(commandBuffer: CommandBuffer): void
+        + Compile(): void
+        + Reset(): void
+        + ValidateGraph(): bool
+        + GetExecutionOrder(): List<RenderPass>
+        + UpdateFrameData(deltaTime: float, width: uint, height: uint): void
+        + SetViewMatrix(viewMatrix: Matrix4x4): void
+        + SetProjectionMatrix(projMatrix: Matrix4x4): void
+        + SetCameraPosition(position: Vector3): void
+        + ImportTexture(name: string, texture: ITexture): ResourceHandle
+        + ImportBuffer(name: string, buffer: IBuffer): ResourceHandle
+        + GetNamedResource(name: string): ResourceHandle
+        + HasNamedResource(name: string): bool
+        + GetMemoryUsage(): MemoryUsageInfo
+        + GetStatistics(): RenderGraphStatistics
+        + GetGraphicsDevice(): IGraphicsDevice
+        + Dispose(): void
+    }
+
+    abstract class RenderPass {
+        + Name: string
+        + Enabled: bool
+        + Inputs: IReadOnlyList<ResourceHandle>
+        + Outputs: IReadOnlyList<ResourceHandle>
+        + Dependencies: IReadOnlyList<RenderPass>
+        + ExecutionOrder: int
+        + AlwaysExecute: bool
+        + Category: PassCategory
+        + Priority: PassPriority
+        + Statistics: PassStatistics
+        --
+        + {abstract} Setup(builder: RenderGraphBuilder): void
+        + {abstract} Execute(context: RenderPassContext): void
+        + CanExecute(): bool
+        + Initialize(): void
+        + OnGraphCompiled(renderGraph: RenderGraph): void
+        + OnFrameBegin(frameData: FrameData): void
+        + OnFrameEnd(frameData: FrameData): void
+        + GetResourceUsage(): ResourceUsageInfo
+        + IsCompatibleWith(otherPass: RenderPass): bool
+        + Validate(out errorMessage: string): bool
+        + AddDependency(dependency: RenderPass): void
+        + RemoveDependency(dependency: RenderPass): void
+        + ClearDependencies(): void
+        + HasDependency(dependency: RenderPass): bool
+        + HasDependencyOn(targetPass: RenderPass): bool
+        + Dispose(): void
+    }
+
+    class RenderGraphBuilder {
+        - _resourceManager: ResourceManager
+        - _currentPass: RenderPass
+        - _resourceUsages: Dictionary<ResourceHandle, ResourceUsageInfo>
+        - _namedResources: Dictionary<string, ResourceHandle>
+        - _currentPassUsages: List<ResourceUsageInfo>
+        --
+        + CreateTexture(name: string, desc: TextureDescription): ResourceHandle
+        + CreateBuffer(name: string, desc: BufferDescription): ResourceHandle
+        + ReadTexture(handle: ResourceHandle): void
+        + WriteTexture(handle: ResourceHandle): void
+        + ReadBuffer(handle: ResourceHandle): void
+        + WriteBuffer(handle: ResourceHandle): void
+        + ReadWriteTexture(handle: ResourceHandle): void
+        + ReadWriteBuffer(handle: ResourceHandle): void
+        + ReadTextureAsDepth(handle: ResourceHandle): void
+        + WriteTextureAsDepth(handle: ResourceHandle): void
+        + ReadTextureAsRenderTarget(handle: ResourceHandle): void
+        + ImportTexture(name: string, texture: ITexture): ResourceHandle
+        + ImportBuffer(name: string, buffer: IBuffer): ResourceHandle
+        + SetResourceLifetime(handle: ResourceHandle, lifetime: ResourceLifetime): void
+        + GetNamedResource(name: string): ResourceHandle
+        + HasNamedResource(name: string): bool
+        + GetResourceUsages(): IEnumerable<ResourceUsageInfo>
+        + GetResourceUsage(handle: ResourceHandle, passName: string): ResourceUsageInfo?
+        + GetResourceDescription(handle: ResourceHandle): ResourceDescription
+        + ValidateResourceUsages(): void
+        + Clear(): void
+    }
+
+    class RenderPassContext {
+        + CommandBuffer: CommandBuffer
+        + Resources: ResourceManager
+        + FrameData: FrameData
+        + PassIndex: int
+        + ViewportWidth: uint
+        + ViewportHeight: uint
+        --
+        + GetTexture(handle: ResourceHandle): ITexture
+        + GetBuffer(handle: ResourceHandle): IBuffer
+        + GetTextureView(handle: ResourceHandle, viewType: TextureViewType): ITextureView
+        + GetBufferView(handle: ResourceHandle, viewType: BufferViewType): IBufferView
+        + SetViewport(x: float, y: float, width: float, height: float, minDepth: float, maxDepth: float): void
+        + SetFullScreenViewport(): void
+    }
+
+    class ResourceManager {
+        - _resources: Dictionary<ResourceHandle, IResource>
+        - _resourceDescriptions: Dictionary<ResourceHandle, ResourceDescription>
+        - _texturePool: ResourcePool<ITexture>
+        - _bufferPool: ResourcePool<IBuffer>
+        - _aliasedResources: Dictionary<ResourceHandle, ResourceHandle>
+        - _resourceLifetimes: Dictionary<ResourceHandle, ResourceLifetime>
+        - _handleGenerator: ResourceHandleGenerator
+        - _device: IGraphicsDevice
+        --
+        + CreateTexture(desc: TextureDescription): ResourceHandle
+        + CreateBuffer(desc: BufferDescription): ResourceHandle
+        + GetTexture(handle: ResourceHandle): ITexture
+        + GetBuffer(handle: ResourceHandle): IBuffer
+        + AliasResource(source: ResourceHandle, target: ResourceHandle): void
+        + TransitionResource(handle: ResourceHandle, state: ResourceState): void
+        + ReleaseResource(handle: ResourceHandle): void
+        + GetResourceDescription(handle: ResourceHandle): ResourceDescription
+        + OptimizeResourceUsage(): void
+        + GetMemoryUsage(): MemoryUsageInfo
+        + SetResourceLifetime(handle: ResourceHandle, lifetime: ResourceLifetime): void
+        + GetResourceLifetime(handle: ResourceHandle): ResourceLifetime
+        + ImportTexture(name: string, texture: ITexture): ResourceHandle
+        + ImportBuffer(name: string, buffer: IBuffer): ResourceHandle
+        + Dispose(): void
+    }
+
+    class DependencyResolver {
+        - _passGraph: DirectedGraph<RenderPass>
+        - _resourceDependencies: Dictionary<ResourceHandle, List<RenderPass>>
+        --
+        + AddNode(pass: RenderPass): void
+        + AddEdge(from: RenderPass, to: RenderPass): void
+        + BuildDependencyGraph(passes: List<RenderPass>): void
+        + TopologicalSort(): List<RenderPass>
+        + DetectCycles(): List<RenderPass>
+        + CullUnusedPasses(): List<RenderPass>
+        + ValidateDependencies(): bool
+        + GetCriticalPath(): List<RenderPass>
+        + Clear(): void
+    }
+
+    class FrameData {
+        + FrameIndex: ulong
+        + DeltaTime: float
+        + ViewMatrix: Matrix4x4
+        + ProjectionMatrix: Matrix4x4
+        + ViewProjectionMatrix: Matrix4x4
+        + CameraPosition: Vector3
+        + ScreenWidth: uint
+        + ScreenHeight: uint
+        - _globalConstants: Dictionary<string, object>
+        --
+        + UpdateMatrices(): void
+        + GetConstantBuffer<T>(): T
+        + SetConstantBuffer<T>(data: T): void
+        + SetGlobalConstant(name: string, value: object): void
+        + GetGlobalConstant<T>(name: string): T
+        + Reset(): void
+    }
+
+    struct ResourceHandle {
+        + Id: uint
+        + Type: ResourceType
+        + Generation: uint
+        + Name: string
+        --
+        + IsValid(): bool
+        + Equals(other: ResourceHandle): bool
+        + GetHashCode(): int
+        + ToString(): string
+    }
+
+    class ResourceHandleGenerator {
+        - _nextId: uint
+        - _generationMap: Dictionary<uint, uint>
+        --
+        + Generate(type: ResourceType, name: string): ResourceHandle
+        + Release(handle: ResourceHandle): void
+        + IsHandleValid(handle: ResourceHandle): bool
+    }
+
+    class ResourceUsageInfo {
+        + Handle: ResourceHandle
+        + AccessType: ResourceAccessType
+        + Usage: ResourceUsage
+        + State: ResourceState
+        + PassName: string
+        --
+        + IsRead(): bool
+        + IsWrite(): bool
+        + ConflictsWith(other: ResourceUsageInfo): bool
+        + ToString(): string
+        + Equals(obj: object): bool
+        + GetHashCode(): int
+    }
+
+    class PassStatistics {
+        + LastSetupTime: TimeSpan
+        + LastExecutionTime: TimeSpan
+        + TotalSetupTime: TimeSpan
+        + TotalExecutionTime: TimeSpan
+        + SetupCount: int
+        + ExecutionCount: int
+        + ErrorCount: int
+        + WasExecutedThisFrame: bool
+        + CurrentFrameNumber: int
+        + AverageSetupTime: TimeSpan
+        + AverageExecutionTime: TimeSpan
+        --
+        + StartSetup(): void
+        + EndSetup(): void
+        + StartExecution(): void
+        + EndExecution(): void
+        + MarkExecutedThisFrame(): void
+        + StartFrame(): void
+        + EndFrame(): void
+        + RecordError(exception: Exception): void
+        + GetErrors(): IReadOnlyList<Exception>
+        + GetLastError(): Exception
+        + Reset(): void
+        + ClearErrors(): void
+        + ToString(): string
+    }
+
+    enum ResourceType {
+        Texture1D
+        Texture2D
+        Texture3D
+        TextureCube
+        Texture2DArray
+        TextureCubeArray
+        Buffer
+        StructuredBuffer
+        RawBuffer
+    }
+
+    enum ResourceAccessType {
+        Read
+        Write
+        ReadWrite
+    }
+
+    enum ResourceLifetime {
+        Transient
+        Persistent
+        External
+        Imported
+    }
+
+    enum PassCategory {
+        Initialization
+        GeometrySetup
+        ShadowMapping
+        Rendering
+        PostProcessing
+        UI
+        Debug
+        Finalization
+    }
+
+    enum PassPriority {
+        Lowest
+        Low
+        Normal
+        High
+        Highest
+        Critical
+    }
+}
+
+package "Extension Methods" {
+    class RenderGraphBuilderExtensions {
+        + {static} CreateColorTarget(builder: RenderGraphBuilder, name: string, width: uint, height: uint, format: TextureFormat): ResourceHandle
+        + {static} CreateDepthTarget(builder: RenderGraphBuilder, name: string, width: uint, height: uint, format: TextureFormat): ResourceHandle
+        + {static} CreateVertexBuffer(builder: RenderGraphBuilder, name: string, size: ulong, stride: uint): ResourceHandle
+        + {static} CreateIndexBuffer(builder: RenderGraphBuilder, name: string, size: ulong): ResourceHandle
+        + {static} CreateConstantBuffer(builder: RenderGraphBuilder, name: string, size: ulong): ResourceHandle
+    }
+
+    class RenderPassExtensions {
+        + {static} IsPostProcessPass(pass: RenderPass): bool
+        + {static} IsRenderingPass(pass: RenderPass): bool
+        + {static} IsHighPriority(pass: RenderPass): bool
+        + {static} SetCategory(pass: RenderPass, category: PassCategory): void
+        + {static} SetPriority(pass: RenderPass, priority: PassPriority): void
+        + {static} RequiresPass(pass: RenderPass, dependency: RenderPass): void
+        + {static} MakeOptional(pass: RenderPass): void
+        + {static} MakeRequired(pass: RenderPass): void
+    }
+
+    class RenderGraphExtensions {
+        + {static} GetGraphicsDevice(renderGraph: RenderGraph): IGraphicsDevice
+    }
+}
+package "GraphicsAPI Abstraction" {
+    interface IGraphicsDevice {
+        + Name: string
+        + API: GraphicsAPI
+        + Capabilities: DeviceCapabilities
+        --
+        + CreateTexture(description: TextureDescription): ITexture
+        + CreateBuffer(description: BufferDescription): IBuffer
+        + CreateShader(description: ShaderDescription): IShader
+        + CreateRenderState(description: RenderStateDescription): IRenderState
+        + CreateSampler(description: SamplerDescription): ISampler
+        + CreateCommandBuffer(): CommandBuffer
+        + CreateCommandBuffer(type: CommandBufferType): CommandBuffer
+        + ExecuteCommandBuffer(commandBuffer: CommandBuffer): void
+        + ExecuteCommandBuffers(commandBuffers: CommandBuffer[]): void
+        + WaitForGPU(): void
+        + WaitForFence(fence: IFence): void
+        + CreateFence(initialValue: ulong): IFence
+        + GetMemoryInfo(): MemoryInfo
+        + GetTotalMemory(): ulong
+        + GetAvailableMemory(): ulong
+        + CreateSwapChain(description: SwapChainDescription): ISwapChain
+        + Present(): void
+        + SupportsFormat(format: TextureFormat, usage: FormatUsage): bool
+        + GetFormatBytesPerPixel(format: TextureFormat): uint
+        + GetSupportedSampleCounts(format: TextureFormat): SampleCountFlags
+        + Dispose(): void
+    }
+
+    interface ITexture {
+        + Description: TextureDescription
+        + Name: string
+        + ResourceType: ResourceType
+        + Width: uint
+        + Height: uint
+        + Depth: uint
+        + MipLevels: uint
+        + ArraySize: uint
+        + Format: TextureFormat
+        + SampleCount: uint
+        + IsDisposed: bool
+        --
+        + CreateView(description: TextureViewDescription): ITextureView
+        + GetDefaultShaderResourceView(): ITextureView
+        + GetDefaultRenderTargetView(): ITextureView
+        + GetDefaultDepthStencilView(): ITextureView
+        + GetDefaultUnorderedAccessView(): ITextureView
+        + SetData<T>(data: T[], mipLevel: uint, arraySlice: uint): void
+        + GetData<T>(mipLevel: uint, arraySlice: uint): T[]
+        + GetSubresourceIndex(mipLevel: uint, arraySlice: uint): uint
+        + GenerateMips(): void
+        + GetNativeHandle(): IntPtr
+        + GetMemorySize(): ulong
+        + Dispose(): void
+    }
+
+    interface IBuffer {
+        + Description: BufferDescription
+        + Name: string
+        + ResourceType: ResourceType
+        + Size: ulong
+        + Stride: uint
+        + Usage: BufferUsage
+        + IsMapped: bool
+        + IsDisposed: bool
+        --
+        + CreateView(description: BufferViewDescription): IBufferView
+        + GetDefaultShaderResourceView(): IBufferView
+        + GetDefaultUnorderedAccessView(): IBufferView
+        + Map(mode: MapMode): IntPtr
+        + Unmap(): void
+        + SetData<T>(data: T[], offset: ulong): void
+        + SetData<T>(data: T, offset: ulong): void
+        + GetData<T>(offset: ulong, count: ulong): T[]
+        + GetData<T>(offset: ulong): T
+        + GetNativeHandle(): IntPtr
+        + GetMemorySize(): ulong
+        + Dispose(): void
+    }
+
+    interface IShader {
+        + Name: string
+        + ResourceType: ResourceType
+        + Stage: ShaderStage
+        + Description: ShaderDescription
+        + Bytecode: byte[]
+        + IsDisposed: bool
+        --
+        + GetReflection(): ShaderReflection
+        + HasConstantBuffer(name: string): bool
+        + HasTexture(name: string): bool
+        + HasSampler(name: string): bool
+        + GetNativeHandle(): IntPtr
+        + GetMemorySize(): ulong
+        + Dispose(): void
+    }
+
+    abstract class CommandBuffer {
+        + IsRecording: bool
+        + Type: CommandBufferType
+        + Name: string
+        --
+        + Begin(): void
+        + End(): void
+        + Reset(): void
+        + SetRenderTargets(colorTargets: ITextureView[], depthTarget: ITextureView): void
+        + SetRenderTarget(colorTarget: ITextureView, depthTarget: ITextureView): void
+        + SetViewport(viewport: Viewport): void
+        + SetViewports(viewports: Viewport[]): void
+        + SetScissorRect(rect: Rectangle): void
+        + SetScissorRects(rects: Rectangle[]): void
+        + ClearRenderTarget(target: ITextureView, color: Vector4): void
+        + ClearDepthStencil(target: ITextureView, flags: ClearFlags, depth: float, stencil: byte): void
+        + ClearUnorderedAccess(target: ITextureView, value: Vector4): void
+        + ClearUnorderedAccess(target: IBufferView, value: uint): void
+        + TransitionResource(resource: IResource, newState: ResourceState): void
+        + TransitionResources(resources: IResource[], newStates: ResourceState[]): void
+        + UAVBarrier(resource: IResource): void
+        + UAVBarriers(resources: IResource[]): void
+        + SetVertexBuffer(buffer: IBufferView, slot: uint): void
+        + SetVertexBuffers(buffers: IBufferView[], startSlot: uint): void
+        + SetIndexBuffer(buffer: IBufferView, format: IndexFormat): void
+        + SetVertexShader(shader: IShader): void
+        + SetPixelShader(shader: IShader): void
+        + SetComputeShader(shader: IShader): void
+        + SetGeometryShader(shader: IShader): void
+        + SetHullShader(shader: IShader): void
+        + SetDomainShader(shader: IShader): void
+        + SetShaderResource(stage: ShaderStage, slot: uint, resource: ITextureView): void
+        + SetShaderResources(stage: ShaderStage, startSlot: uint, resources: ITextureView[]): void
+        + SetUnorderedAccess(stage: ShaderStage, slot: uint, resource: ITextureView): void
+        + SetUnorderedAccesses(stage: ShaderStage, startSlot: uint, resources: ITextureView[]): void
+        + SetConstantBuffer(stage: ShaderStage, slot: uint, buffer: IBufferView): void
+        + SetConstantBuffers(stage: ShaderStage, startSlot: uint, buffers: IBufferView[]): void
+        + SetSampler(stage: ShaderStage, slot: uint, sampler: ISampler): void
+        + SetSamplers(stage: ShaderStage, startSlot: uint, samplers: ISampler[]): void
+        + SetRenderState(renderState: IRenderState): void
+        + SetBlendState(blendState: IBlendState, blendFactor: Vector4, sampleMask: uint): void
+        + SetDepthStencilState(depthStencilState: IDepthStencilState, stencilRef: uint): void
+        + SetRasterizerState(rasterizerState: IRasterizerState): void
+        + Draw(vertexCount: uint, instanceCount: uint, startVertex: uint, startInstance: uint): void
+        + DrawIndexed(indexCount: uint, instanceCount: uint, startIndex: uint, baseVertex: int, startInstance: uint): void
+        + DrawIndirect(argsBuffer: IBufferView, offset: ulong): void
+        + DrawIndexedIndirect(argsBuffer: IBufferView, offset: ulong): void
+        + Dispatch(groupCountX: uint, groupCountY: uint, groupCountZ: uint): void
+        + DispatchIndirect(argsBuffer: IBufferView, offset: ulong): void
+        + CopyTexture(src: ITexture, dst: ITexture): void
+        + CopyTextureRegion(src: ITexture, srcMip: uint, srcArray: uint, srcBox: Box, dst: ITexture, dstMip: uint, dstArray: uint, dstOffset: Point3D): void
+        + CopyBuffer(src: IBuffer, dst: IBuffer): void
+        + CopyBufferRegion(src: IBuffer, srcOffset: ulong, dst: IBuffer, dstOffset: ulong, size: ulong): void
+        + ResolveTexture(src: ITexture, srcArray: uint, dst: ITexture, dstArray: uint, format: TextureFormat): void
+        + BeginQuery(query: IQuery): void
+        + EndQuery(query: IQuery): void
+        + PushDebugGroup(name: string): void
+        + PopDebugGroup(): void
+        + InsertDebugMarker(name: string): void
+        + DrawFullscreenQuad(): void
+        + Dispose(): void
+    }
+
+    interface ITextureView {
+        + Texture: ITexture
+        + ViewType: TextureViewType
+        + Description: TextureViewDescription
+        --
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+    }
+
+    interface IBufferView {
+        + Buffer: IBuffer
+        + ViewType: BufferViewType
+        + Description: BufferViewDescription
+        --
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+    }
+
+    interface ISampler {
+        + Name: string
+        + ResourceType: ResourceType
+        + Description: SamplerDescription
+        + IsDisposed: bool
+        --
+        + GetNativeHandle(): IntPtr
+        + GetMemorySize(): ulong
+        + Dispose(): void
+    }
+
+    interface IRenderState {
+        + Name: string
+        + ResourceType: ResourceType
+        + Description: RenderStateDescription
+        + IsDisposed: bool
+        --
+        + GetNativeHandle(): IntPtr
+        + GetMemorySize(): ulong
+        + Dispose(): void
+    }
+
+    interface IFence {
+        + Value: ulong
+        + IsSignaled: bool
+        --
+        + Signal(value: ulong): void
+        + Wait(value: ulong, timeoutMs: uint): void
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+    }
+
+    interface ISwapChain {
+        + Description: SwapChainDescription
+        + CurrentBackBufferIndex: uint
+        --
+        + GetBackBuffer(index: uint): ITexture
+        + Present(syncInterval: uint): void
+        + Resize(width: uint, height: uint): void
+        + GetNativeHandle(): IntPtr
+        + Dispose(): void
+    }
+
+    enum ResourceState {
+        Undefined
+        Common
+        RenderTarget
+        UnorderedAccess
+        DepthWrite
+        DepthRead
+        ShaderResource
+        StreamOut
+        IndirectArgument
+        CopyDestination
+        CopySource
+        ResolveDestination
+        ResolveSource
+        Present
+    }
+
+    enum GraphicsAPI {
+        Unknown
+        DirectX11
+        DirectX12
+        Vulkan
+        OpenGL
+        Metal
+    }
+
+    enum CommandBufferType {
+        Direct
+        Bundle
+        Compute
+        Copy
+    }
+
+    enum ShaderStage {
+        Vertex
+        Hull
+        Domain
+        Geometry
+        Pixel
+        Compute
+        All
+    }
+
+    enum MapMode {
+        Read
+        Write
+        ReadWrite
+        WriteDiscard
+        WriteNoOverwrite
+    }
+
+    enum TextureViewType {
+        ShaderResource
+        RenderTarget
+        DepthStencil
+        UnorderedAccess
+    }
+
+    enum BufferViewType {
+        ShaderResource
+        UnorderedAccess
+        VertexBuffer
+        IndexBuffer
+        ConstantBuffer
+    }
+
+    enum ClearFlags {
+        Depth
+        Stencil
+        DepthStencil
+    }
+}
+
+package "Render Passes" {
+    class GeometryPass {
+        + ColorTarget: ResourceHandle
+        + DepthTarget: ResourceHandle
+        + CameraBuffer: ResourceHandle
+        + ViewportWidth: uint
+        + ViewportHeight: uint
+        + ClearColor: bool
+        + ClearDepth: bool
+        + ClearColorValue: Vector4
+        + ClearDepthValue: float
+        + RenderableObjects: List<RenderableObject>
+        --
+        + Setup(builder: RenderGraphBuilder): void
+        + Execute(context: RenderPassContext): void
+        + OnGraphCompiled(renderGraph: RenderGraph): void
+        - UpdateCameraConstants(context: RenderPassContext, buffer: IBuffer): void
+        - RenderObjects(context: RenderPassContext): void
+        - SetupMaterial(context: RenderPassContext, material: Material): void
+        + Dispose(): void
+    }
+
+    class BlurPass {
+        + InputTexture: ResourceHandle
+        + OutputTexture: ResourceHandle
+        + BlurRadius: float
+        + BlurSigma: float
+        + BlurDirection: BlurDirection
+        + Quality: BlurQuality
+        - _intermediateTexture: ResourceHandle
+        - _blurParamsBuffer: ResourceHandle
+        - _textureWidth: uint
+        - _textureHeight: uint
+        - _vertexShader: IShader
+        - _horizontalBlurShader: IShader
+        - _verticalBlurShader: IShader
+        - _linearSampler: ISampler
+        --
+        + Setup(builder: RenderGraphBuilder): void
+        + Execute(context: RenderPassContext): void
+        + OnGraphCompiled(renderGraph: RenderGraph): void
+        - CreateShaders(renderGraph: RenderGraph): void
+        - UpdateBlurParameters(context: RenderPassContext): void
+        - PerformBlur(context: RenderPassContext, input: ResourceHandle, output: ResourceHandle, direction: BlurDirection): void
+        - SetupBlurShaders(commandBuffer: CommandBuffer, direction: BlurDirection): void
+        - GetKernelSize(): int
+        + Dispose(): void
+    }
+
+    class ColorCorrectionPass {
+        + InputTexture: ResourceHandle
+        + OutputTexture: ResourceHandle
+        + Gamma: float
+        + Contrast: float
+        + Brightness: float
+        + Saturation: float
+        + ColorBalance: Vector3
+        + EnableToneMapping: bool
+        + ToneMappingType: ToneMappingType
+        + Exposure: float
+        - _colorCorrectionBuffer: ResourceHandle
+        - _vertexShader: IShader
+        - _pixelShader: IShader
+        - _pointSampler: ISampler
+        --
+        + Setup(builder: RenderGraphBuilder): void
+        + Execute(context: RenderPassContext): void
+        + OnGraphCompiled(renderGraph: RenderGraph): void
+        - CreateShaders(renderGraph: RenderGraph): void
+        - UpdateColorCorrectionParameters(context: RenderPassContext): void
+        - SetupColorCorrectionShaders(commandBuffer: CommandBuffer): void
+        + Dispose(): void
+    }
+
+    enum BlurDirection {
+        Horizontal
+        Vertical
+        Both
+    }
+
+    enum BlurQuality {
+        Low
+        Medium
+        High
+    }
+
+    enum ToneMappingType {
+        None
+        Reinhard
+        ACES
+        Filmic
+        Uncharted2
+    }
+
+    class RenderableObject {
+        + Visible: bool
+        + VertexBuffer: ResourceHandle
+        + IndexBuffer: ResourceHandle
+        + VertexCount: uint
+        + IndexCount: uint
+        + InstanceCount: uint
+        + VertexStride: uint
+        + IndexFormat: IndexFormat
+        + Material: Material
+        + WorldMatrix: Matrix4x4
+    }
+
+    class Material {
+        + VertexShader: IShader
+        + PixelShader: IShader
+        + Textures: List<ResourceHandle>
+        + Samplers: List<ISampler>
+        + ConstantBuffer: ResourceHandle
+        + Name: string
+    }
+
+    struct CameraConstants {
+        + ViewMatrix: Matrix4x4
+        + ProjectionMatrix: Matrix4x4
+        + ViewProjectionMatrix: Matrix4x4
+        + CameraPosition: Vector4
+        + ScreenResolution: Vector4
+    }
+
+    struct BlurParameters {
+        + BlurRadius: float
+        + BlurSigma: float
+        + TexelSize: Vector2
+        + KernelSize: int
+    }
+
+    struct ColorCorrectionParameters {
+        + Gamma: float
+        + Contrast: float
+        + Brightness: float
+        + Saturation: float
+        + ColorBalance: Vector3
+        + Exposure: float
+        + EnableToneMapping: int
+        + ToneMappingType: int
+    }
+}
+package "Resource Descriptions" {
+    abstract class ResourceDescription {
+        + Name: string
+        + Usage: ResourceUsage
+        + BindFlags: BindFlags
+        + CPUAccessFlags: CPUAccessFlags
+        + MiscFlags: ResourceMiscFlags
+        --
+        + {abstract} GetMemorySize(): ulong
+        + {abstract} IsCompatible(other: ResourceDescription): bool
+        + {abstract} Clone(): ResourceDescription
+        + RequiresCPUAccess(): bool
+        + IsReadOnlyCPU(): bool
+        + IsWriteOnlyCPU(): bool
+        + IsReadWriteCPU(): bool
+        + IsImmutable(): bool
+        + IsDynamic(): bool
+        + IsStaging(): bool
+        + IsDefault(): bool
+        + SupportsShaderResource(): bool
+        + SupportsRenderTarget(): bool
+        + SupportsDepthStencil(): bool
+        + SupportsUnorderedAccess(): bool
+        + SupportsVertexBuffer(): bool
+        + SupportsIndexBuffer(): bool
+        + SupportsConstantBuffer(): bool
+        + IsShared(): bool
+        + CanGenerateMips(): bool
+        + IsGDICompatible(): bool
+        + Validate(out errorMessage: string): bool
+        + GetBindFlagsString(): string
+        + GetCPUAccessFlagsString(): string
+        + GetMiscFlagsString(): string
+        + GetMemoryAlignment(): ulong
+        + CanAliasWith(other: ResourceDescription): bool
+        + ApplyModifications(modifier: Action<ResourceDescription>): void
+        + Equals(obj: object): bool
+        + GetHashCode(): int
+        + ToString(): string
+    }
+
+    class TextureDescription {
+        + Width: uint
+        + Height: uint
+        + Depth: uint
+        + MipLevels: uint
+        + ArraySize: uint
+        + Format: TextureFormat
+        + SampleCount: uint
+        + SampleQuality: uint
+        + TextureUsage: TextureUsage
+        --
+        + GetMemorySize(): ulong
+        + IsCompatible(other: ResourceDescription): bool
+        + Clone(): ResourceDescription
+        + CreateMipChain(): List<TextureDescription>
+        + IsRenderTarget(): bool
+        + IsDepthStencil(): bool
+        + IsShaderResource(): bool
+        + IsUnorderedAccess(): bool
+        + IsMultisampled(): bool
+        + IsArray(): bool
+        + IsVolume(): bool
+        + IsCubemap(): bool
+        + Validate(out errorMessage: string): bool
+        + ToString(): string
+    }
+
+    class BufferDescription {
+        + Size: ulong
+        + Stride: uint
+        + BufferUsage: BufferUsage
+        + ElementCount: uint
+        + StructureByteStride: uint
+        --
+        + GetMemorySize(): ulong
+        + IsCompatible(other: ResourceDescription): bool
+        + Clone(): ResourceDescription
+        + IsStructured(): bool
+        + IsConstant(): bool
+        + IsVertex(): bool
+        + IsIndex(): bool
+        + IsUnorderedAccess(): bool
+        + IsShaderResource(): bool
+        + IsIndirectArgs(): bool
+        + IsAppendConsume(): bool
+        + GetElementCount(): uint
+        + SetElementCount(count: uint): void
+        + Validate(out errorMessage: string): bool
+        + ToString(): string
+    }
+
+    enum ResourceUsage {
+        Default
+        Immutable
+        Dynamic
+        Staging
+    }
+
+    enum TextureUsage {
+        RenderTarget
+        DepthStencil
+        ShaderResource
+        UnorderedAccess
+        BackBuffer
+        Staging
+        ResolveTarget
+        ResolveSource
+        CubeMap
+        VolumeTexture
+    }
+
+    enum BufferUsage {
+        Vertex
+        Index
+        Constant
+        Structured
+        Raw
+        IndirectArgs
+        Counter
+        Append
+        Consume
+        Staging
+        Upload
+        Readback
+    }
+
+    enum TextureFormat {
+        Unknown
+        R32G32B32A32_TYPELESS
+        R32G32B32A32_FLOAT
+        R32G32B32A32_UINT
+        R32G32B32A32_SINT
+        R8G8B8A8_TYPELESS
+        R8G8B8A8_UNORM
+        R8G8B8A8_UNORM_SRGB
+        R8G8B8A8_UINT
+        R8G8B8A8_SNORM
+        R8G8B8A8_SINT
+        D32_FLOAT
+        D24_UNORM_S8_UINT
+        BC1_TYPELESS
+        BC1_UNORM
+        BC1_UNORM_SRGB
+        BC3_TYPELESS
+        BC3_UNORM
+        BC3_UNORM_SRGB
+        BC7_TYPELESS
+        BC7_UNORM
+        BC7_UNORM_SRGB
+    }
+
+    enum BindFlags {
+        None
+        VertexBuffer
+        IndexBuffer
+        ConstantBuffer
+        ShaderResource
+        StreamOutput
+        RenderTarget
+        DepthStencil
+        UnorderedAccess
+        Decoder
+        VideoEncoder
+    }
+
+    enum CPUAccessFlags {
+        None
+        Write
+        Read
+        ReadWrite
+    }
+
+    enum ResourceMiscFlags {
+        None
+        GenerateMips
+        Shared
+        TextureCube
+        DrawIndirectArgs
+        BufferAllowRawViews
+        BufferStructured
+        ResourceClamp
+        SharedKeyedMutex
+        GDICompatible
+    }
+
+    enum IndexFormat {
+        UInt16
+        UInt32
+    }
+}
+
+package "Utility Classes" {
+    class ResourcePool<T> {
+        - _availableResources: Queue<T>
+        - _usedResources: HashSet<T>
+        - _createFunction: Func<T>
+        --
+        + Rent(): T
+        + Return(item: T): void
+        + Clear(): void
+        + Defragment(): void
+        + GetAvailableResources(): IEnumerable<T>
+        + GetUsageStats(): PoolUsageStats
+        + Dispose(): void
+    }
+
+    struct PoolUsageStats {
+        + AvailableCount: int
+        + UsedCount: int
+        + TotalCount: int
+        + UtilizationRate: float
+    }
+
+    struct MemoryUsageInfo {
+        + TotalAllocated: ulong
+        + TotalUsed: ulong
+        + TextureMemory: ulong
+        + BufferMemory: ulong
+        + PeakUsage: ulong
+        --
+        + GetFragmentation(): float
+        + GetUtilization(): float
+        + GetTextureMemoryRatio(): float
+        + GetBufferMemoryRatio(): float
+        + GetFormattedSize(bytes: ulong): string
+        + ToString(): string
+    }
+
+    struct RenderGraphStatistics {
+        + TotalPasses: int
+        + EnabledPasses: int
+        + DisabledPasses: int
+        + TotalResources: int
+        + MemoryUsage: MemoryUsageInfo
+        + IsCompiled: bool
+        + LastFrameIndex: ulong
+        + PassUtilization: float
+    }
+
+    class DirectedGraph<T> {
+        - _nodes: HashSet<T>
+        - _edges: Dictionary<T, List<T>>
+        - _reverseEdges: Dictionary<T, List<T>>
+        --
+        + Nodes: IReadOnlyCollection<T>
+        + NodeCount: int
+        + EdgeCount: int
+        + AddNode(node: T): void
+        + AddEdge(from: T, to: T): void
+        + RemoveNode(node: T): void
+        + RemoveEdge(from: T, to: T): void
+        + GetTopologicalSort(): List<T>
+        + HasCycle(): bool
+        + GetDependencies(node: T): List<T>
+        + GetDependents(node: T): List<T>
+        + Clear(): void
+        + ContainsNode(node: T): bool
+        + ContainsEdge(from: T, to: T): bool
+    }
+
+    struct DeviceCapabilities {
+        + MaxTexture1DSize: uint
+        + MaxTexture2DSize: uint
+        + MaxTexture3DSize: uint
+        + MaxTextureCubeSize: uint
+        + MaxTextureArrayLayers: uint
+        + MaxColorAttachments: uint
+        + MaxVertexAttributes: uint
+        + MaxVertexBuffers: uint
+        + MaxUniformBufferBindings: uint
+        + MaxStorageBufferBindings: uint
+        + MaxSampledImageBindings: uint
+        + MaxStorageImageBindings: uint
+        + MaxSamplerBindings: uint
+        + MaxComputeWorkGroupSize: uint
+        + MaxComputeWorkGroupInvocations: uint
+        + SupportedSampleCounts: SampleCountFlags
+        + SupportsGeometryShader: bool
+        + SupportsTessellation: bool
+        + SupportsComputeShader: bool
+        + SupportsMultiDrawIndirect: bool
+        + SupportsDrawIndirect: bool
+        + SupportsDepthClamp: bool
+        + SupportsAnisotropicFiltering: bool
+        + SupportsTextureCompressionBC: bool
+        + SupportsTextureCompressionETC: bool
+        + SupportsTextureCompressionASTC: bool
+    }
+
+    struct MemoryInfo {
+        + TotalMemory: ulong
+        + AvailableMemory: ulong
+        + UsedMemory: ulong
+        + Budget: ulong
+        + CurrentUsage: ulong
+        + CurrentReservation: ulong
+    }
+
+    struct Viewport {
+        + X: float
+        + Y: float
+        + Width: float
+        + Height: float
+        + MinDepth: float
+        + MaxDepth: float
+    }
+
+    struct Rectangle {
+        + X: int
+        + Y: int
+        + Width: int
+        + Height: int
+        + Left: int
+        + Top: int
+        + Right: int
+        + Bottom: int
+        + IsEmpty: bool
+        + Area: int
+        --
+        + Contains(x: int, y: int): bool
+        + Contains(rect: Rectangle): bool
+        + Intersects(rect: Rectangle): bool
+        + Intersect(rect: Rectangle): Rectangle
+        + Union(rect: Rectangle): Rectangle
+        + Equals(obj: object): bool
+        + GetHashCode(): int
+        + ToString(): string
+    }
+
+    struct Vector2 {
+        + X: float
+        + Y: float
+    }
+
+    struct Vector3 {
+        + X: float
+        + Y: float
+        + Z: float
+    }
+
+    struct Vector4 {
+        + X: float
+        + Y: float
+        + Z: float
+        + W: float
+    }
+
+    struct Matrix4x4 {
+        + Identity: Matrix4x4
+        --
+        + Multiply(left: Matrix4x4, right: Matrix4x4): Matrix4x4
+    }
+
+    struct Point3D {
+        + X: uint
+        + Y: uint
+        + Z: uint
+    }
+
+    struct Box {
+        + Left: uint
+        + Top: uint
+        + Front: uint
+        + Right: uint
+        + Bottom: uint
+        + Back: uint
+        + Width: uint
+        + Height: uint
+        + Depth: uint
+    }
+}
+
+' Utility Relationships
+ResourceManager --> ResourcePool : uses
+DirectedGraph <-- DependencyResolver : uses
+PassStatistics <-- RenderPass : contains
+
+' Resource Descriptions
+ResourceDescription <|-- TextureDescription
+ResourceDescription <|-- BufferDescription
+
+ITexture --> TextureDescription : has
+IBuffer --> BufferDescription : has
+IShader --> ShaderDescription : has
+ISampler --> SamplerDescription : has
+
+' Render Passes
+RenderPass <|-- GeometryPass
+RenderPass <|-- BlurPass
+RenderPass <|-- ColorCorrectionPass
+
+GeometryPass --> RenderableObject : renders
+RenderableObject --> Material : uses
+Material --> IShader : uses
+Material --> ISampler : uses
+
+BlurPass --> IShader : uses for blur
+BlurPass --> ISampler : uses for sampling
+ColorCorrectionPass --> IShader : uses for correction
+ColorCorrectionPass --> ISampler : uses for sampling
+
+' Graphics API Relationships
+IGraphicsDevice --> ITexture : creates
+IGraphicsDevice --> IBuffer : creates
+IGraphicsDevice --> IShader : creates
+IGraphicsDevice --> ISampler : creates
+IGraphicsDevice --> IRenderState : creates
+IGraphicsDevice --> CommandBuffer : creates
+IGraphicsDevice --> IFence : creates
+IGraphicsDevice --> ISwapChain : creates
+
+ITexture --> ITextureView : creates
+IBuffer --> IBufferView : creates
+
+CommandBuffer --> ITextureView : uses
+CommandBuffer --> IBufferView : uses
+CommandBuffer --> IShader : uses
+CommandBuffer --> ISampler : uses
+CommandBuffer --> IRenderState : uses
+
+' Core Relationships
+RenderGraph *-- RenderPass : manages
+RenderGraph *-- ResourceManager : uses
+RenderGraph *-- DependencyResolver : uses
+RenderGraph *-- RenderGraphBuilder : uses
+RenderGraph *-- FrameData : contains
+RenderGraph --> IGraphicsDevice : uses
+
+RenderPass ..> RenderGraphBuilder : uses in Setup
+RenderPass ..> RenderPassContext : uses in Execute
+RenderPass *-- PassStatistics : contains
+
+RenderGraphBuilder --> ResourceManager : manages resources
+RenderPassContext --> ResourceManager : accesses resources
+RenderPassContext --> CommandBuffer : uses
+RenderPassContext --> FrameData : accesses
+
+ResourceManager --> ResourceHandle : creates/manages
+ResourceManager --> ResourceHandleGenerator : uses
+ResourceManager --> ResourcePool : uses
+ResourceManager --> IGraphicsDevice : uses
+ResourceManager --> MemoryUsageInfo : provides
+
+DependencyResolver --> DirectedGraph : uses
+ResourceUsageInfo --> ResourceHandle : references
+
+@enduml
+```

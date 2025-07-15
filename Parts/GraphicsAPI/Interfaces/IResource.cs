@@ -7,7 +7,7 @@ namespace GraphicsAPI;
 /// </summary>
 public interface IResource: IDisposable
 {
-  string Name { get; set; }
+  string Name { get; }
   ResourceType ResourceType { get; }
   bool IsDisposed { get; }
   ulong GetMemorySize();
