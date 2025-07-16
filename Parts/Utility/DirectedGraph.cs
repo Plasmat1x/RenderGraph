@@ -1,6 +1,6 @@
 namespace Utility;
 
-public class DirectedGraph<T>
+public class DirectedGraph<T> where T : class
 {
   private readonly HashSet<T> p_nodes = [];
   private readonly Dictionary<T, List<T>> p_edges = [];
