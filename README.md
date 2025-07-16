@@ -40,7 +40,7 @@ RenderGraph is a declarative, data-driven rendering framework that automatically
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/RenderGraph.git
+git clone https://github.com/Plasmat1x/RenderGraph.git
 cd RenderGraph
 
 # Restore dependencies
@@ -50,7 +50,7 @@ dotnet restore
 dotnet build
 
 # Run demo application
-dotnet run --project Examples/BasicDemo
+dotnet run --project Examples/MockExample
 ```
 
 
