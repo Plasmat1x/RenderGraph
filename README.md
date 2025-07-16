@@ -238,7 +238,7 @@ We welcome contributions! Please see our Contributing Guide for details.
 ### Development Setup
 ```bash
 # Clone with submodules
-git clone --recursive https://github.com/yourusername/RenderGraph.git
+git clone --recursive https://github.com/Plasmat1x/RenderGraph.git
 
 # Install development dependencies
 dotnet tool restore
