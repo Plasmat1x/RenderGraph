@@ -48,31 +48,72 @@ public class DX12Sampler: ISampler
 
   public ulong GetMemorySize()
   {
-    throw new NotImplementedException();
+    return 0;
   }
 
-  public nint GetNativeHandle()
+  public IntPtr GetNativeHandle()
   {
-    throw new NotImplementedException();
+    ThrowIfDisposed();
+    return (IntPtr)p_descriptor.Ptr;
+  }
+
+  public CpuDescriptorHandle GetDescriptorHandle()
+  {
+    ThrowIfDisposed();
+    return p_descriptor;
   }
 
   public void Dispose()
   {
-    throw new NotImplementedException();
+    if(p_disposed) 
+      return;
+
+    p_releaseDescriptorCallback?.Invoke(p_descriptor);
+
+    p_disposed = true;
+
+    GC.SuppressFinalize(this);
   }
 
-  private SamplerDesc CreateSamplerDesc(SamplerDescription _desc)
+  private unsafe SamplerDesc CreateSamplerDesc(SamplerDescription _desc)
   {
-    throw new NotImplementedException();
+    var samplerDesc = new SamplerDesc
+    {
+      Filter = DX12Helpers.ConvertFilter(
+        _desc.MinFilter,
+        _desc.MagFilter,
+        _desc.MipFilter,
+        _desc.ComparisonFunction != ComparisonFunction.Never),
+
+      AddressU = DX12Helpers.ConvertAddressMode(_desc.AddressModeU),
+      AddressV = DX12Helpers.ConvertAddressMode(_desc.AddressModeV),
+      AddressW = DX12Helpers.ConvertAddressMode(_desc.AddressModeW),
+
+      MipLODBias = _desc.LODBias,
+      MaxAnisotropy = _desc.MaxAnisotropy,
+      ComparisonFunc = DX12Helpers.ConvertCompariosonFunc(_desc.ComparisonFunction),
+      MinLOD = _desc.MinLOD,
+      MaxLOD = _desc.MaxLOD,
+    };
+
+    samplerDesc.BorderColor[0] = _desc.BorderColor.X;
+    samplerDesc.BorderColor[1] = _desc.BorderColor.Y;
+    samplerDesc.BorderColor[2] = _desc.BorderColor.Z;
+    samplerDesc.BorderColor[3] = _desc.BorderColor.W;
+
+    if(_desc.MaxAnisotropy > 1)
+    {
+      samplerDesc.Filter = _desc.ComparisonFunction != ComparisonFunction.Never
+        ? Filter.ComparisonAnisotropic
+        : Filter.Anisotropic;
+    }
+
+    return samplerDesc;
   }
 
-  private Filter ConvertFilter(FilterMode _filter)
+  private void ThrowIfDisposed()
   {
-    throw new NotImplementedException();
-  }
-
-  private TextureAddressMode ConvertAddressMode(AddressMode _mode)
-  {
-    throw new NotImplementedException();
+    if(p_disposed)
+      throw new ObjectDisposedException(nameof(DX12Sampler));
   }
 }
