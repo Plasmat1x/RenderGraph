@@ -13,32 +13,51 @@ public class DX12TextureView: ITextureView
   private DX12Texture p_texture;
   private TextureViewType p_viewType;
   private TextureViewDescription p_description;
-  private CpuDescriptorHandle p_dsecriptor;
-  private Format p_format;
+  private CpuDescriptorHandle p_descriptor;
+  private bool p_disposed;
 
-  public DX12TextureView()
+  public DX12TextureView(
+    DX12Texture _texture,
+    TextureViewType _viewType,
+    TextureViewDescription _desc,
+    CpuDescriptorHandle _descriptor)
   {
-
+    p_texture = _texture ?? throw new ArgumentNullException(nameof(_texture));
+    p_viewType = _viewType;
+    p_description = _desc ?? throw new ArgumentNullException(nameof(_desc));
+    p_descriptor = _descriptor;
   }
 
-  public ITexture Texture => throw new NotImplementedException();
+  public ITexture Texture => p_texture;
 
-  public TextureViewType ViewType => throw new NotImplementedException();
+  public TextureViewType ViewType => p_viewType;
 
-  public TextureViewDescription Description => throw new NotImplementedException();
+  public TextureViewDescription Description => p_description;
 
-  public nint GetNativeHandle()
+  public IntPtr GetNativeHandle()
   {
-    throw new NotImplementedException();
+    ThrowIfDisposed();
+    return (IntPtr)p_descriptor.Ptr;
+  }
+
+  public CpuDescriptorHandle GetDescriptorHandle()
+  {
+    ThrowIfDisposed();
+    return p_descriptor;
   }
 
   public void Dispose()
   {
-    throw new NotImplementedException();
+    if(p_disposed)
+      return;
+
+    p_disposed = true;
+    GC.SuppressFinalize(this);
   }
 
-  private void CreateView()
+  private void ThrowIfDisposed()
   {
-    throw new NotImplementedException();
+    if(p_disposed)
+      throw new ObjectDisposedException(nameof(DX12TextureView));
   }
 }

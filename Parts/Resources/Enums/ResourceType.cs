@@ -12,4 +12,5 @@ public enum ResourceType
   StructuredBuffer,
   RawBuffer,
   Sampler,
+  Shader,
 }
