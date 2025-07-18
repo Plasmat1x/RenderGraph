@@ -358,13 +358,13 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] InsertDebugMarker({_name})");
   }
 
+  public override void SetPrimitiveTopology(PrimitiveTopology _topology)
+  {
+    Console.Write($"    [CMD] Set primitive topology ({_topology})");
+  }
+
   public override void Dispose()
   {
     Console.WriteLine($"    [CMD] Command buffer disposed ({CommandCount} total commands)");
-  }
-
-  public override void SetPrimitiveTopology(PrimitiveTopology _topology)
-  {
-    throw new NotImplementedException();
   }
 }

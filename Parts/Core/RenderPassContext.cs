@@ -65,15 +65,15 @@ public class RenderPassContext
 
 internal class BufferViewStub: IBufferView
 {
-  private BufferViewType p_viewType;
-
   public BufferViewStub(IBuffer _buffer, BufferViewType _viewType)
   {
+    Buffer = _buffer;
+    ViewType = _viewType;
   }
 
-  public IBuffer Buffer => throw new NotImplementedException();
+  public IBuffer Buffer {get;}
 
-  public BufferViewType ViewType => throw new NotImplementedException();
+  public BufferViewType ViewType { get; }
 
   public BufferViewDescription Description => throw new NotImplementedException();
 
@@ -90,16 +90,15 @@ internal class BufferViewStub: IBufferView
 
 internal class TextureViewStub: ITextureView
 {
-  private TextureViewType p_viewType;
-
   public TextureViewStub(ITexture _texture, TextureViewType _viewType)
   {
-
+    Texture = _texture;
+    ViewType = _viewType;
   }
 
-  public ITexture Texture => throw new NotImplementedException();
+  public ITexture Texture {get;}
 
-  public TextureViewType ViewType => throw new NotImplementedException();
+  public TextureViewType ViewType { get;}
 
   public TextureViewDescription Description => throw new NotImplementedException();
 
