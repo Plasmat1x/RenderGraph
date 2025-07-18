@@ -115,7 +115,7 @@ public class BlurPass: RenderPass
     {
       Name = "BlurVertexShader",
       Stage = ShaderStage.Vertex,
-      Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
+      ByteCode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
       EntryPoint = "VSMain"
     };
     p_vertexShader = device.CreateShader(vsDesc);
@@ -124,7 +124,7 @@ public class BlurPass: RenderPass
     {
       Name = "HorizontalBlurShader",
       Stage = ShaderStage.Pixel,
-      Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
+      ByteCode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
       EntryPoint = "PSHorizontalBlur"
     };
     p_horizontalBlurShader = device.CreateShader(hBlurDesc);
@@ -133,7 +133,7 @@ public class BlurPass: RenderPass
     {
       Name = "VerticalBlurShader",
       Stage = ShaderStage.Pixel,
-      Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
+      ByteCode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
       EntryPoint = "PSVerticalBlur"
     };
     p_verticalBlurShader = device.CreateShader(vBlurDesc);

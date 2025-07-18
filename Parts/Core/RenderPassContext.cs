@@ -62,3 +62,54 @@ public class RenderPassContext
 
   public void SetFullScreenViewport() => SetViewport(0, 0, ViewportWidth, ViewportHeight);
 }
+
+internal class BufferViewStub: IBufferView
+{
+  private BufferViewType p_viewType;
+
+  public BufferViewStub(IBuffer _buffer, BufferViewType _viewType)
+  {
+  }
+
+  public IBuffer Buffer => throw new NotImplementedException();
+
+  public BufferViewType ViewType => throw new NotImplementedException();
+
+  public BufferViewDescription Description => throw new NotImplementedException();
+
+  public void Dispose()
+  {
+    throw new NotImplementedException();
+  }
+
+  public nint GetNativeHandle()
+  {
+    throw new NotImplementedException();
+  }
+}
+
+internal class TextureViewStub: ITextureView
+{
+  private TextureViewType p_viewType;
+
+  public TextureViewStub(ITexture _texture, TextureViewType _viewType)
+  {
+
+  }
+
+  public ITexture Texture => throw new NotImplementedException();
+
+  public TextureViewType ViewType => throw new NotImplementedException();
+
+  public TextureViewDescription Description => throw new NotImplementedException();
+
+  public void Dispose()
+  {
+    throw new NotImplementedException();
+  }
+
+  public nint GetNativeHandle()
+  {
+    throw new NotImplementedException();
+  }
+}

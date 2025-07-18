@@ -84,18 +84,18 @@ public class MockBuffer: IBuffer
     IsMapped = false;
   }
 
-  public void SetData<T>(T[] _data, ulong _offset = 0) where T : struct => Console.WriteLine($"    [Resource] Setting data for buffer {Name} ({_data.Length} elements, offset: {_offset})");
+  public void SetData<T>(T[] _data, ulong _offset = 0) where T : unmanaged => Console.WriteLine($"    [Resource] Setting data for buffer {Name} ({_data.Length} elements, offset: {_offset})");
 
-  public void SetData<T>(T _data, ulong _offset = 0) where T : struct => Console.WriteLine($"    [Resource] Setting single data element for buffer {Name} (offset: {_offset})");
+  public void SetData<T>(T _data, ulong _offset = 0) where T : unmanaged => Console.WriteLine($"    [Resource] Setting single data element for buffer {Name} (offset: {_offset})");
 
-  public T[] GetData<T>(ulong _offset = 0, ulong _count = 0) where T : struct
+  public T[] GetData<T>(ulong _offset = 0, ulong _count = 0) where T : unmanaged
   {
     var elementCount = _count > 0 ? (int)_count : (int)(Size / (ulong)System.Runtime.InteropServices.Marshal.SizeOf<T>());
     Console.WriteLine($"    [Resource] Getting data from buffer {Name} (offset: {_offset}, count: {elementCount})");
     return new T[elementCount];
   }
 
-  public T GetData<T>(ulong _offset = 0) where T : struct
+  public T GetData<T>(ulong _offset = 0) where T : unmanaged
   {
     Console.WriteLine($"    [Resource] Getting single data element from buffer {Name} (offset: {_offset})");
     return default(T);

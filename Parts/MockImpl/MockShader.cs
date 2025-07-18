@@ -14,7 +14,7 @@ public class MockShader: IShader
     Description = _description;
     Name = _description.Name;
     Stage = _description.Stage;
-    Bytecode = _description.Bytecode ?? new byte[0];
+    Bytecode = _description.ByteCode ?? new byte[0];
   }
 
   public uint Id { get; }

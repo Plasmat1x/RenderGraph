@@ -9,16 +9,16 @@ using Silk.NET.Direct3D12;
 namespace Directx12Impl;
 public class DX12RenderState: IRenderState
 {
+  private readonly ComPtr<ID3D12Device> p_device;
   private ComPtr<ID3D12PipelineState> p_pipelineState;
   private RenderStateDescription p_description;
-  private ComPtr<ID3D12Device> p_device;
   private BlendDesc p_blendDesc;
   private DepthStencilDesc p_depthStencilDesc;
   private RasterizerDesc p_rasterizerDesc;
 
-  public DX12RenderState()
+  public DX12RenderState(ComPtr<ID3D12Device> _device, RenderStateDescription _desc)
   {
-
+    p_description = _desc;
   }
 
   public RenderStateDescription Description => p_description;

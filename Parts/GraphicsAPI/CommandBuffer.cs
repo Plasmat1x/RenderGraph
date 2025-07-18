@@ -52,6 +52,7 @@ public abstract class CommandBuffer: IDisposable
   public abstract void SetSampler(ShaderStage _stage, uint _slot, ISampler _sampler);
   public abstract void SetSamplers(ShaderStage _stage, uint _startSlot, ISampler[] _samplers);
   public abstract void SetRenderState(IRenderState _renderState);
+  public abstract void SetPrimitiveTopology(PrimitiveTopology _topology);
   public abstract void SetBlendState(IBlendState _blendState, Vector4 _blendFactor, uint _sampleMask = 0xffffffff);
   public abstract void SetDepthStencilState(IDepthStencilState _depthStencilState, uint _stencilRef = 0);
   public abstract void SetRasterizerState(IRasterizerState _rasterizerState);
@@ -71,7 +72,11 @@ public abstract class CommandBuffer: IDisposable
   public abstract void PushDebugGroup(string _name);
   public abstract void PopDebugGroup();
   public abstract void InsertDebugMarker(string _name);
-  public void DrawFullscreenQuad() => Draw(3, 1);
+  public void DrawFullscreenQuad()
+  {
+    SetPrimitiveTopology(PrimitiveTopology.TriangleList);
+    Draw(3, 1, 0, 0);
+  }
 
   public void SetRenderTarget(ITexture _colorTarget, ITexture _depthTarget = null)
   {

@@ -7,16 +7,13 @@ using System.Security.AccessControl;
 
 namespace GraphicsAPI;
 
-//public class ShaderReflection_
-//{
-//  public List<ConstantBufferReflection> ConstantBuffers { get; set; } = [];
-//  public List<ResourceBinding> Resources { get; set; } = [];
-//  public List<InputParameterReflection> InputParameters { get; set; } = [];
-//  public List<OutputParameterReflection> OutputParameters { get; set; } = [];
-//}
-
 public class ShaderReflection
 {
+  public List<ConstantBufferReflection> ConstantBuffers { get; set; } = [];
+  public List<ResourceBinding> Resources { get; set; } = [];
+  public List<InputParameterReflection> InputParameters { get; set; } = [];
+  public List<OutputParameterReflection> OutputParameters { get; set; } = [];
+
   public List<ConstantBufferInfo> ConstatnBuffers { get; set; } = [];
   public List<ResourceBindingInfo> BoundResources { get; set; } = [];
   public List<SamplerBindingInfo> Samplers { get; set; } = [];

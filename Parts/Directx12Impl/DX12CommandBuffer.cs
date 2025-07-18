@@ -7,32 +7,76 @@ using Resources.Enums;
 
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
+using Silk.NET.Maths;
 
+using System.Drawing;
 using System.Numerics;
+using System.Security.Cryptography;
 
 namespace Directx12Impl;
 public class DX12CommandBuffer: CommandBuffer
 {
+  private readonly ComPtr<ID3D12Device> p_device;
+  private readonly D3D12 p_d3d12;
+  private readonly CommandListType p_d3d12Type;
+  private readonly CommandBufferType p_type;
+
   private ComPtr<ID3D12GraphicsCommandList> p_commandList;
   private ComPtr<ID3D12CommandAllocator> p_commandAllocator;
-  private ComPtr<ID3D12Device> p_device;
-  private CommandBufferType p_type;
+
   private ComPtr<ID3D12PipelineState> p_currentPipelineState;
   private ComPtr<ID3D12RootSignature> p_currentRootSignature;
-  private List<ResourceBarrier> p_resourceBarriers;
-  private CpuDescriptorHandle[] p_currentRenderTargets;
-  private CpuDescriptorHandle p_currentDepthStencil;
-  private bool p_isDirty;
 
-  public DX12CommandBuffer() { }
+  private Dictionary<ComPtr<ID3D12Resource>, ResourceStates> p_resourceStates = [];
+  private List<ResourceBarrier> p_pendingBarriers = [];
 
-  public override bool IsRecording { get => throw new NotImplementedException(); protected set => throw new NotImplementedException(); }
+  private readonly CpuDescriptorHandle[] p_currentRenderTargets;
+  private CpuDescriptorHandle? p_currentDepthStencil;
+  private uint p_renderTargetCount;
 
-  public override CommandBufferType Type => throw new NotImplementedException();
+  private bool p_disposed;
 
-  public override void Begin()
+  public DX12CommandBuffer(
+    ComPtr<ID3D12Device> _device,
+    D3D12 _d3d12,
+    CommandBufferType _type,
+    string _name = null) 
   {
-    throw new NotImplementedException();
+    p_device = _device;
+    p_d3d12 = _d3d12;
+    p_type = _type;
+    Name = _name ?? $"CommandBuffer_{p_type}";
+
+    p_d3d12Type = DX12Helpers.ConvertCommandListType(_type);
+    p_currentRenderTargets = new CpuDescriptorHandle[8];
+
+    CreateCommandList();
+  }
+
+  public override bool IsRecording { get; protected set; }
+
+  public override CommandBufferType Type => p_type;
+
+  public override unsafe void Begin()
+  {
+    if(IsRecording)
+      throw new InvalidOperationException("Command buffer is already recording");
+
+    HResult hr = p_commandAllocator.Reset();
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to reset command allocator: {hr}");
+
+    hr = p_commandList.Reset(p_commandAllocator, (ID3D12PipelineState*)IntPtr.Zero);
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to reset command list: {hr}");
+
+    IsRecording = true;
+
+    p_pendingBarriers.Clear();
+    p_currentPipelineState = null;
+    p_currentRootSignature = null;
+    p_renderTargetCount = 0;
+    p_currentDepthStencil = null;
   }
 
   public override void BeginQuery(IQuery _query)
@@ -40,14 +84,34 @@ public class DX12CommandBuffer: CommandBuffer
     throw new NotImplementedException();
   }
 
-  public override void ClearDepthStencil(ITextureView _target, GraphicsAPI.Enums.ClearFlags _flags, float _depth, byte _stencil)
+  public override unsafe void ClearDepthStencil(ITextureView _target, GraphicsAPI.Enums.ClearFlags _flags, float _depth, byte _stencil)
   {
-    throw new NotImplementedException();
+    if(_target is not DX12TextureView view)
+      throw new ArgumentException("Invalid texture view type");
+
+    var handle = view.GetDescriptorHandle();
+    Silk.NET.Direct3D12.ClearFlags d3d12Flags = 0;
+
+    if((_flags & GraphicsAPI.Enums.ClearFlags.Depth) != 0)
+      d3d12Flags |= Silk.NET.Direct3D12.ClearFlags.Depth;
+    if((_flags & GraphicsAPI.Enums.ClearFlags.Stencil) != 0)
+      d3d12Flags |= Silk.NET.Direct3D12.ClearFlags.Stencil;
+
+    p_commandList.ClearDepthStencilView(handle, d3d12Flags, _depth, _stencil, 0, (Box2D<int>*)null);
   }
 
-  public override void ClearRenderTarget(ITextureView _target, Vector4 _color)
+  public override unsafe void ClearRenderTarget(ITextureView _target, Vector4 _color)
   {
-    throw new NotImplementedException();
+    if(_target is not DX12TextureView view)
+      throw new ArgumentException("Invalid texture view type");
+
+    var handle = view.GetDescriptorHandle();
+    var colorArray = new[] { _color.X, _color.Y, _color.Z, _color.W };
+
+    fixed(float* pColor = colorArray)
+    {
+      p_commandList.ClearRenderTargetView(handle, pColor, 0, (Box2D<int>*)IntPtr.Zero);
+    }
   }
 
   public override void ClearUnorderedAccess(ITextureView _target, Vector4 _value)
@@ -62,7 +126,11 @@ public class DX12CommandBuffer: CommandBuffer
 
   public override void CopyBuffer(IBuffer _src, IBuffer _dst)
   {
-    throw new NotImplementedException();
+    if(_src is not DX12Buffer srcBuffer || _dst is not DX12Buffer dstBuffer)
+      throw new ArgumentException("Invalid buffer type");
+
+    FlushResourceBarriers();
+    p_commandList.CopyResource(dstBuffer.GetResource(), srcBuffer.GetResource());
   }
 
   public override void CopyBufferRegion(IBuffer _src, ulong _srcOffset, IBuffer _dst, ulong _dstOffset, ulong _size)
@@ -72,7 +140,11 @@ public class DX12CommandBuffer: CommandBuffer
 
   public override void CopyTexture(ITexture _src, ITexture _dst)
   {
-    throw new NotImplementedException();
+    if(_src is not DX12Texture srcTexture || _dst is not DX12Texture dstTexture)
+      throw new ArgumentException("Invalid texture type");
+
+    FlushResourceBarriers();
+    p_commandList.CopyResource(dstTexture.GetResource(), srcTexture.GetResource());
   }
 
   public override void CopyTextureRegion(ITexture _src, uint _srcMip, uint _srcArray, GraphicsAPI.Box _srcBox, ITexture _dst, uint _dstMip, uint _dstArray, Point3D _dstOffset)
@@ -82,7 +154,8 @@ public class DX12CommandBuffer: CommandBuffer
 
   public override void Dispatch(uint _groupCountX, uint _groupCountY = 1, uint _groupCountZ = 1)
   {
-    throw new NotImplementedException();
+    FlushResourceBarriers();
+    p_commandList.Dispatch(_groupCountX, _groupCountY, _groupCountZ);
   }
 
   public override void DispatchIndirect(IBufferView _argsBuffer, ulong _offset = 0)
@@ -92,12 +165,14 @@ public class DX12CommandBuffer: CommandBuffer
 
   public override void Draw(uint _vertexCount, uint _instanceCount = 1, uint _startVertex = 0, uint _startInstance = 0)
   {
-    throw new NotImplementedException();
+    FlushResourceBarriers();
+    p_commandList.DrawInstanced(_vertexCount, _instanceCount, _startVertex, _startInstance);
   }
 
   public override void DrawIndexed(uint _indexCount, uint _instanceCount = 1, uint _startIndex = 0, int _baseVertex = 0, uint _startInstance = 0)
   {
-    throw new NotImplementedException();
+    FlushResourceBarriers();
+    p_commandList.DrawIndexedInstanced(_indexCount, _instanceCount, _startIndex, _baseVertex, _startInstance);
   }
 
   public override void DrawIndexedIndirect(IBufferView _argsBuffer, ulong _offset = 0)
@@ -112,7 +187,16 @@ public class DX12CommandBuffer: CommandBuffer
 
   public override void End()
   {
-    throw new NotImplementedException();
+    if(!IsRecording)
+      throw new InvalidOperationException("Command buffer is not recording");
+
+    FlushResourceBarriers();
+
+    HResult hr = p_commandList.Close();
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to close command list: {hr}");
+
+    IsRecording = false;
   }
 
   public override void EndQuery(IQuery _query)
@@ -137,7 +221,8 @@ public class DX12CommandBuffer: CommandBuffer
 
   public override void Reset()
   {
-    throw new NotImplementedException();
+    if(IsRecording)
+      End();
   }
 
   public override void ResolveTexture(ITexture _src, uint _srcArray, ITexture _dst, uint _dstArray, TextureFormat _format)
@@ -185,9 +270,13 @@ public class DX12CommandBuffer: CommandBuffer
     throw new NotImplementedException();
   }
 
-  public override void SetIndexBuffer(IBufferView _buffer, IndexFormat _format)
+  public override unsafe void SetIndexBuffer(IBufferView _buffer, IndexFormat _format)
   {
-    throw new NotImplementedException();
+    if(_buffer is not DX12BufferView view)
+      throw new ArgumentException("Invalid buffer view type");
+
+    var ibView = view.GetIndexBufferView();
+    p_commandList.IASetIndexBuffer(&ibView);
   }
 
   public override void SetPixelShader(IShader _shader)
@@ -207,12 +296,40 @@ public class DX12CommandBuffer: CommandBuffer
 
   public override void SetRenderTarget(ITextureView _colorTarget, ITextureView _depthTarget = null)
   {
-    throw new NotImplementedException();
+    SetRenderTargets(
+    _colorTarget != null ? new[] { _colorTarget } : null,
+    _depthTarget);
   }
 
-  public override void SetRenderTargets(ITextureView[] _colorTargets, ITextureView _depthTarget)
+  public override unsafe void SetRenderTargets(ITextureView[] _colorTargets, ITextureView _depthTarget)
   {
-    throw new NotImplementedException();
+    p_renderTargetCount = 0;
+
+    if(_colorTargets != null)
+    {
+      for(int i = 0; i < _colorTargets.Length && i < 8; i++)
+      {
+        if(_colorTargets[i] is DX12TextureView view)
+        {
+          p_currentRenderTargets[i] = view.GetDescriptorHandle();
+          p_renderTargetCount++;
+        }
+      }
+    }
+
+    p_currentDepthStencil = null;
+    if(_depthTarget is DX12TextureView depthView)
+    {
+      p_currentDepthStencil = depthView.GetDescriptorHandle();
+    }
+
+    CpuDescriptorHandle dsHandle = p_currentDepthStencil.HasValue ? p_currentDepthStencil.Value : default;
+    CpuDescriptorHandle rtHandle = p_currentRenderTargets[0];
+    p_commandList.QueryInterface<ID3D12GraphicsCommandList10>().OMSetRenderTargets(
+        p_renderTargetCount,
+        p_renderTargetCount > 0 ? &rtHandle : null,
+        false,
+        &dsHandle);
   }
 
   public override void SetSampler(ShaderStage _stage, uint _slot, ISampler _sampler)
@@ -225,12 +342,18 @@ public class DX12CommandBuffer: CommandBuffer
     throw new NotImplementedException();
   }
 
-  public override void SetScissorRect(Rectangle _rect)
+  public override unsafe void SetScissorRect(Resources.Rectangle _rect)
   {
-    throw new NotImplementedException();
+    var d3d12Rect = new Silk.NET.Maths.Box2D<int>(
+    _rect.X,
+    _rect.Y,
+    _rect.Width,
+    _rect.Height);
+
+    p_commandList.QueryInterface<ID3D12GraphicsCommandList10>().RSSetScissorRects(1, &d3d12Rect);
   }
 
-  public override void SetScissorRects(Rectangle[] _rects)
+  public override void SetScissorRects(Resources.Rectangle[] _rects)
   {
     throw new NotImplementedException();
   }
@@ -255,9 +378,13 @@ public class DX12CommandBuffer: CommandBuffer
     throw new NotImplementedException();
   }
 
-  public override void SetVertexBuffer(IBufferView _buffer, uint _slot = 0)
+  public override unsafe void SetVertexBuffer(IBufferView _buffer, uint _slot = 0)
   {
-    throw new NotImplementedException();
+    if(_buffer is not DX12BufferView view)
+      throw new ArgumentException("Invalid buffer view type");
+
+    var vbView = view.GetVertexBufferView();
+    p_commandList.IASetVertexBuffers(_slot, 1, &vbView);
   }
 
   public override void SetVertexBuffers(IBufferView[] _buffers, uint _startSlot = 0)
@@ -270,9 +397,34 @@ public class DX12CommandBuffer: CommandBuffer
     throw new NotImplementedException();
   }
 
-  public override void SetViewport(Resources.Viewport _viewport)
+  public override unsafe void SetViewport(Resources.Viewport _viewport)
   {
-    throw new NotImplementedException();
+    var d3d12Viewport = new Silk.NET.Direct3D12.Viewport
+    {
+      TopLeftX = _viewport.X,
+      TopLeftY = _viewport.Y,
+      Width = _viewport.Width,
+      Height = _viewport.Height,
+      MinDepth = _viewport.MinDepth,
+      MaxDepth = _viewport.MaxDepth
+    };
+
+    p_commandList.RSSetViewports(1, &d3d12Viewport);
+  }
+
+  public override void SetPrimitiveTopology(PrimitiveTopology _topology)
+  {
+    var d3d12Topology = _topology switch
+    {
+      PrimitiveTopology.PointList => D3DPrimitiveTopology.D3DPrimitiveTopologyPointlist,
+      PrimitiveTopology.LineList => D3DPrimitiveTopology.D3DPrimitiveTopologyLinelist,
+      PrimitiveTopology.LineStrip => D3DPrimitiveTopology.D3DPrimitiveTopologyLinestrip,
+      PrimitiveTopology.TriangleList => D3DPrimitiveTopology.D3DPrimitiveTopologyTrianglelist,
+      PrimitiveTopology.TriangleStrip => D3DPrimitiveTopology.D3DPrimitiveTopologyTrianglestrip,
+      _ => D3DPrimitiveTopology.D3DPrimitiveTopologyUndefined
+    };
+
+    p_commandList.IASetPrimitiveTopology(d3d12Topology);
   }
 
   public override void SetViewports(Resources.Viewport[] _viewports)
@@ -280,9 +432,54 @@ public class DX12CommandBuffer: CommandBuffer
     throw new NotImplementedException();
   }
 
-  public override void TransitionResource(IResource _resource, ResourceState _newState)
+  public override unsafe void TransitionResource(IResource _resource, ResourceState _newState)
   {
-    throw new NotImplementedException();
+    ID3D12Resource* d3d12Resource = null;
+    ResourceStates currentState = ResourceStates.Common;
+
+    switch(_resource)
+    {
+      case DX12Texture texture:
+        d3d12Resource = texture.GetResource();
+        currentState = texture.GetCurrentState();
+        break;
+      case DX12Buffer buffer:
+        d3d12Resource = buffer.GetResource();
+        currentState = buffer.GetCurrentState();
+        break;
+      default:
+        throw new ArgumentException("Invalid resource type");
+    }
+
+    var targetState = ConvertResourceState(_newState);
+
+    if(currentState == targetState)
+      return;
+
+    // Добавляем барьер
+    var barrier = new ResourceBarrier
+    {
+      Type = ResourceBarrierType.Transition,
+      Flags = ResourceBarrierFlags.None
+    };
+
+    barrier.Anonymous.Transition.PResource = d3d12Resource;
+    barrier.Anonymous.Transition.StateBefore = currentState;
+    barrier.Anonymous.Transition.StateAfter = targetState;
+    barrier.Anonymous.Transition.Subresource = D3D12.ResourceBarrierAllSubresources;
+
+    p_pendingBarriers.Add(barrier);
+
+    // Обновляем состояние в ресурсе
+    switch(_resource)
+    {
+      case DX12Texture texture:
+        texture.SetCurrentState(targetState);
+        break;
+      case DX12Buffer buffer:
+        buffer.SetCurrentState(targetState);
+        break;
+    }
   }
 
   public override void TransitionResources(IResource[] _resources, ResourceState[] _newStates)
@@ -300,9 +497,12 @@ public class DX12CommandBuffer: CommandBuffer
     throw new NotImplementedException();
   }
 
+  public unsafe ID3D12GraphicsCommandList* GetCommandList() => p_commandList;
+
   public override void Dispose()
   {
-    throw new NotImplementedException();
+    p_commandList.Dispose();
+    p_commandAllocator.Dispose();
   }
 
   private ResourceStates ConvertResourceState(ResourceState _state)
@@ -315,13 +515,66 @@ public class DX12CommandBuffer: CommandBuffer
     throw new NotImplementedException();
   }
 
-  private void FlushResourceBarriers()
+  private ID3D12Resource GetDX12Resource(IResource _resource)
   {
     throw new NotImplementedException();
   }
 
-  private ID3D12Resource GetDX12Resource(IResource _resource)
+  private unsafe void CreateCommandList()
   {
-    throw new NotImplementedException();
+    ID3D12CommandAllocator* allocator;
+    HResult hr = p_device.CreateCommandAllocator(
+        p_d3d12Type,
+        SilkMarshal.GuidPtrOf<ID3D12CommandAllocator>(),
+        (void**)&allocator);
+
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to create command allocator: {hr}");
+
+    p_commandAllocator = allocator;
+
+    ComPtr<ID3D12PipelineState> pso = default;
+    ID3D12GraphicsCommandList* commandList;
+    hr = p_device.CreateCommandList(
+        0,
+        p_d3d12Type,
+        p_commandAllocator,
+        pso,
+        out p_commandList);
+
+    if(hr.IsFailure)
+    {
+      p_commandAllocator.Release();
+      throw new InvalidOperationException($"Failed to create command list: {hr}");
+    }
+
+    p_commandList.Close();
+
+    if(!string.IsNullOrEmpty(Name))
+    {
+      SetDebugName(Name);
+    }
+  }
+
+  private unsafe void FlushResourceBarriers()
+  {
+    if(p_pendingBarriers.Count == 0)
+      return;
+
+    fixed(ResourceBarrier* pBarriers = p_pendingBarriers.ToArray())
+    {
+      p_commandList.ResourceBarrier((uint)p_pendingBarriers.Count, pBarriers);
+    }
+
+    p_pendingBarriers.Clear();
+  }
+
+  private unsafe void SetDebugName(string name)
+  {
+    var nameBytes = System.Text.Encoding.Unicode.GetBytes(name + "\0");
+    fixed(byte* pName = nameBytes)
+    {
+      p_commandList.SetName((char*)pName);
+    }
   }
 }

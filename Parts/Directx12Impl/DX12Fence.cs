@@ -122,6 +122,12 @@ public class DX12Fence: IFence
       throw new COMException($"Failed to make queue wait for fence value {_value}", hr);
   }
 
+  public ComPtr<ID3D12Fence> GetFence()
+  {
+    ThrowIfDisposed(); 
+    return p_fence;
+  }
+
   public void Dispose()
   {
     if(p_disposed)

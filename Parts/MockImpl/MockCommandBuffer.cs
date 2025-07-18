@@ -362,4 +362,9 @@ public class MockCommandBuffer: CommandBuffer
   {
     Console.WriteLine($"    [CMD] Command buffer disposed ({CommandCount} total commands)");
   }
+
+  public override void SetPrimitiveTopology(PrimitiveTopology _topology)
+  {
+    throw new NotImplementedException();
+  }
 }

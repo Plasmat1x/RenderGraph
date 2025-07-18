@@ -213,7 +213,7 @@ public class Program
       {
         Name = $"Demo{stage}Shader",
         Stage = stage,
-        Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43, 0x01, 0x02, 0x03, 0x04 },
+        ByteCode = new byte[] { 0x44, 0x58, 0x42, 0x43, 0x01, 0x02, 0x03, 0x04 },
         EntryPoint = stage == ShaderStage.Vertex ? "VSMain" :
                      stage == ShaderStage.Pixel ? "PSMain" :
                      stage == ShaderStage.Compute ? "CSMain" : "GSMain"

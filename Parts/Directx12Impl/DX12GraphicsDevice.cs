@@ -1,3 +1,5 @@
+using Directx12Impl.Managers;
+
 using GraphicsAPI;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
@@ -9,90 +11,137 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
+using System.Runtime.InteropServices;
+
 namespace Directx12Impl;
 public class DX12GraphicsDevice: IGraphicsDevice
 {
+  private readonly D3D12 p_d3d12;
+  private readonly DXGI p_dxgi;
+
   private ComPtr<ID3D12Device> p_device;
   private ComPtr<IDXGIFactory4> p_dxgiFactory;
+  private ComPtr<IDXGIAdapter1> p_adapter;
+
   private ComPtr<ID3D12CommandQueue> p_directQueue;
   private ComPtr<ID3D12CommandQueue> p_computeQueue;
   private ComPtr<ID3D12CommandQueue> p_copyQueue;
+
   private uint p_rtvDescriptorSize;
   private uint p_dsvDescriptorSize;
   private uint p_cbvSrvUavDescriptorSize;
-  private uint p_samplerDescriprotSize;
+  private uint p_samplerDescriptorSize;
+
   private ComPtr<ID3D12DescriptorHeap> p_rtvHeap;
   private ComPtr<ID3D12DescriptorHeap> p_dsvHeap;
-  private List<ComPtr<ID3D12DescriptorHeap>> p_shaderVisibleHeaps;
-  private uint p_currentFrameIndex;
-  private List<ulong> p_fenceValues;
-  private ComPtr<ID3D12Fence> p_fence;
-  private nint p_fenceEvent;
+  private ComPtr<ID3D12DescriptorHeap> p_cbvSrvUavHeap;
+  private ComPtr<ID3D12DescriptorHeap> p_samplerHeap;
 
-  public DX12GraphicsDevice()
+  private DescriptorAllocator p_rtvAllocator;
+  private DescriptorAllocator p_dsvAllocator;
+  private DescriptorAllocator p_cbvSrvUavAllocator;
+  private DescriptorAllocator p_samplerAllocator;
+
+  private DX12Fence p_frameFence;
+  private ulong p_currentFenceValue = 1;
+
+  private DeviceCapabilities p_capabilities;
+  private bool p_disposed;
+
+  public DX12GraphicsDevice(bool _enableDebugLayer = false)
   {
-
+    p_d3d12 = D3D12.GetApi();
+    p_dxgi = DXGI.GetApi();
   }
 
   public string Name { get; private set; }
 
-  public API API { get; private set; }
+  public API API => API.DirectX12;
 
-  public DeviceCapabilities Capabilities { get; private set; }
+  public DeviceCapabilities Capabilities => p_capabilities;
 
   public ITexture CreateTexture(TextureDescription _desc)
   {
-    throw new NotImplementedException();
+    return new DX12Texture(p_device, p_d3d12, _desc, ReleaseDescriptor);
   }
 
   public IBuffer CreateBuffer(BufferDescription _desc)
   {
-    throw new NotImplementedException();
+    return new DX12Buffer(p_device, p_d3d12, _desc, ReleaseDescriptor);
   }
 
   public IShader CreateShader(ShaderDescription _desc)
   {
-    throw new NotImplementedException();
+    return new DX12Shader(_desc);
   }
 
   public IRenderState CreateRenderState(RenderStateDescription _desc)
   {
-    throw new NotImplementedException();
+    return new DX12RenderState(p_device, _desc);
   }
 
   public ISampler CreateSampler(SamplerDescription _desc)
   {
-    throw new NotImplementedException();
+    var descriptor = p_samplerAllocator.Allocate();
+    return new DX12Sampler(p_device, _desc, descriptor, ReleaseDescriptor);
   }
 
   public CommandBuffer CreateCommandBuffer()
   {
-    throw new NotImplementedException();
+    return CreateCommandBuffer(CommandBufferType.Direct);
   }
 
   public CommandBuffer CreateCommandBuffer(CommandBufferType _type)
   {
-    throw new NotImplementedException();
+    return new DX12CommandBuffer(p_device, p_d3d12, _type);
   }
 
   public IFence CreateFence(ulong _initialValue = 0)
   {
-    throw new NotImplementedException();
+    return new DX12Fence(p_device, _initialValue);
   }
 
-  public void ExecuteCommandBuffer(CommandBuffer _commandBuffer)
+  public unsafe void ExecuteCommandBuffer(CommandBuffer _commandBuffer)
   {
-    throw new NotImplementedException();
+    if(_commandBuffer is not DX12CommandBuffer dx12CommandBuffer)
+      throw new ArgumentException("Invalid command buffer type");
+
+    var commandList = dx12CommandBuffer.GetCommandList();
+    ID3D12CommandList* lists = (ID3D12CommandList*)commandList;
+
+    var queue = _commandBuffer.Type switch
+    {
+      CommandBufferType.Compute => p_computeQueue,
+      CommandBufferType.Copy => p_copyQueue,
+      _ => p_directQueue
+    };
+
+    queue.ExecuteCommandLists(1, &lists);
   }
 
-  public void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers)
+  public unsafe void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers)
   {
-    throw new NotImplementedException();
+    if(_commandBuffers == null || _commandBuffers.Length == 0)
+      return;
+
+    var commandLists = stackalloc ID3D12CommandList*[_commandBuffers.Length];
+
+    for(int i = 0; i < _commandBuffers.Length; i++)
+    {
+      if(_commandBuffers[i] is not DX12CommandBuffer dx12CommandBuffer)
+        throw new ArgumentException($"Invalid command buffer type at index {i}");
+
+      commandLists[i] = (ID3D12CommandList*)dx12CommandBuffer.GetCommandList();
+    }
+
+    p_directQueue.ExecuteCommandLists((uint)_commandBuffers.Length, commandLists);
   }
 
   public void WaitForGPU()
   {
-    throw new NotImplementedException();
+    p_directQueue.Signal(p_frameFence.GetFence(), p_currentFenceValue);
+    p_frameFence.Wait(p_currentFenceValue);
+    p_currentFenceValue++;
   }
 
   public void WaitForFence(IFence _fence)
@@ -102,17 +151,39 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   public ISwapChain CreateSwapChain(SwapChainDescription _desc)
   {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Swap chain creation requires window handle");
   }
 
   public void Present()
   {
-    throw new NotImplementedException();
+    throw new NotImplementedException("Present is handled by swap chain");
   }
 
   public void Dispose()
   {
-    throw new NotImplementedException();
+    if(p_disposed)
+      return;
+
+    WaitForGPU();
+
+    p_frameFence?.Dispose();
+
+    p_rtvHeap.Dispose();
+    p_dsvHeap.Dispose();
+    p_cbvSrvUavHeap.Dispose();
+    p_samplerHeap.Dispose();
+
+    p_directQueue.Release();
+    if(p_computeQueue != p_directQueue)
+      p_computeQueue.Release();
+    if(p_copyQueue != p_directQueue)
+      p_copyQueue.Release();
+
+    p_device.Dispose();
+    p_adapter.Dispose();
+    p_dxgiFactory.Dispose();
+
+    p_disposed = true;
   }
 
   public MemoryInfo GetMemoryInfo()
@@ -145,19 +216,306 @@ public class DX12GraphicsDevice: IGraphicsDevice
     throw new NotImplementedException();
   }
 
-  private void CreateDevice()
+  private void ReleaseDescriptor(CpuDescriptorHandle _descriptor)
   {
-    throw new NotImplementedException();
+    // Determine which allocator owns this descriptor and free it
   }
 
-  private void CreateCommandQueues()
+  private void Initialize(bool _enableDebugLayer)
   {
-    throw new NotImplementedException();
+
+#if DEBUG
+    if(_enableDebugLayer)
+    {
+      EnableDebugLayer();
+    }
+#endif
+
+    CreateDXGIFactory();
+    CreateDevice();
+    CreateCommandQueues();
+    CreateDescriptorHeaps();
+
+    p_frameFence = new DX12Fence(p_device, 0);
+
+    QueryDeviceCapabilities();
+
+    Name = GetAdapterDescription();
   }
 
-  private void CreateDescriptorHeaps()
+  private unsafe void EnableDebugLayer()
   {
-    throw new NotImplementedException();
+    ID3D12Debug* debugController;
+    HResult hr = p_d3d12.GetDebugInterface(SilkMarshal.GuidPtrOf<ID3D12Debug>(), (void**)&debugController);
+
+    if(hr.IsSuccess)
+    {
+      debugController->EnableDebugLayer();
+      debugController->Release();
+
+      ID3D12Debug1* debugController1;
+      hr = p_d3d12.GetDebugInterface(SilkMarshal.GuidPtrOf<ID3D12Debug1>(), (void**)&debugController1);
+      if(hr.IsSuccess)
+      {
+        debugController1->SetEnableGPUBasedValidation(true);
+        debugController1->Release();
+      }
+    }
+  }
+
+  private unsafe void CreateDXGIFactory()
+  {
+    uint dxgiFactoryFlags = 0;
+
+#if DEBUG
+    dxgiFactoryFlags |= DXGI.CreateFactoryDebug;
+#endif
+
+    IDXGIFactory4* factory;
+    HResult hr = p_dxgi.CreateDXGIFactory2(
+        dxgiFactoryFlags,
+        SilkMarshal.GuidPtrOf<IDXGIFactory4>(),
+        (void**)&factory);
+
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to create DXGI factory: {hr}");
+
+    p_dxgiFactory = factory;
+  }
+
+  private unsafe void CreateDevice()
+  {
+    IDXGIAdapter1* adapter = null;
+    ID3D12Device* device = null;
+
+    for(uint i = 0; ; i++)
+    {
+      IDXGIAdapter1* currentAdapter;
+      HResult hr = p_dxgiFactory.EnumAdapters1(i, &currentAdapter);
+
+      if(hr == 0x887A0002) //DXGI_ERROR_NOT_FOUND
+        break;
+
+      if(hr.IsFailure)
+        continue;
+
+      AdapterDesc1 desc;
+      currentAdapter->GetDesc1(&desc);
+
+      if((desc.Flags & (uint)AdapterFlag.Software) != 0)
+      {
+        currentAdapter->Release();
+        continue;
+      }
+
+      hr = p_d3d12.CreateDevice(
+          (IUnknown*)currentAdapter,
+          D3DFeatureLevel.Level110,
+          SilkMarshal.GuidPtrOf<ID3D12Device>(),
+          (void**)&device);
+
+      if(hr.IsSuccess)
+      {
+        adapter = currentAdapter;
+        break;
+      }
+
+      currentAdapter->Release();
+    }
+
+    if(device == null)
+    {
+      IDXGIAdapter* warpAdapter;
+      HResult hr = p_dxgiFactory.EnumWarpAdapter(SilkMarshal.GuidPtrOf<IDXGIAdapter>(), (void**)&warpAdapter);
+
+      if(hr.IsSuccess)
+      {
+        hr = p_d3d12.CreateDevice(
+            (IUnknown*)warpAdapter,
+            D3DFeatureLevel.Level110,
+            SilkMarshal.GuidPtrOf<ID3D12Device>(),
+            (void**)&device);
+
+        if(hr.IsFailure)
+        {
+          warpAdapter->Release();
+          throw new InvalidOperationException($"Failed to create WARP device: {hr}");
+        }
+
+        adapter = (IDXGIAdapter1*)warpAdapter;
+      }
+      else
+      {
+        throw new InvalidOperationException("No suitable GPU adapter found");
+      }
+    }
+
+    p_adapter = adapter;
+    p_device = device;
+  }
+
+  private unsafe void CreateCommandQueues()
+  {
+    var queueDesc = new CommandQueueDesc
+    {
+      Type = CommandListType.Direct,
+      Priority = (int)CommandQueuePriority.Normal,
+      Flags = CommandQueueFlags.None,
+      NodeMask = 0
+    };
+
+    ID3D12CommandQueue* directQueue;
+    HResult hr = p_device.CreateCommandQueue(
+        &queueDesc,
+        SilkMarshal.GuidPtrOf<ID3D12CommandQueue>(),
+        (void**)&directQueue);
+
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to create direct command queue: {hr}");
+
+    p_directQueue = directQueue;
+
+    queueDesc.Type = CommandListType.Compute;
+
+    ID3D12CommandQueue* computeQueue;
+    hr = p_device.CreateCommandQueue(
+        &queueDesc,
+        SilkMarshal.GuidPtrOf<ID3D12CommandQueue>(),
+        (void**)&computeQueue);
+
+    if(hr.IsSuccess)
+      p_computeQueue = computeQueue;
+    else
+      p_computeQueue = p_directQueue;
+
+    queueDesc.Type = CommandListType.Copy;
+
+    ID3D12CommandQueue* copyQueue;
+    hr = p_device.CreateCommandQueue(
+        &queueDesc,
+        SilkMarshal.GuidPtrOf<ID3D12CommandQueue>(),
+        (void**)&copyQueue);
+
+    if(hr.IsSuccess)
+      p_copyQueue = copyQueue;
+    else
+      p_copyQueue = p_directQueue;
+  }
+
+  private unsafe void CreateDescriptorHeaps()
+  {
+    p_rtvDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.Rtv);
+    p_dsvDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.Dsv);
+    p_cbvSrvUavDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.CbvSrvUav);
+    p_samplerDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.Sampler);
+
+    // Create RTV heap
+    var heapDesc = new DescriptorHeapDesc
+    {
+      Type = DescriptorHeapType.Rtv,
+      NumDescriptors = 64,
+      Flags = DescriptorHeapFlags.None,
+      NodeMask = 0
+    };
+
+    ID3D12DescriptorHeap* rtvHeap;
+    HResult hr = p_device.CreateDescriptorHeap(
+        &heapDesc,
+        SilkMarshal.GuidPtrOf<ID3D12DescriptorHeap>(),
+        (void**)&rtvHeap);
+
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to create RTV heap: {hr}");
+
+    p_rtvHeap = rtvHeap;
+    p_rtvAllocator = new DescriptorAllocator(p_rtvHeap, p_rtvDescriptorSize, 64);
+
+    heapDesc.Type = DescriptorHeapType.Dsv;
+    heapDesc.NumDescriptors = 32;
+
+    ID3D12DescriptorHeap* dsvHeap;
+    hr = p_device.CreateDescriptorHeap(
+        &heapDesc,
+        SilkMarshal.GuidPtrOf<ID3D12DescriptorHeap>(),
+        (void**)&dsvHeap);
+
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to create DSV heap: {hr}");
+
+    p_dsvHeap = dsvHeap;
+    p_dsvAllocator = new DescriptorAllocator(p_dsvHeap, p_dsvDescriptorSize, 32);
+
+    heapDesc.Type = DescriptorHeapType.CbvSrvUav;
+    heapDesc.NumDescriptors = 1024;
+    heapDesc.Flags = DescriptorHeapFlags.ShaderVisible;
+
+    ID3D12DescriptorHeap* cbvSrvUavHeap;
+    hr = p_device.CreateDescriptorHeap(
+        &heapDesc,
+        SilkMarshal.GuidPtrOf<ID3D12DescriptorHeap>(),
+        (void**)&cbvSrvUavHeap);
+
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to create CBV/SRV/UAV heap: {hr}");
+
+    p_cbvSrvUavHeap = cbvSrvUavHeap;
+    p_cbvSrvUavAllocator = new DescriptorAllocator(p_cbvSrvUavHeap, p_cbvSrvUavDescriptorSize, 1024);
+
+    heapDesc.Type = DescriptorHeapType.Sampler;
+    heapDesc.NumDescriptors = 64;
+
+    ID3D12DescriptorHeap* samplerHeap;
+    hr = p_device.CreateDescriptorHeap(
+        &heapDesc,
+        SilkMarshal.GuidPtrOf<ID3D12DescriptorHeap>(),
+        (void**)&samplerHeap);
+
+    if(hr.IsFailure)
+      throw new InvalidOperationException($"Failed to create sampler heap: {hr}");
+
+    p_samplerHeap = samplerHeap;
+    p_samplerAllocator = new DescriptorAllocator(p_samplerHeap, p_samplerDescriptorSize, 64);
+  }
+
+  private void QueryDeviceCapabilities()
+  {
+    p_capabilities = new DeviceCapabilities
+    {
+      MaxTexture1DSize = D3D12.ReqTexture1DUDimension,
+      MaxTexture2DSize = D3D12.ReqTexture2DUOrVDimension,
+      MaxTexture3DSize = D3D12.ReqTexture3DUVOrWDimension,
+      MaxTextureCubeSize = D3D12.ReqTexturecubeDimension,
+      MaxTextureArrayLayers = D3D12.ReqTexture2DArrayAxisDimension,
+      MaxColorAttachments = D3D12.SimultaneousRenderTargetCount,
+      MaxVertexAttributes = D3D12.IAVertexInputResourceSlotCount,
+      MaxVertexBuffers = D3D12.IAVertexInputResourceSlotCount,
+      MaxUniformBufferBindings = 14,
+      MaxStorageBufferBindings = 64,
+      MaxSampledImageBindings = 128,
+      MaxStorageImageBindings = 64,
+      MaxSamplerBindings = D3D12.CommonshaderSamplerSlotCount,
+      MaxComputeWorkGroupSize = D3D12.CSThreadGroupMaxX,
+      MaxComputeWorkGroupInvocations = D3D12.CSThreadGroupMaxThreadsPerGroup,
+      SupportsGeometryShader = true,
+      SupportsTessellation = true,
+      SupportsComputeShader = true,
+      SupportsMultiDrawIndirect = true,
+      SupportsDrawIndirect = true,
+      SupportsDepthClamp = true,
+      SupportsAnisotropicFiltering = true,
+      SupportsTextureCompressionBC = true
+    };
+  }
+
+  private unsafe string GetAdapterDescription()
+  {
+    if(p_adapter == null)
+      return "Unknown Adapter";
+
+    AdapterDesc1 desc;
+    p_adapter.GetDesc1(&desc);
+
+    return Marshal.PtrToStringUni((IntPtr)desc.Description) ?? "Unknown Adapter";
   }
 
   private void CreateFence()
@@ -167,16 +525,11 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   private void WaitForFenceValue(ulong _fenceValue)
   {
-    throw new NotImplementedException();
+    p_frameFence.Wait(_fenceValue);
   }
 
   private ComPtr<ID3D12Device> GetID3D12Device()
   {
-    throw new NotImplementedException();
-  }
-
-  private CpuDescriptorHandle AllocateDescriptor(DescriptorHeapType _type)
-  {
-    throw new NotImplementedException();
+    return p_device;
   }
 }

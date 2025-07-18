@@ -8,6 +8,7 @@ public class TextureViewDescription
 {
   public TextureViewType ViewType { get; set; }
   public TextureFormat Format { get; set; }
+  public BindFlags BindFlags { get; set; }
   public uint MostDetailedMip { get; set; } = 0;
   public uint MipLevels { get; set; } = 1;
   public uint FirstArraySlice { get; set; } = 0;
