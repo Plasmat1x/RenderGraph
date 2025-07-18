@@ -159,7 +159,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
     throw new NotImplementedException("Present is handled by swap chain");
   }
 
-  public void Dispose()
+  public unsafe void Dispose()
   {
     if(p_disposed)
       return;
@@ -173,11 +173,11 @@ public class DX12GraphicsDevice: IGraphicsDevice
     p_cbvSrvUavHeap.Dispose();
     p_samplerHeap.Dispose();
 
-    p_directQueue.Release();
-    if(p_computeQueue != p_directQueue)
-      p_computeQueue.Release();
-    if(p_copyQueue != p_directQueue)
-      p_copyQueue.Release();
+    if(p_computeQueue.Handle != p_directQueue.Handle)
+      p_computeQueue.Dispose();
+    if(p_copyQueue.Handle != p_directQueue.Handle)
+      p_copyQueue.Dispose();
+    p_directQueue.Dispose();
 
     p_device.Dispose();
     p_adapter.Dispose();
@@ -509,7 +509,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   private unsafe string GetAdapterDescription()
   {
-    if(p_adapter == null)
+    if(p_adapter.Handle == null)
       return "Unknown Adapter";
 
     AdapterDesc1 desc;
