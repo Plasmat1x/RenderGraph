@@ -1,3 +1,5 @@
+using GraphicsAPI.Descriptions;
+
 namespace GraphicsAPI.Interfaces;
 
 /// <summary>

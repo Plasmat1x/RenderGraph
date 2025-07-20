@@ -1,4 +1,4 @@
-namespace GraphicsAPI;
+namespace GraphicsAPI.Reflections;
 
 public class ConstantBufferReflection
 {

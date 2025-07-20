@@ -135,7 +135,7 @@ public static class DX12Helpers
     _ => throw new ArgumentException($"Unsupported texture address mode: {_mode}")
   };
 
-  public static ComparisonFunc ConvertCompariosonFunc(ComparisonFunction _func) => _func switch
+  public static ComparisonFunc ConvertComparisonFunc(ComparisonFunction _func) => _func switch
   {
     ComparisonFunction.Never => ComparisonFunc.Never,
     ComparisonFunction.Less => ComparisonFunc.Less,
@@ -174,12 +174,69 @@ public static class DX12Helpers
     return result;
   }
 
+  public static BlendOp ConvertBlendOp(BlendOperation _operation) => _operation switch
+  {
+    BlendOperation.Add => BlendOp.Add,
+    BlendOperation.Subtract => BlendOp.Subtract,
+    BlendOperation.ReverseSubtract => BlendOp.RevSubtract,
+    BlendOperation.Min => BlendOp.Min,
+    BlendOperation.Max => BlendOp.Max,
+    _ => BlendOp.Add
+  };
+
+  public static Silk.NET.Direct3D12.CullMode ConvertCullMode(GraphicsAPI.Enums.CullMode _mode) => _mode switch
+  {
+    GraphicsAPI.Enums.CullMode.None => Silk.NET.Direct3D12.CullMode.None,
+    GraphicsAPI.Enums.CullMode.Front => Silk.NET.Direct3D12.CullMode.Front,
+    GraphicsAPI.Enums.CullMode.Back => Silk.NET.Direct3D12.CullMode.Back,
+    _ => Silk.NET.Direct3D12.CullMode.Back
+  };
+
+  public static StencilOp ConvertStencilOperation(StencilOperation _operation) => _operation switch
+  {
+    StencilOperation.Keep => StencilOp.Keep,
+    StencilOperation.Zero => StencilOp.Zero,
+    StencilOperation.Replace => StencilOp.Replace,
+    StencilOperation.IncrementSaturated => StencilOp.IncrSat,
+    StencilOperation.DecrementSaturated => StencilOp.DecrSat,
+    StencilOperation.Invert => StencilOp.Invert,
+    StencilOperation.Increment => StencilOp.Incr,
+    StencilOperation.Decrement => StencilOp.Decr,
+    _ => StencilOp.Keep
+  };
+
+  public static Blend ConvertBlend(BlendFactor _option) => _option switch
+  {
+    BlendFactor.Zero => Blend.Zero,
+    BlendFactor.One => Blend.One,
+    BlendFactor.SrcColor => Blend.SrcColor,
+    BlendFactor.InvSrcColor => Blend.InvSrcColor,
+    BlendFactor.SrcAlpha => Blend.SrcAlpha,
+    BlendFactor.InvSrcAlpha => Blend.InvSrcAlpha,
+    BlendFactor.DstAlpha => Blend.DestAlpha,
+    BlendFactor.InvDstAlpha => Blend.InvDestAlpha,
+    BlendFactor.DstColor => Blend.DestColor,
+    BlendFactor.InvDstColor => Blend.InvDestColor,
+    BlendFactor.SrcAlphaSat => Blend.SrcAlphaSat,
+    BlendFactor.BlendFactor => Blend.BlendFactor,
+    BlendFactor.InvBlendFactor => Blend.InvBlendFactor,
+    _ => Blend.One
+  };
+
+  public static PrimitiveTopologyType ConvertPrimitiveTopologyType(PrimitiveTopology _topology) => _topology switch
+  {
+    PrimitiveTopology.PointList => PrimitiveTopologyType.Point,
+    PrimitiveTopology.LineList or PrimitiveTopology.LineStrip => PrimitiveTopologyType.Line,
+    PrimitiveTopology.TriangleList or PrimitiveTopology.TriangleStrip => PrimitiveTopologyType.Triangle,
+    _ => PrimitiveTopologyType.Undefined
+  };
+
   public static uint GetFormatSize(Format _format) => _format switch
   {
     Format.FormatR32G32B32A32Typeless or
-                Format.FormatR32G32B32A32Float or
-                Format.FormatR32G32B32A32Uint or
-                Format.FormatR32G32B32A32Sint => 16,
+    Format.FormatR32G32B32A32Float or
+    Format.FormatR32G32B32A32Uint or
+    Format.FormatR32G32B32A32Sint => 16,
 
     Format.FormatR32G32B32Typeless or
     Format.FormatR32G32B32Float or

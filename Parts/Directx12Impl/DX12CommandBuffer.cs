@@ -456,7 +456,6 @@ public class DX12CommandBuffer: CommandBuffer
     if(currentState == targetState)
       return;
 
-    // Добавляем барьер
     var barrier = new ResourceBarrier
     {
       Type = ResourceBarrierType.Transition,
@@ -470,7 +469,6 @@ public class DX12CommandBuffer: CommandBuffer
 
     p_pendingBarriers.Add(barrier);
 
-    // Обновляем состояние в ресурсе
     switch(_resource)
     {
       case DX12Texture texture:
@@ -507,7 +505,7 @@ public class DX12CommandBuffer: CommandBuffer
 
   private ResourceStates ConvertResourceState(ResourceState _state)
   {
-    throw new NotImplementedException();
+    return DX12Helpers.ConvertResourceState(_state);
   }
 
   private CommandListType ConvertCommandListType(CommandBufferType _type)
@@ -569,9 +567,9 @@ public class DX12CommandBuffer: CommandBuffer
     p_pendingBarriers.Clear();
   }
 
-  private unsafe void SetDebugName(string name)
+  private unsafe void SetDebugName(string _name)
   {
-    var nameBytes = System.Text.Encoding.Unicode.GetBytes(name + "\0");
+    var nameBytes = System.Text.Encoding.Unicode.GetBytes(_name + "\0");
     fixed(byte* pName = nameBytes)
     {
       p_commandList.SetName((char*)pName);

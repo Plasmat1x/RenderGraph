@@ -1,6 +1,6 @@
 using GraphicsAPI.Enums;
 
-namespace GraphicsAPI;
+namespace GraphicsAPI.Descriptions;
 
 public class ShaderDescription
 {

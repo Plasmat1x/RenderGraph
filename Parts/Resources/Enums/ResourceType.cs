@@ -13,4 +13,5 @@ public enum ResourceType
   RawBuffer,
   Sampler,
   Shader,
+  RenderState,
 }

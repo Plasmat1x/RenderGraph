@@ -2,6 +2,7 @@ using Core;
 using Core.Enums;
 
 using GraphicsAPI;
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 

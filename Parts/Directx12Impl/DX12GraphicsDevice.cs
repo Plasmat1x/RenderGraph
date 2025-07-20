@@ -1,6 +1,7 @@
 using Directx12Impl.Managers;
 
 using GraphicsAPI;
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
@@ -42,8 +43,8 @@ public class DX12GraphicsDevice: IGraphicsDevice
   private DescriptorAllocator p_cbvSrvUavAllocator;
   private DescriptorAllocator p_samplerAllocator;
 
-  private DX12Fence p_frameFence;
-  private ulong p_currentFenceValue = 1;
+  private FrameFenceManager p_frameManager;
+  private const int p_frameCount = 3;
 
   private DeviceCapabilities p_capabilities;
   private bool p_disposed;
@@ -77,7 +78,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   public IRenderState CreateRenderState(RenderStateDescription _desc)
   {
-    return new DX12RenderState(p_device, _desc);
+    return new DX12RenderState(p_device, p_d3d12, _desc);
   }
 
   public ISampler CreateSampler(SamplerDescription _desc)
@@ -139,9 +140,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   public void WaitForGPU()
   {
-    p_directQueue.Signal(p_frameFence.GetFence(), p_currentFenceValue);
-    p_frameFence.Wait(p_currentFenceValue);
-    p_currentFenceValue++;
+    p_frameManager.WaitForGPU(p_directQueue);
   }
 
   public void WaitForFence(IFence _fence)
@@ -159,6 +158,18 @@ public class DX12GraphicsDevice: IGraphicsDevice
     throw new NotImplementedException("Present is handled by swap chain");
   }
 
+  public void BeginFrame()
+  {
+    p_frameManager.WaitForPreviousFrame();
+  }
+
+  public void EndFrame()
+  {
+    p_frameManager.MoveToNextFrame();
+  }
+
+  public int GetCurrentFrameIndex() => p_frameManager.CurrentFrameIndex;
+
   public unsafe void Dispose()
   {
     if(p_disposed)
@@ -166,7 +177,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
     WaitForGPU();
 
-    p_frameFence?.Dispose();
+    p_frameManager?.Dispose();
 
     p_rtvHeap.Dispose();
     p_dsvHeap.Dispose();
@@ -236,7 +247,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
     CreateCommandQueues();
     CreateDescriptorHeaps();
 
-    p_frameFence = new DX12Fence(p_device, 0);
+    p_frameManager = new FrameFenceManager(p_device, p_frameCount);
 
     QueryDeviceCapabilities();
 
@@ -525,7 +536,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   private void WaitForFenceValue(ulong _fenceValue)
   {
-    p_frameFence.Wait(_fenceValue);
+    //p_frameManager.Wait(_fenceValue);
   }
 
   private ComPtr<ID3D12Device> GetID3D12Device()

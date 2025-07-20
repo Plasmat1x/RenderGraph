@@ -1,4 +1,4 @@
-using GraphicsAPI;
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Interfaces;
 
 using Silk.NET.Core.Native;

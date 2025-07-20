@@ -1,6 +1,6 @@
 using GraphicsAPI.Enums;
 
-namespace GraphicsAPI;
+namespace GraphicsAPI.Reflections;
 
 public class InputParameterReflection
 {

@@ -1,4 +1,4 @@
-using GraphicsAPI;
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
@@ -91,7 +91,7 @@ public class DX12Sampler: ISampler
 
       MipLODBias = _desc.LODBias,
       MaxAnisotropy = _desc.MaxAnisotropy,
-      ComparisonFunc = DX12Helpers.ConvertCompariosonFunc(_desc.ComparisonFunction),
+      ComparisonFunc = DX12Helpers.ConvertComparisonFunc(_desc.ComparisonFunction),
       MinLOD = _desc.MinLOD,
       MaxLOD = _desc.MaxLOD,
     };

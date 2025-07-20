@@ -2,7 +2,7 @@ using GraphicsAPI.Enums;
 
 using Resources.Enums;
 
-namespace GraphicsAPI;
+namespace GraphicsAPI.Descriptions;
 
 public class SwapChainDescription
 {
@@ -14,5 +14,5 @@ public class SwapChainDescription
   public uint SampleQuality { get; set; } = 0;
   public SwapEffect SwapEffect { get; set; } = SwapEffect.FlipDiscard;
   public bool Windowed { get; set; } = true;
-  public IntPtr WindowHandle { get; set; }
+  public nint WindowHandle { get; set; }
 }

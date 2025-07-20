@@ -1,4 +1,4 @@
-using GraphicsAPI;
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 

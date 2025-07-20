@@ -6,5 +6,6 @@ public enum BlendOperation
   Subtract,
   RevSubtract,
   Min,
-  Max
+  Max,
+  ReverseSubtract
 }

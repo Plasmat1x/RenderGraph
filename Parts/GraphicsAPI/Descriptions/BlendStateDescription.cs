@@ -1,4 +1,4 @@
-namespace GraphicsAPI;
+namespace GraphicsAPI.Descriptions;
 
 public class BlendStateDescription
 {

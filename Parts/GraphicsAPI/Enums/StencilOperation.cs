@@ -9,5 +9,9 @@ public enum StencilOperation
   DecrSat,
   Invert,
   Incr,
-  Decr
+  Decr,
+  IncrementSaturated,
+  DecrementSaturated,
+  Increment,
+  Decrement
 }

@@ -27,6 +27,9 @@ public class FrameFenceManager : IDisposable
     p_currentFenceValue = 1;
   }
 
+  public int CurrentFrameIndex => p_currentFrameIndex;
+  public ulong CurrentFenceValue => p_currentFenceValue;
+
   public void WaitForPreviousFrame()
   {
     var fenceValueToWait = p_fenceValues[p_currentFrameIndex];
@@ -37,6 +40,7 @@ public class FrameFenceManager : IDisposable
   public void SignalEndOfFrame(ComPtr<ID3D12CommandQueue> _queue)
   {
     p_fence.SignalFromQueue(_queue, p_currentFenceValue);
+    p_fenceValues[p_currentFrameIndex] = p_currentFenceValue;
     p_currentFenceValue++;
   }
 

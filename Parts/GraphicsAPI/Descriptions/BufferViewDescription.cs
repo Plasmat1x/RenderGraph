@@ -1,6 +1,6 @@
 using Resources.Enums;
 
-namespace GraphicsAPI;
+namespace GraphicsAPI.Descriptions;
 
 public class BufferViewDescription
 {

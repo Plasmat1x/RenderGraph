@@ -1,4 +1,5 @@
 using GraphicsAPI;
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Interfaces;
 
 using Resources;

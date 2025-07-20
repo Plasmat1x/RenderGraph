@@ -1,6 +1,7 @@
 using Core;
 
 using GraphicsAPI;
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 
 using MockImpl;
