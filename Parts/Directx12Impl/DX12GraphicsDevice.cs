@@ -86,7 +86,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   public IRenderState CreateRenderState(RenderStateDescription _description, PipelineStateDescription _pipelineDescription)
   {
-    return new DX12RenderState(p_device, p_d3d12, _description, _pipelineDescription, p_rootSignatureCache);
+    return new DX12RenderState(p_device, p_d3d12, _description, _pipelineDescription, p_rootSignatureCache, p_pipelineStateCache);
   }
 
   public ISampler CreateSampler(SamplerDescription _desc)
