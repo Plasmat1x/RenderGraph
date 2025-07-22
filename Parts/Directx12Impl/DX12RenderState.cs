@@ -14,18 +14,29 @@ public class DX12RenderState: IRenderState
 {
   private readonly ComPtr<ID3D12Device> p_device;
   private readonly D3D12 p_d3d12;
+
+  private readonly DX12PipelineStateCache p_pipelineStateCache;
+  private readonly DX12RootSignatureCache p_rootSignatureCache;
+
   private ComPtr<ID3D12PipelineState> p_pipelineState;
   private ComPtr<ID3D12RootSignature> p_rootSignature;
   private RenderStateDescription p_description;
+  private PipelineStateDescription p_pipelineDescription;
   private bool p_disposed;
 
   public DX12RenderState(
     ComPtr<ID3D12Device> _device,
     D3D12 _d3d12,
-    RenderStateDescription _desc)
+    RenderStateDescription _desc,
+    PipelineStateDescription _pipelineDescription,
+    DX12RootSignatureCache _rootSignatureCache,
+    DX12PipelineStateCache _pipelineStateCache)
   {
     p_description = _desc;
     p_d3d12 = _d3d12;
+    p_rootSignatureCache = _rootSignatureCache;
+    p_pipelineStateCache = _pipelineStateCache;
+    p_pipelineDescription = _pipelineDescription;
 
     CreatePipelineState();
   }
@@ -80,26 +91,30 @@ public class DX12RenderState: IRenderState
 
   private unsafe void CreatePipelineState()
   {
-    CreateDefaultRootSignature();
-
-    if(p_description.PipelineState.ComputeShader != null)
+    if(p_pipelineDescription.ComputeShader != null)
+    {
+      p_rootSignature = p_rootSignatureCache.GetDefaultComputeRootSignature();
       CreateComputePipelineState();
+    }
     else
+    {
+      p_rootSignature = p_rootSignatureCache.GetDefaultGraphicsRootSignature();
       CreateGraphicsPipelineState();
+    }
   }
 
   private unsafe void CreateGraphicsPipelineState()
   {
-    var vs = p_description.PipelineState.VertexShader as DX12Shader;
-    var ps = p_description.PipelineState.PixelShader as DX12Shader;
-    var ds = p_description.PipelineState.DomainShader as DX12Shader;
-    var hs = p_description.PipelineState.HullShader as DX12Shader;
-    var gs = p_description.PipelineState.GeometryShader as DX12Shader;
+    var vs = p_pipelineDescription.VertexShader as DX12Shader;
+    var ps = p_pipelineDescription.PixelShader as DX12Shader;
+    var ds = p_pipelineDescription.DomainShader as DX12Shader;
+    var hs = p_pipelineDescription.HullShader as DX12Shader;
+    var gs = p_pipelineDescription.GeometryShader as DX12Shader;
 
     if(vs == null)
       throw new ArgumentException("Vertex shader is required for graphics pipeline");
 
-    var inputElements = CreateInputLayout(p_description.PipelineState.InputLayout);
+    var inputElements = CreateInputLayout(p_pipelineDescription.InputLayout);
 
     var psoDesc = new GraphicsPipelineStateDesc
     {
@@ -111,7 +126,7 @@ public class DX12RenderState: IRenderState
       GS = gs?.GetD3D12Bytecode() ?? default,
       StreamOutput = default, // TODO: Stream output support
       BlendState = ConvertBlendState(p_description.BlendState),
-      SampleMask = p_description.PipelineState.SampleMask,
+      SampleMask = p_pipelineDescription.SampleMask,
       RasterizerState = ConvertRasterizerState(p_description.RasterizerState),
       DepthStencilState = ConvertDepthStencilState(p_description.DepthStencilState),
       InputLayout = new InputLayoutDesc
@@ -120,39 +135,29 @@ public class DX12RenderState: IRenderState
         NumElements = (uint)inputElements.Length
       },
       IBStripCutValue = IndexBufferStripCutValue.ValueDisabled,
-      PrimitiveTopologyType = ConvertPrimitiveTopologyType(p_description.PipelineState.PrimitiveTopology),
-      NumRenderTargets = p_description.PipelineState.RenderTargetCount,
-      DSVFormat = ConvertFormat(p_description.PipelineState.DepthStencilFormat),
+      PrimitiveTopologyType = ConvertPrimitiveTopologyType(p_pipelineDescription.PrimitiveTopology),
+      NumRenderTargets = p_pipelineDescription.RenderTargetCount,
+      DSVFormat = ConvertFormat(p_pipelineDescription.DepthStencilFormat),
       SampleDesc = new SampleDesc
       {
-        Count = p_description.PipelineState.SampleCount,
-        Quality = p_description.PipelineState.SampleQuality
+        Count = p_pipelineDescription.SampleCount,
+        Quality = p_pipelineDescription.SampleQuality
       },
       NodeMask = 0,
       Flags = PipelineStateFlags.None
     };
 
-    for(int i = 0; i < p_description.PipelineState.RenderTargetCount; i++)
+    for(int i = 0; i < p_pipelineDescription.RenderTargetCount; i++)
     {
-      psoDesc.RTVFormats[i] = ConvertFormat(p_description.PipelineState.RenderTargetFormats[i]);
+      psoDesc.RTVFormats[i] = ConvertFormat(p_pipelineDescription.RenderTargetFormats[i]);
     }
 
-    HResult hr = p_device.CreateGraphicsPipelineState(
-        ref psoDesc,
-        out p_pipelineState);
-
-    if(psoDesc.InputLayout.PInputElementDescs != null)
-    {
-      SilkMarshal.Free((nint)psoDesc.InputLayout.PInputElementDescs);
-    }
-
-    if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to create graphics pipeline state: {hr}");
+    p_pipelineState = p_pipelineStateCache.GetOrCreateGraphicsPipeline(psoDesc);
   }
 
   private void CreateComputePipelineState()
   {
-    var cs = p_description.PipelineState.ComputeShader as DX12Shader;
+    var cs = p_pipelineDescription.ComputeShader as DX12Shader;
 
     if(cs == null)
       throw new ArgumentException("Compute shader is required for compute pipeline");
@@ -165,61 +170,7 @@ public class DX12RenderState: IRenderState
       Flags = PipelineStateFlags.None
     };
 
-    HResult hr = p_device.CreateComputePipelineState(
-        ref psoDesc,
-        out p_pipelineState);
-
-    if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to create compute pipeline state: {hr}");
-  }
-
-  private unsafe void CreateDefaultRootSignature()
-  {
-    var rootSignatureDesc = new RootSignatureDesc
-    {
-      NumParameters = 0,
-      PParameters = null,
-      NumStaticSamplers = 0,
-      PStaticSamplers = null,
-      Flags = RootSignatureFlags.AllowInputAssemblerInputLayout
-    };
-
-    ID3D10Blob* signature = null;
-    ID3D10Blob* error = null;
-
-    HResult hr = p_d3d12.SerializeRootSignature(
-        &rootSignatureDesc,
-        D3DRootSignatureVersion.Version10,
-        &signature,
-        &error);
-
-    if(hr.IsFailure)
-    {
-      if(error != null)
-      {
-        var errorMessage = SilkMarshal.PtrToString((nint)error->GetBufferPointer());
-        error->Release();
-        throw new InvalidOperationException($"Failed to serialize root signature: {errorMessage}");
-      }
-      throw new InvalidOperationException($"Failed to serialize root signature: {hr}");
-    }
-
-    ID3D12RootSignature* rootSig;
-    hr = p_device.CreateRootSignature(
-        0,
-        signature->GetBufferPointer(),
-        signature->GetBufferSize(),
-        SilkMarshal.GuidPtrOf<ID3D12RootSignature>(),
-        (void**)&rootSig);
-
-    signature->Release();
-    if(error != null)
-      error->Release();
-
-    if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to create root signature: {hr}");
-
-    p_rootSignature = rootSig;
+    p_pipelineState = p_pipelineStateCache.GetOrCreateComputePipeline(psoDesc);
   }
 
   private unsafe InputElementDesc[] CreateInputLayout(InputLayoutDescription _layoutDesc)

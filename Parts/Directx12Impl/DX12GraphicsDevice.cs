@@ -46,6 +46,9 @@ public class DX12GraphicsDevice: IGraphicsDevice
   private FrameFenceManager p_frameManager;
   private const int p_frameCount = 3;
 
+  private DX12PipelineStateCache p_pipelineStateCache;
+  private DX12RootSignatureCache p_rootSignatureCache;
+
   private DeviceCapabilities p_capabilities;
   private bool p_disposed;
 
@@ -78,7 +81,12 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   public IRenderState CreateRenderState(RenderStateDescription _desc)
   {
-    return new DX12RenderState(p_device, p_d3d12, _desc);
+    throw new InvalidOperationException("Use CreateRenderState overload with PipelineStateDescription for D3D12");
+  }
+
+  public IRenderState CreateRenderState(RenderStateDescription _description, PipelineStateDescription _pipelineDescription)
+  {
+    return new DX12RenderState(p_device, p_d3d12, _description, _pipelineDescription, p_rootSignatureCache);
   }
 
   public ISampler CreateSampler(SamplerDescription _desc)
@@ -170,6 +178,33 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   public int GetCurrentFrameIndex() => p_frameManager.CurrentFrameIndex;
 
+  public MemoryInfo GetMemoryInfo()
+  {
+    throw new NotImplementedException();
+  }
+
+  public ulong GetTotalMemory()
+  {
+    throw new NotImplementedException();
+  }
+
+  public bool SupportsFormat(TextureFormat _format, FormatUsage _usage)
+  {
+    throw new NotImplementedException();
+  }
+
+  public uint GetFormatBytesPerPixel(TextureFormat _format) => DX12Helpers.GetFormatSize(DX12Helpers.ConvertFormat(_format));
+
+  public SampleCountFlags GetSupportedSampleCounts(TextureFormat _textureFormat)
+  {
+    throw new NotImplementedException();
+  }
+
+  public ulong GetAvailableMemory()
+  {
+    throw new NotImplementedException();
+  }
+
   public unsafe void Dispose()
   {
     if(p_disposed)
@@ -178,6 +213,8 @@ public class DX12GraphicsDevice: IGraphicsDevice
     WaitForGPU();
 
     p_frameManager?.Dispose();
+    p_pipelineStateCache?.Dispose();
+    p_rootSignatureCache?.Dispose();
 
     p_rtvHeap.Dispose();
     p_dsvHeap.Dispose();
@@ -197,35 +234,6 @@ public class DX12GraphicsDevice: IGraphicsDevice
     p_disposed = true;
   }
 
-  public MemoryInfo GetMemoryInfo()
-  {
-    throw new NotImplementedException();
-  }
-
-  public ulong GetTotalMemory()
-  {
-    throw new NotImplementedException();
-  }
-
-  public bool SupportsFormat(TextureFormat _format, FormatUsage _usage)
-  {
-    throw new NotImplementedException();
-  }
-
-  public uint GetFormatBytesPerPixel(TextureFormat _format)
-  {
-    throw new NotImplementedException();
-  }
-
-  public SampleCountFlags GetSupportedSampleCounts(TextureFormat _textureFormat)
-  {
-    throw new NotImplementedException();
-  }
-
-  public ulong GetAvailableMemory()
-  {
-    throw new NotImplementedException();
-  }
 
   private void ReleaseDescriptor(CpuDescriptorHandle _descriptor)
   {
@@ -247,7 +255,10 @@ public class DX12GraphicsDevice: IGraphicsDevice
     CreateCommandQueues();
     CreateDescriptorHeaps();
 
-    p_frameManager = new FrameFenceManager(p_device, p_frameCount);
+    CreateFence();
+
+    p_pipelineStateCache = new(p_device);
+    p_rootSignatureCache = new(p_device, p_d3d12);
 
     QueryDeviceCapabilities();
 
@@ -420,7 +431,6 @@ public class DX12GraphicsDevice: IGraphicsDevice
     p_cbvSrvUavDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.CbvSrvUav);
     p_samplerDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.Sampler);
 
-    // Create RTV heap
     var heapDesc = new DescriptorHeapDesc
     {
       Type = DescriptorHeapType.Rtv,
@@ -531,11 +541,12 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   private void CreateFence()
   {
-    throw new NotImplementedException();
+    p_frameManager = new FrameFenceManager(p_device, p_frameCount);
   }
 
   private void WaitForFenceValue(ulong _fenceValue)
   {
+    throw new NotImplementedException();
     //p_frameManager.Wait(_fenceValue);
   }
 

@@ -27,8 +27,7 @@ public class DX12CommandBuffer: CommandBuffer
   private ComPtr<ID3D12PipelineState> p_currentPipelineState;
   private ComPtr<ID3D12RootSignature> p_currentRootSignature;
 
-  private Dictionary<ComPtr<ID3D12Resource>, ResourceStates> p_resourceStates = [];
-  private List<ResourceBarrier> p_pendingBarriers = [];
+  private DX12StateTracker p_stateTracker = new();
 
   private readonly CpuDescriptorHandle[] p_currentRenderTargets;
   private CpuDescriptorHandle? p_currentDepthStencil;
@@ -72,7 +71,7 @@ public class DX12CommandBuffer: CommandBuffer
 
     IsRecording = true;
 
-    p_pendingBarriers.Clear();
+    p_stateTracker.Reset();
     p_currentPipelineState = null;
     p_currentRootSignature = null;
     p_renderTargetCount = 0;
@@ -129,7 +128,7 @@ public class DX12CommandBuffer: CommandBuffer
     if(_src is not DX12Buffer srcBuffer || _dst is not DX12Buffer dstBuffer)
       throw new ArgumentException("Invalid buffer type");
 
-    FlushResourceBarriers();
+    p_stateTracker.FlushResourceBarriers(p_commandList);
     p_commandList.CopyResource(dstBuffer.GetResource(), srcBuffer.GetResource());
   }
 
@@ -143,7 +142,7 @@ public class DX12CommandBuffer: CommandBuffer
     if(_src is not DX12Texture srcTexture || _dst is not DX12Texture dstTexture)
       throw new ArgumentException("Invalid texture type");
 
-    FlushResourceBarriers();
+    p_stateTracker.FlushResourceBarriers(p_commandList);
     p_commandList.CopyResource(dstTexture.GetResource(), srcTexture.GetResource());
   }
 
@@ -154,7 +153,7 @@ public class DX12CommandBuffer: CommandBuffer
 
   public override void Dispatch(uint _groupCountX, uint _groupCountY = 1, uint _groupCountZ = 1)
   {
-    FlushResourceBarriers();
+    p_stateTracker.FlushResourceBarriers(p_commandList);
     p_commandList.Dispatch(_groupCountX, _groupCountY, _groupCountZ);
   }
 
@@ -165,13 +164,13 @@ public class DX12CommandBuffer: CommandBuffer
 
   public override void Draw(uint _vertexCount, uint _instanceCount = 1, uint _startVertex = 0, uint _startInstance = 0)
   {
-    FlushResourceBarriers();
+    p_stateTracker.FlushResourceBarriers(p_commandList);
     p_commandList.DrawInstanced(_vertexCount, _instanceCount, _startVertex, _startInstance);
   }
 
   public override void DrawIndexed(uint _indexCount, uint _instanceCount = 1, uint _startIndex = 0, int _baseVertex = 0, uint _startInstance = 0)
   {
-    FlushResourceBarriers();
+    p_stateTracker.FlushResourceBarriers(p_commandList);
     p_commandList.DrawIndexedInstanced(_indexCount, _instanceCount, _startIndex, _baseVertex, _startInstance);
   }
 
@@ -190,7 +189,9 @@ public class DX12CommandBuffer: CommandBuffer
     if(!IsRecording)
       throw new InvalidOperationException("Command buffer is not recording");
 
-    FlushResourceBarriers();
+    p_stateTracker.ResolvePendingResourceBarriers();
+    p_stateTracker.FlushResourceBarriers(p_commandList);
+    p_stateTracker.CommitFinalResourceStates();
 
     HResult hr = p_commandList.Close();
     if(hr.IsFailure)
@@ -289,9 +290,26 @@ public class DX12CommandBuffer: CommandBuffer
     throw new NotImplementedException();
   }
 
-  public override void SetRenderState(IRenderState _renderState)
+  public override unsafe void SetRenderState(IRenderState _renderState)
   {
-    throw new NotImplementedException();
+    if(_renderState is not DX12RenderState dx12RenderState)
+      throw new ArgumentException("Invalid render state type");
+
+    var pso = dx12RenderState.GetPipelineState();
+    var rootSignature = dx12RenderState.GetRootSignature();
+
+    p_commandList.SetPipelineState(pso);
+    p_currentPipelineState = pso;
+
+    if(p_currentRootSignature.Handle != rootSignature.Handle)
+    {
+      if(Type == CommandBufferType.Compute)
+        p_commandList.SetComputeRootSignature(rootSignature);
+      else
+        p_commandList.SetGraphicsRootSignature(rootSignature);
+
+      p_currentRootSignature = rootSignature;
+    }
   }
 
   public override void SetRenderTarget(ITextureView _colorTarget, ITextureView _depthTarget = null)
@@ -435,17 +453,14 @@ public class DX12CommandBuffer: CommandBuffer
   public override unsafe void TransitionResource(IResource _resource, ResourceState _newState)
   {
     ID3D12Resource* d3d12Resource = null;
-    ResourceStates currentState = ResourceStates.Common;
 
     switch(_resource)
     {
       case DX12Texture texture:
         d3d12Resource = texture.GetResource();
-        currentState = texture.GetCurrentState();
         break;
       case DX12Buffer buffer:
         d3d12Resource = buffer.GetResource();
-        currentState = buffer.GetCurrentState();
         break;
       default:
         throw new ArgumentException("Invalid resource type");
@@ -453,21 +468,7 @@ public class DX12CommandBuffer: CommandBuffer
 
     var targetState = ConvertResourceState(_newState);
 
-    if(currentState == targetState)
-      return;
-
-    var barrier = new ResourceBarrier
-    {
-      Type = ResourceBarrierType.Transition,
-      Flags = ResourceBarrierFlags.None
-    };
-
-    barrier.Anonymous.Transition.PResource = d3d12Resource;
-    barrier.Anonymous.Transition.StateBefore = currentState;
-    barrier.Anonymous.Transition.StateAfter = targetState;
-    barrier.Anonymous.Transition.Subresource = D3D12.ResourceBarrierAllSubresources;
-
-    p_pendingBarriers.Add(barrier);
+    p_stateTracker.TransitionResource(d3d12Resource, targetState);
 
     switch(_resource)
     {
@@ -552,19 +553,6 @@ public class DX12CommandBuffer: CommandBuffer
     {
       SetDebugName(Name);
     }
-  }
-
-  private unsafe void FlushResourceBarriers()
-  {
-    if(p_pendingBarriers.Count == 0)
-      return;
-
-    fixed(ResourceBarrier* pBarriers = p_pendingBarriers.ToArray())
-    {
-      p_commandList.ResourceBarrier((uint)p_pendingBarriers.Count, pBarriers);
-    }
-
-    p_pendingBarriers.Clear();
   }
 
   private unsafe void SetDebugName(string _name)

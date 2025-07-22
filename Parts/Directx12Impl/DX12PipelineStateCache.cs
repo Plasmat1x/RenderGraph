@@ -2,11 +2,13 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 
 namespace Directx12Impl;
-public class DX12PipelineStateCache
+public class DX12PipelineStateCache: IDisposable
 {
   private readonly Dictionary<GraphicsPipelineStateDesc, ComPtr<ID3D12PipelineState>> p_graphicsCache = [];
   private readonly Dictionary<ComputePipelineStateDesc, ComPtr<ID3D12PipelineState>> p_computeCache = []; 
   private readonly ComPtr<ID3D12Device> p_device;
+
+  private bool p_disposed;
 
   public DX12PipelineStateCache(ComPtr<ID3D12Device> _device) 
   { 
@@ -41,5 +43,15 @@ public class DX12PipelineStateCache
   {
     p_graphicsCache.Clear();
     p_computeCache.Clear();
+  }
+
+  public void Dispose()
+  {
+    if(p_disposed)
+      return;
+
+    Clear();
+
+    p_disposed = true;
   }
 }

@@ -22,8 +22,9 @@ package "DirectX12 Implementation" {
         - _dsvAllocator: DescriptorAllocator
         - _cbvSrvUavAllocator: DescriptorAllocator
         - _samplerAllocator: DescriptorAllocator
-        - _frameFence: DX12Fence
-        - _currentFenceValue: ulong
+        - _frameManager: FrameFenceManager
+        - _rootSignatureCache: DX12RootSignatureCache
+        - _pipelineStateCache: DX12PipelineStateCache
         - _capabilities: DeviceCapabilities
         - _isDisposed: bool
         --
@@ -36,23 +37,18 @@ package "DirectX12 Implementation" {
         + CreateShader(description: ShaderDescription): IShader
         + CreateSampler(description: SamplerDescription): ISampler
         + CreateRenderState(description: RenderStateDescription): IRenderState
+        + CreateRenderState(description: RenderStateDescription, pipeline: PipelineStateDescription): IRenderState
         + CreateCommandBuffer(): CommandBuffer
         + CreateCommandBuffer(type: CommandBufferType): CommandBuffer
         + ExecuteCommandBuffer(commandBuffer: CommandBuffer): void
         + ExecuteCommandBuffers(commandBuffers: CommandBuffer[]): void
         + WaitForGPU(): void
+        + BeginFrame(): void
+        + EndFrame(): void
+        + GetCurrentFrameIndex(): int
         + CreateSwapChain(description: SwapChainDescription): ISwapChain
         + Present(): void
         + Dispose(): void
-        - Initialize(enableDebugLayer: bool): void
-        - EnableDebugLayer(): void
-        - CreateDXGIFactory(): void
-        - CreateDevice(): void
-        - CreateCommandQueues(): void
-        - CreateDescriptorHeaps(): void
-        - QueryDeviceCapabilities(): void
-        - GetAdapterDescription(): string
-        - ReleaseDescriptor(descriptor: CpuDescriptorHandle): void
     }
 
     class DX12Texture {
@@ -93,14 +89,6 @@ package "DirectX12 Implementation" {
         + GetNativeHandle(): IntPtr
         + GetMemorySize(): ulong
         + Dispose(): void
-        - CreateResource(): void
-        - GetResourceDimension(): ResourceDimension
-        - ConvertToResourceFlags(): ResourceFlags
-        - DetermineInitialState(): ResourceStates
-        - SetDebugName(name: string): void
-        - ConvertToDXGIFormat(format: TextureFormat): Format
-        - GetTypelessFormat(format: Format): Format
-        - GetDepthStencilFormat(format: Format): Format
     }
 
     class DX12Buffer {
@@ -140,9 +128,6 @@ package "DirectX12 Implementation" {
         + GetNativeHandle(): IntPtr
         + GetMemorySize(): ulong
         + Dispose(): void
-        - CreateResource(): void
-        - ConvertToResourceFlags(): ResourceFlags
-        - SetDebugName(name: string): void
     }
 
     class DX12CommandBuffer {
@@ -153,8 +138,7 @@ package "DirectX12 Implementation" {
         - _d3d12Type: CommandListType
         - _currentPipelineState: ID3D12PipelineState*
         - _currentRootSignature: ID3D12RootSignature*
-        - _pendingBarriers: List<ResourceBarrier>
-        - _resourceStates: Dictionary<ID3D12Resource*, ResourceStates>
+        - _stateTracker: DX12ResourceStateTracker
         - _currentRenderTargets: CpuDescriptorHandle[]
         - _currentDepthStencil: CpuDescriptorHandle?
         - _renderTargetCount: uint
@@ -175,16 +159,19 @@ package "DirectX12 Implementation" {
         + SetVertexBuffer(buffer: IBufferView, slot: uint): void
         + SetIndexBuffer(buffer: IBufferView, format: IndexFormat): void
         + SetPrimitiveTopology(topology: PrimitiveTopology): void
+        + SetRenderState(renderState: IRenderState): void
+        + SetVertexShader(shader: IShader): void
+        + SetPixelShader(shader: IShader): void
+        + SetComputeShader(shader: IShader): void
+        + SetShaderResource(stage: ShaderStage, slot: uint, resource: ITextureView): void
+        + SetUnorderedAccess(stage: ShaderStage, slot: uint, resource: ITextureView): void
+        + SetConstantBuffer(stage: ShaderStage, slot: uint, buffer: IBufferView): void
+        + SetSampler(stage: ShaderStage, slot: uint, sampler: ISampler): void
         + CopyTexture(src: ITexture, dst: ITexture): void
         + CopyBuffer(src: IBuffer, dst: IBuffer): void
         + DrawFullscreenQuad(): void
         + GetCommandList(): ID3D12GraphicsCommandList*
         + Dispose(): void
-        - CreateCommandList(): void
-        - FlushResourceBarriers(): void
-        - ConvertCommandListType(type: CommandBufferType): CommandListType
-        - ConvertResourceState(state: ResourceState): ResourceStates
-        - SetDebugName(name: string): void
     }
 
     class DX12Shader {
@@ -227,7 +214,28 @@ package "DirectX12 Implementation" {
         + GetNativeHandle(): IntPtr
         + GetMemorySize(): ulong
         + Dispose(): void
-        - CreateSamplerDesc(desc: SamplerDescription): D3D12_SAMPLER_DESC
+    }
+
+    class DX12RenderState {
+        - _device: ID3D12Device*
+        - _description: RenderStateDescription
+        - _pipelineDescription: PipelineStateDescription
+        - _rootSignatureCache: DX12RootSignatureCache
+        - _pipelineStateCache: DX12PipelineStateCache
+        - _pipelineState: ID3D12PipelineState*
+        - _rootSignature: ID3D12RootSignature*
+        - _isDisposed: bool
+        --
+        + Name: string
+        + ResourceType: ResourceType
+        + Description: RenderStateDescription
+        + IsDisposed: bool
+        --
+        + GetPipelineState(): ID3D12PipelineState*
+        + GetRootSignature(): ID3D12RootSignature*
+        + GetNativeHandle(): IntPtr
+        + GetMemorySize(): ulong
+        + Dispose(): void
     }
 
     class DX12TextureView {
@@ -284,6 +292,7 @@ package "DirectX12 Implementation" {
         + Dispose(): void
     }
 
+    ' Helper classes
     class FrameFenceManager {
         - _fence: DX12Fence
         - _fenceValues: ulong[]
@@ -301,6 +310,25 @@ package "DirectX12 Implementation" {
         + Dispose(): void
     }
 
+    class DX12ResourceStateTracker {
+        - {static} s_globalResourceStates: Dictionary<ID3D12Resource*, ResourceStates>
+        - {static} s_globalMutex: object
+        - _finalResourceStates: Dictionary<ID3D12Resource*, ResourceStates>
+        - _pendingResourceBarriers: List<ResourceBarrier>
+        - _resourceBarriers: List<ResourceBarrier>
+        - _pendingResourceStates: Dictionary<ID3D12Resource*, ResourceStates>
+        --
+        + TransitionResource(resource: ID3D12Resource*, stateAfter: ResourceStates, subresource: uint): void
+        + UAVBarrier(resource: ID3D12Resource*): void
+        + AliasBarrier(resourceBefore: ID3D12Resource*, resourceAfter: ID3D12Resource*): void
+        + FlushResourceBarriers(commandList: ID3D12GraphicsCommandList*): void
+        + ResolvePendingResourceBarriers(): void
+        + CommitFinalResourceStates(): void
+        + Reset(): void
+        + GetPendingBarrierCount(): int
+        + {static} ResetGlobalState(): void
+    }
+
     class DescriptorAllocator {
         - _heap: ID3D12DescriptorHeap*
         - _descriptorSize: uint
@@ -312,12 +340,37 @@ package "DirectX12 Implementation" {
         + Free(index: uint): void
     }
 
+    class DX12RootSignatureCache {
+        - _device: ID3D12Device*
+        - _cache: Dictionary<RootSignatureDesc, ID3D12RootSignature*>
+        - _isDisposed: bool
+        --
+        + GetOrCreate(desc: RootSignatureDesc): ID3D12RootSignature*
+        + GetDefaultGraphicsRootSignature(): ID3D12RootSignature*
+        + GetDefaultComputeRootSignature(): ID3D12RootSignature*
+        + Clear(): void
+        + Dispose(): void
+    }
+
+    class DX12PipelineStateCache {
+        - _graphicsCache: Dictionary<GraphicsPipelineStateDesc, ID3D12PipelineState*>
+        - _computeCache: Dictionary<ComputePipelineStateDesc, ID3D12PipelineState*>
+        - _device: ID3D12Device*
+        - _isDisposed: bool
+        --
+        + GetOrCreateGraphicsPipeline(desc: GraphicsPipelineStateDesc): ID3D12PipelineState*
+        + GetOrCreateComputePipeline(desc: ComputePipelineStateDesc): ID3D12PipelineState*
+        + Clear(): void
+        + Dispose(): void
+    }
+
     class DX12Helpers {
         + {static} ConvertFormat(format: TextureFormat): Format
         + {static} ConvertResourceState(state: ResourceState): ResourceStates
         + {static} ConvertFilter(minFilter: TextureFilter, magFilter: TextureFilter, mipFilter: TextureFilter, isComparison: bool): D3D12_FILTER
         + {static} ConvertAddressMode(mode: TextureAddressMode): D3D12_TEXTURE_ADDRESS_MODE
         + {static} ConvertComparisonFunc(func: ComparisonFunc): D3D12_COMPARISON_FUNC
+        + {static} ConvertComparisonFunction(func: ComparisonFunction): ComparisonFunc
         + {static} ConvertToHeapType(usage: ResourceUsage): D3D12_HEAP_TYPE
         + {static} ConvertBindFlags(flags: BindFlags): D3D12_RESOURCE_FLAGS
         + {static} GetFormatSize(format: Format): uint
@@ -327,13 +380,31 @@ package "DirectX12 Implementation" {
         + {static} CalculateTextureSize(width: uint, height: uint, depth: uint, mipLevels: uint, arraySize: uint, format: Format): ulong
     }
 
-    ' TODO классы (не реализованы)
-    class DX12RenderState <<not implemented>> {
-        + Description: RenderStateDescription
-        + GetNativeHandle(): IntPtr
-        + Dispose(): void
+    class TextureUploadHelper {
+        - _device: ID3D12Device*
+        - _d3d12: D3D12
+        --
+        + UploadTextureData<T>(texture: DX12Texture, data: T[], mipLevel: uint, arraySlice: uint, commandList: ID3D12GraphicsCommandList*): void
     }
 
+    class PipelineStateDescription <<helper>> {
+        + VertexShader: IShader
+        + PixelShader: IShader
+        + DomainShader: IShader
+        + HullShader: IShader
+        + GeometryShader: IShader
+        + ComputeShader: IShader
+        + InputLayout: InputLayoutDescription
+        + PrimitiveTopology: PrimitiveTopology
+        + RenderTargetCount: uint
+        + RenderTargetFormats: TextureFormat[]
+        + DepthStencilFormat: TextureFormat
+        + SampleCount: uint
+        + SampleQuality: uint
+        + SampleMask: uint
+    }
+
+    ' TODO классы (не реализованы)
     class DX12SwapChain <<not implemented>> {
         + Description: SwapChainDescription
         + CurrentBackBufferIndex: uint
@@ -355,7 +426,7 @@ ISampler <|.. DX12Sampler
 ITextureView <|.. DX12TextureView
 IBufferView <|.. DX12BufferView
 IFence <|.. DX12Fence
-IRenderState <|.. DX12RenderState : "not implemented"
+IRenderState <|.. DX12RenderState
 ISwapChain <|.. DX12SwapChain : "not implemented"
 
 ' Внутренние связи
@@ -364,31 +435,40 @@ DX12GraphicsDevice --> DX12Buffer : creates
 DX12GraphicsDevice --> DX12CommandBuffer : creates
 DX12GraphicsDevice --> DX12Shader : creates
 DX12GraphicsDevice --> DX12Sampler : creates
+DX12GraphicsDevice --> DX12RenderState : creates
 DX12GraphicsDevice --> DX12Fence : uses
 DX12GraphicsDevice --> DescriptorAllocator : uses multiple
-DX12GraphicsDevice --> FrameFenceManager : "should use"
+DX12GraphicsDevice --> FrameFenceManager : uses
+DX12GraphicsDevice --> DX12RootSignatureCache : uses
+DX12GraphicsDevice --> DX12PipelineStateCache : uses
 
 DX12Texture --> DX12TextureView : creates
+DX12Texture --> TextureUploadHelper : uses
 DX12Buffer --> DX12BufferView : creates
 
+DX12CommandBuffer --> DX12ResourceStateTracker : uses
 DX12CommandBuffer --> DX12Texture : uses
 DX12CommandBuffer --> DX12Buffer : uses
 DX12CommandBuffer --> DX12TextureView : uses
 DX12CommandBuffer --> DX12BufferView : uses
+DX12CommandBuffer --> DX12RenderState : uses
 
-note right of FrameFenceManager
-  Создан но не используется
-  в DX12GraphicsDevice
-end note
+DX12RenderState --> DX12RootSignatureCache : uses
+DX12RenderState --> DX12PipelineStateCache : uses
+DX12RenderState --> PipelineStateDescription : uses
 
-note right of DX12RenderState
-  Требует реализации
-  Pipeline State Objects
-end note
-
+' Статус реализации
 note right of DX12SwapChain
   Требует window handle
   для создания
+end note
+
+note bottom of DX12GraphicsDevice
+  Все основные компоненты реализованы:
+  - Resource State Tracking
+  - Frame Synchronization
+  - PSO/Root Signature Caching
+  - Descriptor Management
 end note
 
 @enduml

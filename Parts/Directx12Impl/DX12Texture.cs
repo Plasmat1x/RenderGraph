@@ -7,11 +7,117 @@ using Resources.Enums;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
+using Silk.NET.Maths;
 
 namespace Directx12Impl;
 
 public class DX12Texture: ITexture
 {
+  public class TextureUploadHelper
+  {
+    private readonly ComPtr<ID3D12Device> p_device;
+    private readonly D3D12 p_d3d12;
+
+    public TextureUploadHelper(ComPtr<ID3D12Device> _device, D3D12 _d3d12)
+    {
+      p_d3d12 = _d3d12;
+      p_device = _device;
+    }
+
+    public unsafe void UploadTextureData<T>(
+      DX12Texture _texture,
+      T[] _data,
+      uint _mipLevels,
+      uint _arraySize,
+      ComPtr<ID3D12GraphicsCommandList> _commandList) where T : unmanaged
+    {
+      var subresource = _texture.GetSubresourceIndex(_mipLevels, _arraySize);
+      var footprints = new PlacedSubresourceFootprint[1];
+      var numRows = new uint[1];
+      var rowSizeInBytes = new ulong[1];
+      ulong totalSize;
+
+      var desc = _texture.p_resource.GetDesc();
+      _texture.p_device.GetCopyableFootprints(
+        &desc,
+        subresource,
+        1,
+        0,
+        footprints,
+        numRows,
+        rowSizeInBytes,
+        &totalSize);
+
+      var uploadBufferDesc = new BufferDescription
+      {
+        Name = $"{_texture.Name}_Upload",
+        Size = totalSize,
+        Usage = ResourceUsage.Dynamic,
+        BindFlags = BindFlags.None,
+      };
+
+      using var uploadBuffer = new DX12Buffer(_texture.p_device, _texture.p_d3d12, uploadBufferDesc, null);
+      var mappedPtr = uploadBuffer.Map(GraphicsAPI.Enums.MapMode.Write);
+      var dataSize = (ulong)(_data.Length * sizeof(T));
+
+      fixed (T* pData = _data)
+      {
+        if(footprints[0].Footprint.RowPitch == rowSizeInBytes[0])
+          Buffer.MemoryCopy(pData, mappedPtr.ToPointer(), totalSize, dataSize);
+        else
+        {
+          byte* pSrc = (byte*)pData;
+          byte* pDst = (byte*)mappedPtr.ToPointer();
+          var rowSize = rowSizeInBytes[0];
+          var rowPitch = footprints[0].Footprint.RowPitch;
+
+          for(uint row = 0; row < numRows[0]; row++)
+          {
+            Buffer.MemoryCopy(pSrc, pDst, rowPitch, rowSize);
+            pSrc += rowSize;
+            pDst += rowPitch;
+          }
+        }
+      }
+
+      uploadBuffer.Unmap();
+
+      var barrier = new ResourceBarrier
+      {
+        Type = ResourceBarrierType.Transition,
+        Flags = ResourceBarrierFlags.None,
+      };
+      barrier.Anonymous.Transition.PResource = _texture.p_resource;
+      barrier.Anonymous.Transition.StateBefore = _texture.p_currentState;
+      barrier.Anonymous.Transition.StateAfter = ResourceStates.CopyDest;
+      barrier.Anonymous.Transition.Subresource = subresource;
+
+
+      _commandList.ResourceBarrier(1, &barrier);
+
+      var srcLocation = new TextureCopyLocation
+      {
+        PResource = uploadBuffer.GetResource(),
+        Type = TextureCopyType.PlacedFootprint,
+      };
+      srcLocation.Anonymous.PlacedFootprint = footprints[0];
+
+      var dstLocation = new TextureCopyLocation
+      {
+        PResource = _texture.p_resource,
+        Type = TextureCopyType.SubresourceIndex,
+      };
+      dstLocation.Anonymous.SubresourceIndex = subresource;
+
+      _commandList.CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, (Box*)null);
+
+      barrier.Anonymous.Transition.StateBefore = ResourceStates.CopyDest;
+      barrier.Anonymous.Transition.StateAfter = _texture.p_currentState;
+
+      _commandList.ResourceBarrier(1, &barrier);
+    }
+  }
+
   private struct TextureViewKey: IEquatable<TextureViewKey>
   {
     public TextureViewType ViewType;
@@ -40,6 +146,7 @@ public class DX12Texture: ITexture
     }
   }
 
+  private readonly D3D12 p_d3d12;
   private ComPtr<ID3D12Resource> p_resource;
   private TextureDescription p_description;
   private Format p_dxgiFormat;
@@ -57,6 +164,7 @@ public class DX12Texture: ITexture
   {
     p_description = _desc;
     p_device = _device;
+    p_d3d12 = _d3d12;
     p_releaseDescriptorCallback = _releaseDescriptorCallback;
     
     p_dxgiFormat = DX12Helpers.ConvertFormat(p_description.Format);
@@ -388,6 +496,64 @@ public class DX12Texture: ITexture
     }
   }
 
+  private DX12TextureView CreateViewInternal(TextureViewType _viewType, TextureViewDescription _description)
+  {
+    CpuDescriptorHandle descriptor;
+
+    switch(_viewType)
+    {
+      case TextureViewType.ShaderResource:
+      {
+        // Для SRV нужен дескриптор из CBV_SRV_UAV heap
+        // Пока используем заглушку
+        descriptor = default;
+
+        // TODO: Получить дескриптор из allocator
+        // descriptor = _device->GetCBVSRVUAVAllocator().Allocate();
+        // CreateShaderResourceView(descriptor, description);
+      }
+      break;
+
+      case TextureViewType.RenderTarget:
+      {
+        // Для RTV нужен дескриптор из RTV heap
+        descriptor = default;
+
+        // TODO: Получить дескриптор из allocator
+        // descriptor = _device->GetRTVAllocator().Allocate();
+        // CreateRenderTargetView(descriptor, description);
+      }
+      break;
+
+      case TextureViewType.DepthStencil:
+      {
+        // Для DSV нужен дескриптор из DSV heap
+        descriptor = default;
+
+        // TODO: Получить дескриптор из allocator
+        // descriptor = _device->GetDSVAllocator().Allocate();
+        // CreateDepthStencilView(descriptor, description);
+      }
+      break;
+
+      case TextureViewType.UnorderedAccess:
+      {
+        // Для UAV нужен дескриптор из CBV_SRV_UAV heap
+        descriptor = default;
+
+        // TODO: Получить дескриптор из allocator
+        // descriptor = _device->GetCBVSRVUAVAllocator().Allocate();
+        // CreateUnorderedAccessView(descriptor, description);
+      }
+      break;
+
+      default:
+        throw new ArgumentException($"Unsupported view type: {_viewType}");
+    }
+
+    return new DX12TextureView(this, _viewType, _description, descriptor);
+  }
+
   private void CreateDefaultViews()
   {
     throw new NotImplementedException();
@@ -399,4 +565,3 @@ public class DX12Texture: ITexture
       throw new ObjectDisposedException(nameof(DX12Texture));
   }
 }
-

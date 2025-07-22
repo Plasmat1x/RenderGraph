@@ -1,5 +1,6 @@
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
+using GraphicsAPI.Utils;
 
 using Resources.Enums;
 
@@ -51,8 +52,5 @@ public class InputLayoutBuilder
     return new InputLayoutDescription { Elements = p_elements };
   }
 
-  private uint GetFormatSize(TextureFormat _format)
-  {
-    throw new NotImplementedException();
-  }
+  private uint GetFormatSize(TextureFormat _format) => Toolbox.GetFormatSize(_format);
 }
