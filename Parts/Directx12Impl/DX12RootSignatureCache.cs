@@ -81,32 +81,90 @@ public class DX12RootSignatureCache: IDisposable
     return newRootSignature;
   }
 
+  /// <summary>
+  /// Создает простой root signature для базовых шейдеров
+  /// </summary>
   public ComPtr<ID3D12RootSignature> GetDefaultGraphicsRootSignature()
   {
-    var desc = new RootSignatureDesc
-    {
-      NumParameters = 0,
-      PParameters = null,
-      NumStaticSamplers = 0,
-      PStaticSamplers = null,
-      Flags = RootSignatureFlags.AllowInputAssemblerInputLayout
-    };
-
-    return GetOrCreate(desc);
+    var desc = RootSignatureLayouts.CreateBasicGraphics();
+    return GetOrCreateFromDesc1(desc);
   }
 
+  /// <summary>
+  /// Создает root signature для compute шейдеров
+  /// </summary>
   public ComPtr<ID3D12RootSignature> GetDefaultComputeRootSignature()
   {
-    var desc = new RootSignatureDesc
+    var desc = RootSignatureLayouts.CreateBasicCompute();
+    return GetOrCreateFromDesc1(desc);
+  }
+
+  /// <summary>
+  /// Создает root signature для постобработки
+  /// </summary>
+  public ComPtr<ID3D12RootSignature> GetPostProcessRootSignature()
+  {
+    var desc = RootSignatureLayouts.CreatePostProcess();
+    return GetOrCreateFromDesc1(desc);
+  }
+
+  /// <summary>
+  /// Получает или создает root signature из RootSignatureDesc1
+  /// </summary>
+  public unsafe ComPtr<ID3D12RootSignature> GetOrCreateFromDesc1(RootSignatureDesc1 _desc)
+  {
+    var key = new RootSignatureDesc
     {
-      NumParameters = 0,
-      PParameters = null,
-      NumStaticSamplers = 0,
-      PStaticSamplers = null,
-      Flags = RootSignatureFlags.None
+      NumParameters = _desc.NumParameters,
+      NumStaticSamplers = _desc.NumStaticSamplers,
+      Flags = _desc.Flags
     };
 
-    return GetOrCreate(desc);
+    if(p_cache.TryGetValue(key, out var rootSignature))
+      return rootSignature;
+
+    var versionedDesc = new VersionedRootSignatureDesc
+    {
+      Version = D3DRootSignatureVersion.Version11
+    };
+    versionedDesc.Anonymous.Desc11 = _desc;
+
+    ID3D10Blob* signature = null;
+    ID3D10Blob* error = null;
+
+    HResult hr = p_d3d12.SerializeVersionedRootSignature(
+        &versionedDesc,
+        &signature,
+        &error);
+
+    if(hr.IsFailure)
+    {
+      if(error != null)
+      {
+        var errorMessage = SilkMarshal.PtrToString((nint)error->GetBufferPointer());
+        error->Release();
+        throw new InvalidOperationException($"Failed to serialize root signature: {errorMessage}");
+      }
+      throw new InvalidOperationException($"Failed to serialize root signature: {hr}");
+    }
+
+    ID3D12RootSignature* newRootSignature;
+    HResult createHr = p_device.CreateRootSignature(
+        0,
+        signature->GetBufferPointer(),
+        signature->GetBufferSize(),
+        SilkMarshal.GuidPtrOf<ID3D12RootSignature>(),
+        (void**)&newRootSignature);
+
+    signature->Release();
+    if(error != null)
+      error->Release();
+
+    if(createHr.IsFailure)
+      throw new InvalidOperationException($"Failed to create root signature: {createHr}");
+
+    p_cache[key] = newRootSignature;
+    return newRootSignature;
   }
 
   public void Clear()
@@ -125,85 +183,5 @@ public class DX12RootSignatureCache: IDisposable
 
     Clear();
     p_disposed = true;
-  }
-}
-
-public class RootSignatureBuilder
-{
-  private readonly List<RootParameter> p_parameters = [];
-  private readonly List<StaticSamplerDesc> p_staticSamplers = [];
-  private RootSignatureFlags p_flags = RootSignatureFlags.None;
-
-  public RootSignatureBuilder AllowInputAssemblerInputLayout()
-  {
-    p_flags |= RootSignatureFlags.AllowInputAssemblerInputLayout;
-    return this;
-  }
-
-  public RootSignatureBuilder AddConstantBufferView(uint _shaderRegister, uint _registerSpace = 0)
-  {
-    var parameter = new RootParameter
-    {
-      ParameterType = RootParameterType.TypeCbv,
-      ShaderVisibility = ShaderVisibility.All,
-    };
-    parameter.Anonymous.Descriptor = new RootDescriptor
-    {
-      ShaderRegister = _shaderRegister,
-      RegisterSpace = _registerSpace,
-    };
-
-    p_parameters.Add(parameter);
-    return this;
-  }
-
-  public RootSignatureBuilder AddShaderResourceView(uint _shaderRegister, uint _registerSpace = 0)
-  {
-    var parameter = new RootParameter
-    {
-      ParameterType = RootParameterType.TypeSrv,
-      ShaderVisibility = ShaderVisibility.All
-    };
-    parameter.Anonymous.Descriptor = new RootDescriptor
-    {
-      ShaderRegister = _shaderRegister,
-      RegisterSpace = _registerSpace
-    };
-
-    p_parameters.Add(parameter);
-    return this;
-  }
-
-  public RootSignatureBuilder AddUnorderedAccessView(uint _shaderRegister, uint _registerSpace = 0)
-  {
-    var parameter = new RootParameter
-    {
-      ParameterType = RootParameterType.TypeUav,
-      ShaderVisibility = ShaderVisibility.All
-    };
-    parameter.Anonymous.Descriptor = new RootDescriptor
-    {
-      ShaderRegister = _shaderRegister,
-      RegisterSpace = _registerSpace
-    };
-
-    p_parameters.Add(parameter);
-    return this;
-  }
-
-  public unsafe RootSignatureDesc Build()
-  {
-    fixed(RootParameter* pParams = p_parameters.ToArray())
-    fixed(StaticSamplerDesc* pSamplers = p_staticSamplers.ToArray())
-    {
-      return new RootSignatureDesc
-      {
-        NumParameters = (uint)p_parameters.Count,
-        PParameters = pParams,
-        NumStaticSamplers = (uint)p_staticSamplers.Count,
-        PStaticSamplers = pSamplers,
-        Flags = p_flags
-      };
-    }
   }
 }

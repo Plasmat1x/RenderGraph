@@ -27,7 +27,10 @@ public class DX12CommandBuffer: CommandBuffer
   private ComPtr<ID3D12PipelineState> p_currentPipelineState;
   private ComPtr<ID3D12RootSignature> p_currentRootSignature;
 
-  private DX12StateTracker p_stateTracker = new();
+  private ComPtr<ID3D12DescriptorHeap> p_currentSrvHeap;
+  private ComPtr<ID3D12DescriptorHeap> p_currentSamplerHeap;
+
+  private readonly DX12ResourceStateTracker p_stateTracker = new();
 
   private readonly CpuDescriptorHandle[] p_currentRenderTargets;
   private CpuDescriptorHandle? p_currentDepthStencil;

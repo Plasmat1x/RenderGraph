@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Directx12Impl;
-public class DX12StateTracker
+public class DX12ResourceStateTracker
 {
   private static readonly Dictionary<ComPtr<ID3D12Resource>, ResourceStates> s_globalResourceStates = [];
   private static readonly object s_globalMutex = new();
@@ -18,7 +18,7 @@ public class DX12StateTracker
   private List<ResourceBarrier> p_pendingResourceBarriers = [];
   private List<ResourceBarrier> p_resourceBarriers = [];
 
-  public DX12StateTracker() { }
+  public DX12ResourceStateTracker() { }
 
   public unsafe void TransitionResource(ComPtr<ID3D12Resource> _resource, ResourceStates _stateAfter, uint _subresource = D3D12.ResourceBarrierAllSubresources)
   {
