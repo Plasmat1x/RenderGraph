@@ -13,19 +13,19 @@ public class DX12TextureView: ITextureView
   private DX12Texture p_texture;
   private TextureViewType p_viewType;
   private TextureViewDescription p_description;
-  private CpuDescriptorHandle p_descriptor;
+  private DescriptorAllocation p_allcation;
   private bool p_disposed;
 
   public DX12TextureView(
     DX12Texture _texture,
     TextureViewType _viewType,
     TextureViewDescription _desc,
-    CpuDescriptorHandle _descriptor)
+    DescriptorAllocation _allocation)
   {
     p_texture = _texture ?? throw new ArgumentNullException(nameof(_texture));
     p_viewType = _viewType;
     p_description = _desc ?? throw new ArgumentNullException(nameof(_desc));
-    p_descriptor = _descriptor;
+    p_allcation = _allocation ?? throw new ArgumentNullException(nameof(_allocation));
   }
 
   public ITexture Texture => p_texture;
@@ -37,19 +37,21 @@ public class DX12TextureView: ITextureView
   public IntPtr GetNativeHandle()
   {
     ThrowIfDisposed();
-    return (IntPtr)p_descriptor.Ptr;
+    return (IntPtr)p_allcation.CpuHandle.Ptr;
   }
 
   public CpuDescriptorHandle GetDescriptorHandle()
   {
     ThrowIfDisposed();
-    return p_descriptor;
+    return p_allcation.CpuHandle;
   }
 
   public void Dispose()
   {
     if(p_disposed)
       return;
+
+    p_allcation?.Dispose();
 
     p_disposed = true;
     GC.SuppressFinalize(this);

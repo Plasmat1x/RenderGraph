@@ -13,26 +13,26 @@ public class DX12BufferView: IBufferView
   private DX12Buffer p_buffer;
   private BufferViewType p_viewType;
   private BufferViewDescription p_description;
-  private CpuDescriptorHandle p_descriptor;
+  private DescriptorAllocation p_allocation;
   private bool p_disposed;
 
   public DX12BufferView(
     DX12Buffer _buffer,
     BufferViewType _viewType,
     BufferViewDescription _desc,
-    CpuDescriptorHandle _descriptor) 
+    DescriptorAllocation _allocation) 
   {
     p_buffer = _buffer ?? throw new ArgumentNullException(nameof(_buffer));
     p_viewType = _viewType;
     p_description = _desc ?? throw new ArgumentNullException(nameof(_desc));
-    p_descriptor = _descriptor;
+    p_allocation = _allocation ?? throw new ArgumentNullException(nameof(_allocation));
   }
 
-  public IBuffer Buffer => throw new NotImplementedException();
+  public IBuffer Buffer => p_buffer;
 
-  public BufferViewType ViewType => throw new NotImplementedException();
+  public BufferViewType ViewType => p_viewType;
 
-  public BufferViewDescription Description => throw new NotImplementedException();
+  public BufferViewDescription Description => p_description;
 
   public ConstantBufferViewDesc GetConstantBufferViewDesc()
   {
@@ -79,7 +79,13 @@ public class DX12BufferView: IBufferView
   public IntPtr GetNativeHandle()
   {
     ThrowIfDisposed();
-    return (IntPtr)p_descriptor.Ptr;
+    return (IntPtr)p_allocation.CpuHandle.Ptr;
+  }
+
+  public CpuDescriptorHandle GetDescriptorHandle()
+  {
+    ThrowIfDisposed();
+    return p_allocation.CpuHandle;
   }
 
   public void Dispose()
@@ -87,6 +93,7 @@ public class DX12BufferView: IBufferView
     if(p_disposed)
       return;
 
+    p_allocation.Dispose();
 
     p_disposed = true;
     GC.SuppressFinalize(this);

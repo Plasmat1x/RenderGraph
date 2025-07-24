@@ -33,15 +33,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
   private uint p_cbvSrvUavDescriptorSize;
   private uint p_samplerDescriptorSize;
 
-  private ComPtr<ID3D12DescriptorHeap> p_rtvHeap;
-  private ComPtr<ID3D12DescriptorHeap> p_dsvHeap;
-  private ComPtr<ID3D12DescriptorHeap> p_cbvSrvUavHeap;
-  private ComPtr<ID3D12DescriptorHeap> p_samplerHeap;
-
-  private DescriptorAllocator p_rtvAllocator;
-  private DescriptorAllocator p_dsvAllocator;
-  private DescriptorAllocator p_cbvSrvUavAllocator;
-  private DescriptorAllocator p_samplerAllocator;
+  private DX12DescriptorHeapManager p_descriptorManager;
 
   private FrameFenceManager p_frameManager;
   private const int p_frameCount = 3;
@@ -56,6 +48,8 @@ public class DX12GraphicsDevice: IGraphicsDevice
   {
     p_d3d12 = D3D12.GetApi();
     p_dxgi = DXGI.GetApi();
+
+    Initialize(_enableDebugLayer);
   }
 
   public string Name { get; private set; }
@@ -66,12 +60,12 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   public ITexture CreateTexture(TextureDescription _desc)
   {
-    return new DX12Texture(p_device, p_d3d12, _desc, ReleaseDescriptor);
+    return new DX12Texture(p_device, p_d3d12, _desc, p_descriptorManager);
   }
 
   public IBuffer CreateBuffer(BufferDescription _desc)
   {
-    return new DX12Buffer(p_device, p_d3d12, _desc, ReleaseDescriptor);
+    return new DX12Buffer(p_device, p_d3d12, _desc, p_descriptorManager);
   }
 
   public IShader CreateShader(ShaderDescription _desc)
@@ -91,8 +85,8 @@ public class DX12GraphicsDevice: IGraphicsDevice
 
   public ISampler CreateSampler(SamplerDescription _desc)
   {
-    var descriptor = p_samplerAllocator.Allocate();
-    return new DX12Sampler(p_device, _desc, descriptor, ReleaseDescriptor);
+    var allocation = p_descriptorManager.AllocateSampler();
+    return new DX12Sampler(p_device, _desc, descriptor, allocation);
   }
 
   public CommandBuffer CreateCommandBuffer()
@@ -109,6 +103,8 @@ public class DX12GraphicsDevice: IGraphicsDevice
   {
     return new DX12Fence(p_device, _initialValue);
   }
+
+  public DX12DescriptorHeapManager GetDescriptorManager() => p_descriptorManager;
 
   public unsafe void ExecuteCommandBuffer(CommandBuffer _commandBuffer)
   {
@@ -216,10 +212,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
     p_pipelineStateCache?.Dispose();
     p_rootSignatureCache?.Dispose();
 
-    p_rtvHeap.Dispose();
-    p_dsvHeap.Dispose();
-    p_cbvSrvUavHeap.Dispose();
-    p_samplerHeap.Dispose();
+    p_descriptorManager?.Dispose();
 
     if(p_computeQueue.Handle != p_directQueue.Handle)
       p_computeQueue.Dispose();
@@ -253,7 +246,8 @@ public class DX12GraphicsDevice: IGraphicsDevice
     CreateDXGIFactory();
     CreateDevice();
     CreateCommandQueues();
-    CreateDescriptorHeaps();
+
+    p_descriptorManager = new DX12DescriptorHeapManager(p_device);
 
     CreateFence();
 
@@ -422,80 +416,6 @@ public class DX12GraphicsDevice: IGraphicsDevice
       p_copyQueue = copyQueue;
     else
       p_copyQueue = p_directQueue;
-  }
-
-  private unsafe void CreateDescriptorHeaps()
-  {
-    p_rtvDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.Rtv);
-    p_dsvDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.Dsv);
-    p_cbvSrvUavDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.CbvSrvUav);
-    p_samplerDescriptorSize = p_device.GetDescriptorHandleIncrementSize(DescriptorHeapType.Sampler);
-
-    var heapDesc = new DescriptorHeapDesc
-    {
-      Type = DescriptorHeapType.Rtv,
-      NumDescriptors = 64,
-      Flags = DescriptorHeapFlags.None,
-      NodeMask = 0
-    };
-
-    ID3D12DescriptorHeap* rtvHeap;
-    HResult hr = p_device.CreateDescriptorHeap(
-        &heapDesc,
-        SilkMarshal.GuidPtrOf<ID3D12DescriptorHeap>(),
-        (void**)&rtvHeap);
-
-    if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to create RTV heap: {hr}");
-
-    p_rtvHeap = rtvHeap;
-    p_rtvAllocator = new DescriptorAllocator(p_rtvHeap, p_rtvDescriptorSize, 64);
-
-    heapDesc.Type = DescriptorHeapType.Dsv;
-    heapDesc.NumDescriptors = 32;
-
-    ID3D12DescriptorHeap* dsvHeap;
-    hr = p_device.CreateDescriptorHeap(
-        &heapDesc,
-        SilkMarshal.GuidPtrOf<ID3D12DescriptorHeap>(),
-        (void**)&dsvHeap);
-
-    if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to create DSV heap: {hr}");
-
-    p_dsvHeap = dsvHeap;
-    p_dsvAllocator = new DescriptorAllocator(p_dsvHeap, p_dsvDescriptorSize, 32);
-
-    heapDesc.Type = DescriptorHeapType.CbvSrvUav;
-    heapDesc.NumDescriptors = 1024;
-    heapDesc.Flags = DescriptorHeapFlags.ShaderVisible;
-
-    ID3D12DescriptorHeap* cbvSrvUavHeap;
-    hr = p_device.CreateDescriptorHeap(
-        &heapDesc,
-        SilkMarshal.GuidPtrOf<ID3D12DescriptorHeap>(),
-        (void**)&cbvSrvUavHeap);
-
-    if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to create CBV/SRV/UAV heap: {hr}");
-
-    p_cbvSrvUavHeap = cbvSrvUavHeap;
-    p_cbvSrvUavAllocator = new DescriptorAllocator(p_cbvSrvUavHeap, p_cbvSrvUavDescriptorSize, 1024);
-
-    heapDesc.Type = DescriptorHeapType.Sampler;
-    heapDesc.NumDescriptors = 64;
-
-    ID3D12DescriptorHeap* samplerHeap;
-    hr = p_device.CreateDescriptorHeap(
-        &heapDesc,
-        SilkMarshal.GuidPtrOf<ID3D12DescriptorHeap>(),
-        (void**)&samplerHeap);
-
-    if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to create sampler heap: {hr}");
-
-    p_samplerHeap = samplerHeap;
-    p_samplerAllocator = new DescriptorAllocator(p_samplerHeap, p_samplerDescriptorSize, 64);
   }
 
   private void QueryDeviceCapabilities()

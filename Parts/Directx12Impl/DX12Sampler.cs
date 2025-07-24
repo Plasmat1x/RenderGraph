@@ -27,7 +27,7 @@ public class DX12Sampler: ISampler
   public DX12Sampler(ComPtr<ID3D12Device>? _device,
     SamplerDescription _description, 
     CpuDescriptorHandle _descriptor, 
-    Action<CpuDescriptorHandle> _releaseDescriptorCallback)
+    DescriptorAllocation _allocation)
   {
     p_device = _device ?? throw new ArgumentNullException(nameof(_device));
     p_description = _description ?? throw new ArgumentNullException(nameof(_description));

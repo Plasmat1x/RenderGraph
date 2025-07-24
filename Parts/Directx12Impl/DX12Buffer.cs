@@ -19,7 +19,7 @@ public unsafe class DX12Buffer: IBuffer
   private readonly D3D12 p_d3d12;
   private readonly Dictionary<BufferViewType, DX12BufferView> p_views = [];
   private readonly BufferDescription p_description;
-  private readonly Action<CpuDescriptorHandle> p_releaseDescriptorCallback;
+  private readonly DescriptorAllocation p_allocation;
 
   private ComPtr<ID3D12Resource> p_resource;
   private ResourceStates p_currentState;
@@ -32,12 +32,12 @@ public unsafe class DX12Buffer: IBuffer
     ComPtr<ID3D12Device> _device,
     D3D12 _d3d12,
     BufferDescription _desc,
-    Action<CpuDescriptorHandle> _releaseDescriptorCallback) 
+    DescriptorAllocation _allocation) 
   {
     p_device = _device;
     p_d3d12 = _d3d12;
     p_description = _desc ?? throw new ArgumentNullException(nameof(_desc));
-    p_releaseDescriptorCallback = _releaseDescriptorCallback;
+    p_allocation = _allocation ?? throw new ArgumentNullException(nameof(_allocation));
 
     CreateResource();
   }

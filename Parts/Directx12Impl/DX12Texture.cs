@@ -1,3 +1,4 @@
+using GraphicsAPI;
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Interfaces;
 
@@ -153,19 +154,19 @@ public class DX12Texture: ITexture
   private ResourceDesc p_resourceDesc;
   private ResourceStates p_currentState;
   private ComPtr<ID3D12Device> p_device;
-  private Dictionary<TextureViewKey, DX12TextureView> p_views = [];
-  private Action<CpuDescriptorHandle> p_releaseDescriptorCallback;
+  private readonly Dictionary<TextureViewKey, DX12TextureView> p_views = [];
+  private readonly DX12DescriptorHeapManager p_descriptorManager;
   private bool p_disposed;
 
   public DX12Texture(ComPtr<ID3D12Device> _device, 
     D3D12 _d3d12, 
     TextureDescription _desc,
-    Action<CpuDescriptorHandle> _releaseDescriptorCallback)
+    DX12DescriptorHeapManager _descriptorManager)
   {
-    p_description = _desc;
+    p_description = _desc ?? throw new ArgumentNullException(nameof(_desc));
     p_device = _device;
     p_d3d12 = _d3d12;
-    p_releaseDescriptorCallback = _releaseDescriptorCallback;
+    p_descriptorManager = _descriptorManager ?? throw new ArgumentNullException(nameof(_descriptorManager));
     
     p_dxgiFormat = DX12Helpers.ConvertFormat(p_description.Format);
     p_currentState = ResourceStates.Present;
@@ -496,54 +497,71 @@ public class DX12Texture: ITexture
     }
   }
 
-  private DX12TextureView CreateViewInternal(TextureViewType _viewType, TextureViewDescription _description)
+  private unsafe DX12TextureView CreateViewInternal(TextureViewType _viewType, TextureViewDescription _description)
   {
-    CpuDescriptorHandle descriptor;
+    DescriptorAllocation allocation = null;
 
     switch(_viewType)
     {
       case TextureViewType.ShaderResource:
       {
-        // Для SRV нужен дескриптор из CBV_SRV_UAV heap
-        // Пока используем заглушку
-        descriptor = default;
-
-        // TODO: Получить дескриптор из allocator
-        // descriptor = _device->GetCBVSRVUAVAllocator().Allocate();
-        // CreateShaderResourceView(descriptor, description);
+        allocation = p_descriptorManager.AllocateCBVSRVUAV();
+        var srvDesc = new ShaderResourceViewDesc
+        {
+          Format = p_dxgiFormat,
+          ViewDimension = GetSRVDimension(),
+          Shader4ComponentMapping = 0 // TODO: implement shader mapping 
+        };
+        FillSRVDescription(ref srvDesc, _description);
+        p_device.CreateShaderResourceView(p_resource, &srvDesc, allocation.CpuHandle);
       }
       break;
 
       case TextureViewType.RenderTarget:
       {
-        // Для RTV нужен дескриптор из RTV heap
-        descriptor = default;
+        allocation = p_descriptorManager.AllocateRTV();
+        var rtvDesc = new RenderTargetViewDesc
+        {
+          Format = p_dxgiFormat,
+          ViewDimension = GetRTVDimension()
+        };
 
-        // TODO: Получить дескриптор из allocator
-        // descriptor = _device->GetRTVAllocator().Allocate();
-        // CreateRenderTargetView(descriptor, description);
+        FillRTVDescription(ref rtvDesc, _description);
+
+        p_device.CreateRenderTargetView(p_resource, &rtvDesc, allocation.CpuHandle);
       }
       break;
 
       case TextureViewType.DepthStencil:
       {
-        // Для DSV нужен дескриптор из DSV heap
-        descriptor = default;
+        allocation = p_descriptorManager.AllocateDSV();
 
-        // TODO: Получить дескриптор из allocator
-        // descriptor = _device->GetDSVAllocator().Allocate();
-        // CreateDepthStencilView(descriptor, description);
+        var dsvDesc = new DepthStencilViewDesc
+        {
+          Format = GetDepthStencilFormat(p_dxgiFormat),
+          ViewDimension = GetDSVDimension(),
+          Flags = DsvFlags.None
+        };
+
+        FillDSVDescription(ref dsvDesc, _description);
+
+        p_device.CreateDepthStencilView(p_resource, &dsvDesc, allocation.CpuHandle);
       }
       break;
 
       case TextureViewType.UnorderedAccess:
       {
-        // Для UAV нужен дескриптор из CBV_SRV_UAV heap
-        descriptor = default;
+        allocation = p_descriptorManager.AllocateCBVSRVUAV();
+        var uavDesc = new UnorderedAccessViewDesc
+        {
+          Format = p_dxgiFormat,
+          ViewDimension = GetUAVDimension()
+        };
 
-        // TODO: Получить дескриптор из allocator
-        // descriptor = _device->GetCBVSRVUAVAllocator().Allocate();
-        // CreateUnorderedAccessView(descriptor, description);
+        // Заполняем специфичные для dimension поля
+        FillUAVDescription(ref uavDesc, _description);
+
+        p_device.CreateUnorderedAccessView(p_resource, (ID3D12Resource*)null, &uavDesc, allocation.CpuHandle);
       }
       break;
 
@@ -551,7 +569,119 @@ public class DX12Texture: ITexture
         throw new ArgumentException($"Unsupported view type: {_viewType}");
     }
 
-    return new DX12TextureView(this, _viewType, _description, descriptor);
+    return new DX12TextureView(this, _viewType, _description, allocation);
+  }
+
+  private SrvDimension GetSRVDimension()
+  {
+    if(p_description.ArraySize > 1)
+    {
+      if(p_description.Depth > 1)
+        throw new NotSupportedException("3D texture arrays are not supported");
+
+      return (p_description.MiscFlags & ResourceMiscFlags.TextureCube) != 0
+          ? SrvDimension.Texturecubearray
+          : SrvDimension.Texture2Darray;
+    }
+
+    if(p_description.Depth > 1)
+      return SrvDimension.Texture3D;
+    else if(p_description.Height > 1)
+      return SrvDimension.Texture2D;
+    else
+      return SrvDimension.Texture1D;
+  }
+
+  private RtvDimension GetRTVDimension()
+  {
+    if(p_description.ArraySize > 1)
+      return RtvDimension.Texture2Darray;
+    else if(p_description.Height > 1)
+      return RtvDimension.Texture2D;
+    else
+      return RtvDimension.Texture1D;
+  }
+
+  private DsvDimension GetDSVDimension()
+  {
+    if(p_description.ArraySize > 1)
+      return DsvDimension.Texture2Darray;
+    else
+      return DsvDimension.Texture2D;
+  }
+
+  private UavDimension GetUAVDimension()
+  {
+    if(p_description.ArraySize > 1)
+      return UavDimension.Texture2Darray;
+    else if(p_description.Depth > 1)
+      return UavDimension.Texture3D;
+    else if(p_description.Height > 1)
+      return UavDimension.Texture2D;
+    else
+      return UavDimension.Texture1D;
+  }
+
+  private void FillSRVDescription(ref ShaderResourceViewDesc _desc, TextureViewDescription _viewDesc)
+  {
+    switch(_desc.ViewDimension)
+    {
+      case SrvDimension.Texture2D:
+        _desc.Anonymous.Texture2D.MostDetailedMip = _viewDesc.MostDetailedMip;
+        _desc.Anonymous.Texture2D.MipLevels = _viewDesc.MipLevels;
+        _desc.Anonymous.Texture2D.PlaneSlice = 0;
+        _desc.Anonymous.Texture2D.ResourceMinLODClamp = 0;
+        break;
+
+      case SrvDimension.Texture2Darray:
+        _desc.Anonymous.Texture2DArray.MostDetailedMip = _viewDesc.MostDetailedMip;
+        _desc.Anonymous.Texture2DArray.MipLevels = _viewDesc.MipLevels;
+        _desc.Anonymous.Texture2DArray.FirstArraySlice = _viewDesc.FirstArraySlice;
+        _desc.Anonymous.Texture2DArray.ArraySize = _viewDesc.ArraySize;
+        _desc.Anonymous.Texture2DArray.PlaneSlice = 0;
+        _desc.Anonymous.Texture2DArray.ResourceMinLODClamp = 0;
+        break;
+
+        // TODO: Добавить другие dimensions
+    }
+  }
+
+  private void FillRTVDescription(ref RenderTargetViewDesc _desc, TextureViewDescription _viewDesc)
+  {
+    switch(_desc.ViewDimension)
+    {
+      case RtvDimension.Texture2D:
+        _desc.Anonymous.Texture2D.MipSlice = _viewDesc.MostDetailedMip;
+        _desc.Anonymous.Texture2D.PlaneSlice = 0;
+        break;
+
+        // TODO: Добавить другие dimensions
+    }
+  }
+
+  private void FillDSVDescription(ref DepthStencilViewDesc _desc, TextureViewDescription _viewDesc)
+  {
+    switch(_desc.ViewDimension)
+    {
+      case DsvDimension.Texture2D:
+        _desc.Anonymous.Texture2D.MipSlice = _viewDesc.MostDetailedMip;
+        break;
+
+        // TODO: Добавить другие dimensions
+    }
+  }
+
+  private void FillUAVDescription(ref UnorderedAccessViewDesc _desc, TextureViewDescription _viewDesc)
+  {
+    switch(_desc.ViewDimension)
+    {
+      case UavDimension.Texture2D:
+        _desc.Anonymous.Texture2D.MipSlice = _viewDesc.MostDetailedMip;
+        _desc.Anonymous.Texture2D.PlaneSlice = 0;
+        break;
+
+        // TODO: Добавить другие dimensions
+    }
   }
 
   private void CreateDefaultViews()

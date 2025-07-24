@@ -37,7 +37,7 @@ public class DX12RootSignatureCache: IDisposable
     p_d3d12 = _d3d12;
   }
 
-  public unsafe ComPtr<ID3D12RootSignature> GetOrCreate(RootSignatureDesc _desc)
+  public unsafe ComPtr<ID3D12RootSignature> GetOrCreateFromDesc(RootSignatureDesc _desc)
   {
     if(p_cache.TryGetValue(_desc, out var rootSignature))
       return rootSignature;

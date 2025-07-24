@@ -21,7 +21,6 @@ public unsafe class RootSignatureBuilderEx : IDisposable
   private readonly HashSet<(ShaderVisibility, uint)> p_usedUavSlots = [];
   private readonly HashSet<(ShaderVisibility, uint)> p_usedSamplerSlots = [];
 
-
   public RootSignatureBuilderEx AllowInputAssemblerInputLayout()
   {
     p_flags |= RootSignatureFlags.AllowInputAssemblerInputLayout;
@@ -93,15 +92,15 @@ public unsafe class RootSignatureBuilderEx : IDisposable
   {
     var ranges = new DescriptorRange1[]
     {
-                new DescriptorRange1
-                {
-                    RangeType = DescriptorRangeType.Srv,
-                    NumDescriptors = _descriptorCount,
-                    BaseShaderRegister = _baseRegister,
-                    RegisterSpace = _registerSpace,
-                    Flags = DescriptorRangeFlags.DataStaticWhileSetATExecute,
-                    OffsetInDescriptorsFromTableStart = 0
-                }
+      new DescriptorRange1
+      {
+        RangeType = DescriptorRangeType.Srv,
+        NumDescriptors = _descriptorCount,
+        BaseShaderRegister = _baseRegister,
+        RegisterSpace = _registerSpace,
+        Flags = DescriptorRangeFlags.DataStaticWhileSetATExecute,
+        OffsetInDescriptorsFromTableStart = 0
+      }
     };
 
     return AddDescriptorTable(ranges, _visibility);
@@ -115,15 +114,15 @@ public unsafe class RootSignatureBuilderEx : IDisposable
   {
     var ranges = new DescriptorRange1[]
     {
-                new DescriptorRange1
-                {
-                    RangeType = DescriptorRangeType.Uav,
-                    NumDescriptors = _descriptorCount,
-                    BaseShaderRegister = _baseRegister,
-                    RegisterSpace = _registerSpace,
-                    Flags = DescriptorRangeFlags.DataVolatile,
-                    OffsetInDescriptorsFromTableStart = 0
-                }
+      new DescriptorRange1
+      {
+        RangeType = DescriptorRangeType.Uav,
+        NumDescriptors = _descriptorCount,
+        BaseShaderRegister = _baseRegister,
+        RegisterSpace = _registerSpace,
+        Flags = DescriptorRangeFlags.DataVolatile,
+        OffsetInDescriptorsFromTableStart = 0
+      }
     };
 
     return AddDescriptorTable(ranges, _visibility);
@@ -137,23 +136,23 @@ public unsafe class RootSignatureBuilderEx : IDisposable
   {
     var ranges = new DescriptorRange1[]
     {
-                new DescriptorRange1
-                {
-                    RangeType = DescriptorRangeType.Sampler,
-                    NumDescriptors = _descriptorCount,
-                    BaseShaderRegister = _baseRegister,
-                    RegisterSpace = _registerSpace,
-                    Flags = DescriptorRangeFlags.None,
-                    OffsetInDescriptorsFromTableStart = 0
-                }
+      new DescriptorRange1
+      {
+        RangeType = DescriptorRangeType.Sampler,
+        NumDescriptors = _descriptorCount,
+        BaseShaderRegister = _baseRegister,
+        RegisterSpace = _registerSpace,
+        Flags = DescriptorRangeFlags.None,
+        OffsetInDescriptorsFromTableStart = 0
+      }
     };
 
     return AddDescriptorTable(ranges, _visibility);
   }
 
   public RootSignatureBuilderEx AddDescriptorTable(
-           DescriptorRange1[] _ranges,
-           ShaderVisibility _visibility = ShaderVisibility.All)
+    DescriptorRange1[] _ranges,
+    ShaderVisibility _visibility = ShaderVisibility.All)
   {
     var parameter = new RootParameter1
     {
@@ -161,7 +160,7 @@ public unsafe class RootSignatureBuilderEx : IDisposable
       ShaderVisibility = _visibility
     };
 
-    var rangesPtr = (DescriptorRange1*)SilkMarshal.Allocate(_ranges);
+    var rangesPtr = (DescriptorRange1*)SilkMarshal.Allocate(_ranges.Length);
 
     parameter.Anonymous.DescriptorTable = new RootDescriptorTable1
     {
@@ -234,14 +233,12 @@ public unsafe class RootSignatureBuilderEx : IDisposable
     ID3D10Blob* signature;
     ID3D10Blob* errorBlob = _errorBlob;
     HResult hr = _d3d12.SerializeVersionedRootSignature(
-        &versionedDesc,
-        &signature,
-        &errorBlob);
+      &versionedDesc,
+      &signature,
+      &errorBlob);
 
     if(hr.IsFailure)
-    {
       return null;
-    }
 
     return signature;
   }
@@ -309,5 +306,4 @@ public static class RootSignatureLayouts
 
     return builder.Build();
   }
-}
 }
