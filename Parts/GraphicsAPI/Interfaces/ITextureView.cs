@@ -1,3 +1,5 @@
+using GraphicsAPI.Descriptions;
+
 using Resources.Enums;
 
 namespace GraphicsAPI.Interfaces;

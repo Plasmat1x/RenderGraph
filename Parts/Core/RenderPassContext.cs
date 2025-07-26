@@ -1,4 +1,5 @@
 using GraphicsAPI;
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Interfaces;
 
 using Resources;
@@ -61,4 +62,54 @@ public class RenderPassContext
   }
 
   public void SetFullScreenViewport() => SetViewport(0, 0, ViewportWidth, ViewportHeight);
+}
+
+internal class BufferViewStub: IBufferView
+{
+  public BufferViewStub(IBuffer _buffer, BufferViewType _viewType)
+  {
+    Buffer = _buffer;
+    ViewType = _viewType;
+  }
+
+  public IBuffer Buffer {get;}
+
+  public BufferViewType ViewType { get; }
+
+  public BufferViewDescription Description => throw new NotImplementedException();
+
+  public void Dispose()
+  {
+    throw new NotImplementedException();
+  }
+
+  public nint GetNativeHandle()
+  {
+    throw new NotImplementedException();
+  }
+}
+
+internal class TextureViewStub: ITextureView
+{
+  public TextureViewStub(ITexture _texture, TextureViewType _viewType)
+  {
+    Texture = _texture;
+    ViewType = _viewType;
+  }
+
+  public ITexture Texture {get;}
+
+  public TextureViewType ViewType { get;}
+
+  public TextureViewDescription Description => throw new NotImplementedException();
+
+  public void Dispose()
+  {
+    throw new NotImplementedException();
+  }
+
+  public nint GetNativeHandle()
+  {
+    throw new NotImplementedException();
+  }
 }

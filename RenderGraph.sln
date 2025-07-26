@@ -39,6 +39,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockExample", "Examples\Moc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RenderGraph.Tests", "Tests\RenderGraph.Tests\RenderGraph.Tests.csproj", "{F8A7D1DC-FA72-B81A-DD88-B4441A2CEC12}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{20320571-623D-4EFB-AD53-BCDE75E1ECEB}"
+	ProjectSection(SolutionItems) = preProject
+		doc\ClassDiagrams\cd_pkg_core.puml = doc\ClassDiagrams\cd_pkg_core.puml
+		doc\ClassDiagrams\cd_pkg_directx12impl.puml = doc\ClassDiagrams\cd_pkg_directx12impl.puml
+		doc\ClassDiagrams\cd_pkg_extensions.puml = doc\ClassDiagrams\cd_pkg_extensions.puml
+		doc\ClassDiagrams\cd_pkg_graphicsapi.puml = doc\ClassDiagrams\cd_pkg_graphicsapi.puml
+		doc\ClassDiagrams\cd_pkg_passes.puml = doc\ClassDiagrams\cd_pkg_passes.puml
+		doc\ClassDiagrams\cd_pkg_resources.puml = doc\ClassDiagrams\cd_pkg_resources.puml
+		doc\ClassDiagrams\cd_pkg_utility.puml = doc\ClassDiagrams\cd_pkg_utility.puml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +112,7 @@ Global
 		{F541ADCC-8A58-A9A3-DCF1-6DAA5B40B71D} = {59375A01-523A-48A3-AC07-EC5CE1FC61BD}
 		{989D5488-9292-4A70-9B00-FF07792F9339} = {46DDC729-7715-4190-9CBC-4151DD4B5A6E}
 		{F8A7D1DC-FA72-B81A-DD88-B4441A2CEC12} = {769087AC-BFC1-4A85-BF97-5DA63B548E7A}
+		{20320571-623D-4EFB-AD53-BCDE75E1ECEB} = {01519A95-037D-431C-838C-355DB46C9F37}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {376DA86B-0E5C-4A57-9198-A072E5FD6F04}

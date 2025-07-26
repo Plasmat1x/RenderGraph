@@ -2,6 +2,7 @@ using Core;
 using Core.Enums;
 
 using GraphicsAPI;
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
@@ -105,7 +106,7 @@ public class ColorCorrectionPass: RenderPass
     {
       Name = "ColorCorrectionVertexShader",
       Stage = ShaderStage.Vertex,
-      Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
+      ByteCode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
       EntryPoint = "VSMain"
     };
     p_vertexShader = device.CreateShader(vsDesc);
@@ -114,7 +115,7 @@ public class ColorCorrectionPass: RenderPass
     {
       Name = "ColorCorrectionPixelShader",
       Stage = ShaderStage.Pixel,
-      Bytecode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
+      ByteCode = new byte[] { 0x44, 0x58, 0x42, 0x43 },
       EntryPoint = "PSColorCorrection"
     };
     p_pixelShader = device.CreateShader(psDesc);

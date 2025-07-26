@@ -190,6 +190,18 @@ package "Resource Descriptions" {
         UInt16
         UInt32
     }
+
+    enum TextureAddressMode{
+        Wrap
+        Mirror
+        Clamp
+        Border
+        MirrorOnce
+    }
+
+    enum TextureFilter{
+
+    }
 }
 
 ' Resource Descriptions

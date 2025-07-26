@@ -40,7 +40,7 @@ RenderGraph is a declarative, data-driven rendering framework that automatically
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/RenderGraph.git
+git clone https://github.com/Plasmat1x/RenderGraph.git
 cd RenderGraph
 
 # Restore dependencies
@@ -50,7 +50,7 @@ dotnet restore
 dotnet build
 
 # Run demo application
-dotnet run --project Examples/BasicDemo
+dotnet run --project Examples/MockExample
 ```
 
 
@@ -238,7 +238,7 @@ We welcome contributions! Please see our Contributing Guide for details.
 ### Development Setup
 ```bash
 # Clone with submodules
-git clone --recursive https://github.com/yourusername/RenderGraph.git
+git clone --recursive https://github.com/Plasmat1x/RenderGraph.git
 
 # Install development dependencies
 dotnet tool restore
@@ -280,16 +280,16 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE.txt
 - ✅ Basic render passes
 - ✅ Resource management system
 
-### Version 1.1 (Q2 2024)
+### Version 1.1 (Q3 2025)
 - 📋 Vulkan backend completion
 - 📋 Advanced post-processing passes
 - 📋 Compute shader integration
 - 📋 Performance profiling tools
 
-### Version 1.2 (Q3 2024)
+### Version 1.2 (Q4 2025)
 - 📋 Ray tracing support
 - 📋 Visual graph editor
 - 📋 GLTF 2.0 integration
 
-### Version 2.0 (Q4 2024)
+### Version 2.0 (Q1 2026)
 - 📋 Multi-GPU rendering

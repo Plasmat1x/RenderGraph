@@ -2,8 +2,13 @@ namespace GraphicsAPI.Enums;
 
 public enum ResourceBindingType
 {
-  ConstantBuffer,
+  Unknown,
   Texture,
   Sampler,
-  UnorderedAccess
+  ConstantBuffer,
+  StructuredBuffer,
+  ByteAddressBuffer,
+  UnorderedAccessView,
+  RWStructuredBuffer,
+  RWByteAddressBuffer
 }

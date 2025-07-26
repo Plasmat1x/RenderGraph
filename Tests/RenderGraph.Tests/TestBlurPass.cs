@@ -34,6 +34,5 @@ public class TestBlurPass: RenderPass
 
   public override void Execute(RenderPassContext _context)
   {
-    // Mock execution
   }
 }
