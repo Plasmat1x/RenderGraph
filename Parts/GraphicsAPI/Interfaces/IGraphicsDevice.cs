@@ -27,7 +27,7 @@ public interface IGraphicsDevice: IDisposable
   MemoryInfo GetMemoryInfo();
   ulong GetTotalMemory();
   ulong GetAvailableMemory();
-  ISwapChain CreateSwapChain(SwapChainDescription _description);
+  ISwapChain CreateSwapChain(SwapChainDescription _description, IntPtr _windowHandle);
   void Present();
   bool SupportsFormat(TextureFormat _format, FormatUsage _usage);
   uint GetFormatBytesPerPixel(TextureFormat _format);

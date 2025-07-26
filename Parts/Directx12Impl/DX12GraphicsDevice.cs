@@ -99,9 +99,15 @@ public class DX12GraphicsDevice: IGraphicsDevice
     return new DX12CommandBuffer(p_device, p_d3d12, _type);
   }
 
-  public ISwapChain CreateSwapChain(SwapChainDescription _desc)
+  public unsafe ISwapChain CreateSwapChain(SwapChainDescription _desc, IntPtr _windowHandle)
   {
-    throw new NotImplementedException("Swap chain creation requires window handle");
+    return new DX12SwapChain(
+    p_device,
+    p_dxgiFactory,
+    p_directQueue,
+    p_descriptorManager,
+    _desc,
+    _windowHandle);
   }
 
   public IFence CreateFence(ulong _initialValue = 0)

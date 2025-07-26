@@ -110,7 +110,7 @@ public class DX12Texture: ITexture
       };
       dstLocation.Anonymous.SubresourceIndex = subresource;
 
-      _commandList.CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, (Box*)null);
+      _commandList.CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, (Silk.NET.Direct3D12.Box*)null);
 
       barrier.Anonymous.Transition.StateBefore = ResourceStates.CopyDest;
       barrier.Anonymous.Transition.StateAfter = _texture.p_currentState;
@@ -159,7 +159,7 @@ public class DX12Texture: ITexture
   private bool p_disposed;
 
   public DX12Texture(ComPtr<ID3D12Device> _device, 
-    D3D12 _d3d12, 
+    D3D12? _d3d12, 
     TextureDescription _desc,
     DX12DescriptorHeapManager _descriptorManager)
   {
@@ -172,6 +172,23 @@ public class DX12Texture: ITexture
     p_currentState = ResourceStates.Present;
 
     p_resource.AddRef();
+  }
+
+  public DX12Texture(ComPtr<ID3D12Device> _device,
+    D3D12?_d3d12,
+    ComPtr<ID3D12Resource> _resource,
+    TextureDescription _desc,
+    DX12DescriptorHeapManager _descriptorManager)
+  {
+    p_description = _desc ?? throw new ArgumentNullException(nameof(_desc));
+    p_device = _device;
+    p_d3d12 = _d3d12;
+    p_descriptorManager = _descriptorManager ?? throw new ArgumentNullException(nameof(_descriptorManager));
+
+    p_dxgiFormat = DX12Helpers.ConvertFormat(p_description.Format);
+    p_currentState = ResourceStates.Present;
+
+    p_resource = _resource;
   }
 
   public TextureDescription Description => p_description;
