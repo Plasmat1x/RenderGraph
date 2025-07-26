@@ -86,7 +86,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
   public ISampler CreateSampler(SamplerDescription _desc)
   {
     var allocation = p_descriptorManager.AllocateSampler();
-    return new DX12Sampler(p_device, _desc, descriptor, allocation);
+    return new DX12Sampler(p_device, _desc,  allocation);
   }
 
   public CommandBuffer CreateCommandBuffer()
@@ -97,6 +97,11 @@ public class DX12GraphicsDevice: IGraphicsDevice
   public CommandBuffer CreateCommandBuffer(CommandBufferType _type)
   {
     return new DX12CommandBuffer(p_device, p_d3d12, _type);
+  }
+
+  public ISwapChain CreateSwapChain(SwapChainDescription _desc)
+  {
+    throw new NotImplementedException("Swap chain creation requires window handle");
   }
 
   public IFence CreateFence(ulong _initialValue = 0)
@@ -152,11 +157,6 @@ public class DX12GraphicsDevice: IGraphicsDevice
     throw new NotImplementedException();
   }
 
-  public ISwapChain CreateSwapChain(SwapChainDescription _desc)
-  {
-    throw new NotImplementedException("Swap chain creation requires window handle");
-  }
-
   public void Present()
   {
     throw new NotImplementedException("Present is handled by swap chain");
@@ -165,6 +165,7 @@ public class DX12GraphicsDevice: IGraphicsDevice
   public void BeginFrame()
   {
     p_frameManager.WaitForPreviousFrame();
+    p_descriptorManager.ResetForNewFrame();
   }
 
   public void EndFrame()

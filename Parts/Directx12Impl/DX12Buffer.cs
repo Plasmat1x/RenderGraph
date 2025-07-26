@@ -1,3 +1,4 @@
+using GraphicsAPI;
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
@@ -19,7 +20,7 @@ public unsafe class DX12Buffer: IBuffer
   private readonly D3D12 p_d3d12;
   private readonly Dictionary<BufferViewType, DX12BufferView> p_views = [];
   private readonly BufferDescription p_description;
-  private readonly DescriptorAllocation p_allocation;
+  private readonly DX12DescriptorHeapManager p_descriptorManager;
 
   private ComPtr<ID3D12Resource> p_resource;
   private ResourceStates p_currentState;
@@ -32,12 +33,12 @@ public unsafe class DX12Buffer: IBuffer
     ComPtr<ID3D12Device> _device,
     D3D12 _d3d12,
     BufferDescription _desc,
-    DescriptorAllocation _allocation) 
+    DX12DescriptorHeapManager _descriptorManager) 
   {
     p_device = _device;
     p_d3d12 = _d3d12;
     p_description = _desc ?? throw new ArgumentNullException(nameof(_desc));
-    p_allocation = _allocation ?? throw new ArgumentNullException(nameof(_allocation));
+    p_descriptorManager = _descriptorManager ?? throw new ArgumentNullException(nameof(_descriptorManager));
 
     CreateResource();
   }
@@ -57,38 +58,6 @@ public unsafe class DX12Buffer: IBuffer
   public ResourceType ResourceType => ResourceType.Buffer;
 
   public bool IsDisposed => p_disposed;
-
-  public IBufferView CreateView(BufferViewDescription _desc)
-  {
-    ThrowIfDisposed();
-
-    BufferViewType viewType;
-
-    if((p_description.BindFlags & BindFlags.VertexBuffer) != 0)
-      viewType = BufferViewType.VertexBuffer;
-    else if((p_description.BindFlags & BindFlags.IndexBuffer) != 0)
-      viewType = BufferViewType.IndexBuffer;
-    else if((p_description.BindFlags & BindFlags.ConstantBuffer) != 0)
-      viewType = BufferViewType.ConstantBuffer;
-    else if((p_description.BindFlags & BindFlags.ShaderResource) != 0)
-      viewType = BufferViewType.ShaderResource;
-    else if((p_description.BindFlags & BindFlags.UnorderedAccess) != 0)
-      viewType = BufferViewType.UnorderedAccess;
-    else
-      throw new InvalidOperationException("Buffer has no valid bind flags for view creation");
-
-    if(p_views.TryGetValue(viewType, out var existingView))
-      return existingView;
-
-    if(viewType == BufferViewType.VertexBuffer || viewType == BufferViewType.IndexBuffer)
-    {
-      var view = new DX12BufferView(this, viewType, _desc, default);
-      p_views[viewType] = view;
-      return view;
-    }
-
-    throw new NotImplementedException("CBV/SRV/UAV creation requires descriptor allocation");
-  }
 
   public T[] GetData<T>(ulong _offset = 0, ulong _count = 0) where T : unmanaged
   {
@@ -243,6 +212,32 @@ public unsafe class DX12Buffer: IBuffer
     return p_resource;
   }
 
+  public IBufferView CreateView(BufferViewDescription _description)
+  {
+    ThrowIfDisposed();
+
+    BufferViewType viewType;
+    if((p_description.BindFlags & BindFlags.VertexBuffer) != 0)
+      viewType = BufferViewType.VertexBuffer;
+    else if((p_description.BindFlags & BindFlags.IndexBuffer) != 0)
+      viewType = BufferViewType.IndexBuffer;
+    else if((p_description.BindFlags & BindFlags.ConstantBuffer) != 0)
+      viewType = BufferViewType.ConstantBuffer;
+    else if((p_description.BindFlags & BindFlags.ShaderResource) != 0)
+      viewType = BufferViewType.ShaderResource;
+    else if((p_description.BindFlags & BindFlags.UnorderedAccess) != 0)
+      viewType = BufferViewType.UnorderedAccess;
+    else
+      throw new InvalidOperationException("Buffer has no valid bind flags for view creation");
+
+    if(p_views.TryGetValue(viewType, out var existingView))
+      return existingView;
+
+    var view = CreateViewInternal(viewType, _description);
+    p_views[viewType] = view;
+    return view;
+  }
+
   public void Dispose()
   {
     if(p_disposed) 
@@ -329,11 +324,6 @@ public unsafe class DX12Buffer: IBuffer
     }
   }
 
-  private void CreateDefaultView()
-  {
-    throw new NotImplementedException();
-  }
-
   private ResourceStates DetermineResourceStates()
   {
     throw new NotImplementedException();
@@ -362,5 +352,83 @@ public unsafe class DX12Buffer: IBuffer
     {
       p_resource.SetName((char*)pName);
     }
+  }
+
+  private DX12BufferView CreateViewInternal(BufferViewType _viewType, BufferViewDescription _description)
+  {
+    DescriptorAllocation allocation = null;
+
+    switch(_viewType)
+    {
+      case BufferViewType.VertexBuffer:
+      case BufferViewType.IndexBuffer:
+        return new DX12BufferView(this, _viewType, _description, null);
+
+      case BufferViewType.ConstantBuffer:
+      {
+        allocation = p_descriptorManager.AllocateCBVSRVUAV();
+        var cbvDesc = new ConstantBufferViewDesc
+        {
+          BufferLocation = p_gpuVirtualAddress + _description.Offset,
+          SizeInBytes = (uint)DX12Helpers.AlignUp(
+                _description.Size == ulong.MaxValue ? _description.Size : _description.Size,
+                256) // CB size must be 256-byte aligned
+        };
+
+        p_device.CreateConstantBufferView(&cbvDesc, allocation.CpuHandle);
+      }
+      break;
+
+      case BufferViewType.ShaderResource:
+      {
+        allocation = p_descriptorManager.AllocateCBVSRVUAV();
+        var srvDesc = new ShaderResourceViewDesc
+        {
+          Format = Format.FormatUnknown,
+          ViewDimension = SrvDimension.Buffer,
+          Shader4ComponentMapping = D3D12.Shader4ComponentMapping
+        };
+
+        var elementCount = (uint)((_description.Size == ulong.MaxValue ? _description.Size : _description.Size) /
+                                 (_description.Stride > 0 ? _description.Stride : 4));
+
+        srvDesc.Anonymous.Buffer.FirstElement = (ulong)(_description.Offset /
+                                                (_description.Stride > 0 ? _description.Stride : 4));
+        srvDesc.Anonymous.Buffer.NumElements = elementCount;
+        srvDesc.Anonymous.Buffer.StructureByteStride = _description.Stride;
+        srvDesc.Anonymous.Buffer.Flags = BufferSrvFlags.None;
+
+        p_device.CreateShaderResourceView(p_resource, &srvDesc, allocation.CpuHandle);
+      }
+      break;
+
+      case BufferViewType.UnorderedAccess:
+      {
+        allocation = p_descriptorManager.AllocateCBVSRVUAV();
+        var uavDesc = new UnorderedAccessViewDesc
+        {
+          Format = Format.FormatUnknown,
+          ViewDimension = UavDimension.Buffer
+        };
+
+        var elementCount = (uint)((_description.Size == ulong.MaxValue ? _description.Size : _description.Size) /
+                                 (_description.Stride > 0 ? _description.Stride : 4));
+
+        uavDesc.Anonymous.Buffer.FirstElement = (ulong)(_description.Offset /
+                                                (_description.Stride > 0 ? _description.Stride : 4));
+        uavDesc.Anonymous.Buffer.NumElements = elementCount;
+        uavDesc.Anonymous.Buffer.StructureByteStride = _description.Stride;
+        uavDesc.Anonymous.Buffer.CounterOffsetInBytes = 0;
+        uavDesc.Anonymous.Buffer.Flags = BufferUavFlags.None;
+
+        p_device.CreateUnorderedAccessView(p_resource, (ID3D12Resource*)null, &uavDesc, allocation.CpuHandle);
+      }
+      break;
+
+      default:
+        throw new ArgumentException($"Unsupported buffer view type: {_viewType}");
+    }
+
+    return new DX12BufferView(this, _viewType, _description, allocation);
   }
 }

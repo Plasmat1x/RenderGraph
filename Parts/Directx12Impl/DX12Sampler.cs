@@ -20,22 +20,18 @@ public class DX12Sampler: ISampler
   private readonly ComPtr<ID3D12Device> p_device;
   private readonly SamplerDescription p_description;
   private readonly SamplerDesc p_samplerDesc;
-  private readonly Action<CpuDescriptorHandle> p_releaseDescriptorCallback;
-  private CpuDescriptorHandle p_descriptor;
+  private readonly DescriptorAllocation p_allocation;
   private bool p_disposed;
 
   public DX12Sampler(ComPtr<ID3D12Device>? _device,
     SamplerDescription _description, 
-    CpuDescriptorHandle _descriptor, 
     DescriptorAllocation _allocation)
   {
     p_device = _device ?? throw new ArgumentNullException(nameof(_device));
     p_description = _description ?? throw new ArgumentNullException(nameof(_description));
-    p_descriptor = _descriptor;
-    p_releaseDescriptorCallback = _releaseDescriptorCallback;
 
     p_samplerDesc = CreateSamplerDesc(_description);
-    p_device.CreateSampler(ref p_samplerDesc, _descriptor);
+    p_device.CreateSampler(ref p_samplerDesc, _allocation.CpuHandle);
   }
 
   public SamplerDescription Description => p_description;
@@ -54,13 +50,13 @@ public class DX12Sampler: ISampler
   public IntPtr GetNativeHandle()
   {
     ThrowIfDisposed();
-    return (IntPtr)p_descriptor.Ptr;
+    return (IntPtr)p_allocation.CpuHandle.Ptr;
   }
 
   public CpuDescriptorHandle GetDescriptorHandle()
   {
     ThrowIfDisposed();
-    return p_descriptor;
+    return p_allocation.CpuHandle;
   }
 
   public void Dispose()
@@ -68,7 +64,7 @@ public class DX12Sampler: ISampler
     if(p_disposed) 
       return;
 
-    p_releaseDescriptorCallback?.Invoke(p_descriptor);
+    p_allocation.Dispose();
 
     p_disposed = true;
 
