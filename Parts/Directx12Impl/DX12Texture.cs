@@ -171,6 +171,8 @@ public class DX12Texture: ITexture
     p_dxgiFormat = DX12Helpers.ConvertFormat(p_description.Format);
     p_currentState = ResourceStates.Present;
 
+    CreateResource();
+
     p_resource.AddRef();
   }
 
@@ -189,6 +191,7 @@ public class DX12Texture: ITexture
     p_currentState = ResourceStates.Present;
 
     p_resource = _resource;
+    p_resource.AddRef();
   }
 
   public TextureDescription Description => p_description;
@@ -261,7 +264,11 @@ public class DX12Texture: ITexture
     if(p_views.TryGetValue(key, out var existingView))
       return existingView;
 
-    throw new NotImplementedException("Texture view creation requires descriptor allocation");
+    var view =  CreateViewInternal(viewType, _desc);
+
+    p_views.Add(key,view);
+
+    return view;
   }
 
   public void GenerateMips()
@@ -699,11 +706,6 @@ public class DX12Texture: ITexture
 
         // TODO: Добавить другие dimensions
     }
-  }
-
-  private void CreateDefaultViews()
-  {
-    throw new NotImplementedException();
   }
 
   private void ThrowIfDisposed()

@@ -5,6 +5,8 @@ public enum ResourceBindingType
   Unknown,
   Texture,
   Sampler,
+  UnorderedAccess,
+  ShaderResource,
   ConstantBuffer,
   StructuredBuffer,
   ByteAddressBuffer,

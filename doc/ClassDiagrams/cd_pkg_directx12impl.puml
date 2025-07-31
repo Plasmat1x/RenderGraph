@@ -10,18 +10,7 @@ package "DirectX12 Implementation" {
         - _directQueue: ID3D12CommandQueue*
         - _computeQueue: ID3D12CommandQueue*
         - _copyQueue: ID3D12CommandQueue*
-        - _rtvHeap: ID3D12DescriptorHeap*
-        - _dsvHeap: ID3D12DescriptorHeap*
-        - _cbvSrvUavHeap: ID3D12DescriptorHeap*
-        - _samplerHeap: ID3D12DescriptorHeap*
-        - _rtvDescriptorSize: uint
-        - _dsvDescriptorSize: uint
-        - _cbvSrvUavDescriptorSize: uint
-        - _samplerDescriptorSize: uint
-        - _rtvAllocator: DescriptorAllocator
-        - _dsvAllocator: DescriptorAllocator
-        - _cbvSrvUavAllocator: DescriptorAllocator
-        - _samplerAllocator: DescriptorAllocator
+        - _descriptorManager: DX12DescriptorHeapManager
         - _frameManager: FrameFenceManager
         - _rootSignatureCache: DX12RootSignatureCache
         - _pipelineStateCache: DX12PipelineStateCache
@@ -329,17 +318,6 @@ package "DirectX12 Implementation" {
         + {static} ResetGlobalState(): void
     }
 
-    class DescriptorAllocator {
-        - _heap: ID3D12DescriptorHeap*
-        - _descriptorSize: uint
-        - _maxDescriptors: uint
-        - _currentIndex: uint
-        - _freeIndices: Stack<uint>
-        --
-        + Allocate(): CpuDescriptorHandle
-        + Free(index: uint): void
-    }
-
     class DX12RootSignatureCache {
         - _device: ID3D12Device*
         - _cache: Dictionary<RootSignatureDesc, ID3D12RootSignature*>
@@ -404,8 +382,7 @@ package "DirectX12 Implementation" {
         + SampleMask: uint
     }
 
-    ' TODO классы (не реализованы)
-    class DX12SwapChain <<not implemented>> {
+    class DX12SwapChain {
         + Description: SwapChainDescription
         + CurrentBackBufferIndex: uint
         + GetBackBuffer(index: uint): ITexture
@@ -413,6 +390,88 @@ package "DirectX12 Implementation" {
         + Resize(width: uint, height: uint): void
         + GetNativeHandle(): IntPtr
         + Dispose(): void
+    }
+
+    class DX12DescriptorHeapManager{
+        - _rtvHeap: StaticDescriptorHeap
+        - _dsvHeap: StaticDescriptorHeap
+        - _srvHeap: StaticDescriptorHeap
+        - _samplerHeap: StaticDescriptorHeap
+        - _gpuSrvHeap: DynamicDescriptorHeap
+        - _gpuSamplerHeap: DynamicDescriptorHeap
+        --
+        + AllocateRTV(count: uint): DescriptorAllocation
+        + AllocateDSV(count: uint): DescriptorAllocation
+        + AllocateCBVSRVUAV(count: uint): DescriptorAllocation
+        + AllocateSampler(count: uint): DescriptorAllocation
+        + SetDescriptorHeaps(ID3D12GraphicsCommandList*): void
+        + CopyToGPUHeap(CpuDescriptorHandle, count: uint): GpuDescriptorHandle
+        + CopySamplerToGPUHeap(CpuDescriptorHandle, count: uint)
+        + ResetForNewFrame(): void
+    }
+
+    class StaticDescriptorHeap{
+        - _device: ID3D12Device*
+        - _heap: ID3D12DescriptorHeap*
+        - _dsecriptorSize: uint
+        - _maxDescriptors: uint
+        - _freeIndices: Stack<uint>
+        - _currentIndex: uint
+        --
+        + Allocate(count: uint): DescriptorAllocation
+        + GetCPUHandle(index: uint): CpuDescriptorHandle
+        + GetHeap(): ID3D12DescriptorHeap
+        + Free(baseIndex: uint, count: uint)
+    }
+
+    class DynamicDescriptorHeap{
+        - _device: ID3D12Device*
+        - _heap: ID3D12DescriptorHeap*
+        - _type: DescriptorHeapType
+        - _dsecriptorSize: uint
+        - _maxDescriptors: uint
+        - _currentOffset: uint
+        --
+        + CopyDescriptor(CpuDescriptorHandle, count: uint)
+        + Reset(): void
+        - GetGPUHandle(index: uint): GpuDescriptorHandle
+        - GetCPUHnaadle(index: uint): CpuDescriptorHandle
+    }
+
+    class DescriptorAllocation{
+        - _heap: StaticDescriptorHeap
+        - _baseIndex: uint
+        - _count: uint
+        - _dsecriptorSize: uint
+        - _cpuHandle: CpuDescriptorHandle
+        + Count: uint
+        + CpuHandle: CpuDescriptorHandle
+        --
+        + GetHandle(index: uint): CpuDescriptorHandle  
+    }
+
+    class RootSignatureBuilder{
+        - _parameters: List<RootParameters>
+        - _staticSamplers: List<StaticSamplerDesc>
+        - _flags: RootSignatureFlags
+        --
+        + AllowInputAssembleInputLayout(): RootSignatureBuilderEx
+        + AddConstantBufferView(): RootSignatureBuilderEx
+        + AddShaderResourceView(): RootSignatureBuilderEx
+        + AddUnordererdAccessView(): RootSignatureBuilderEx
+        + Build(): RootSignatureDesc
+    }
+    
+    class RootSignatureBuilderEx{
+        - _parameters: List<RootParameters>
+        - _staticSamplers: List<StaticSamplerDesc>
+        - _flags: RootSignatureFlags
+        --
+        + AllowInputAssembleInputLayout(): RootSignatureBuilderEx
+        + AddConstantBufferView(): RootSignatureBuilderEx
+        + AddShaderResourceView(): RootSignatureBuilderEx
+        + AddUnordererdAccessView(): RootSignatureBuilderEx
+        + Build(): RootSignatureDesc
     }
 }
 
@@ -456,12 +515,10 @@ DX12CommandBuffer --> DX12RenderState : uses
 DX12RenderState --> DX12RootSignatureCache : uses
 DX12RenderState --> DX12PipelineStateCache : uses
 DX12RenderState --> PipelineStateDescription : uses
+StaticDescriptorHeap -->  DescriptorAllocation : uses
+DX12DescriptorHeapManager --> StaticDescriptorHeap : store
+DX12DescriptorHeapManager --> DynamicDescriptorHeap : store
 
-' Статус реализации
-note right of DX12SwapChain
-  Требует window handle
-  для создания
-end note
 
 note bottom of DX12GraphicsDevice
   Все основные компоненты реализованы:

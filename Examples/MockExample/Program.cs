@@ -222,7 +222,7 @@ public class Program
       using var shader = _device.CreateShader(shaderDesc);
 
       var reflection = shader.GetReflection();
-      Console.WriteLine($"      {stage} Shader: {reflection.ConstantBuffers.Count} CBs, {reflection.Resources.Count} resources");
+      Console.WriteLine($"      {stage} Shader: {reflection.ConstantBuffers.Count} CBs, {reflection.BoundResources.Count} resources");
     }
 
     var samplerConfigs = new[]

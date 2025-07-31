@@ -18,4 +18,10 @@ public interface IShader: IResource
   bool HasConstantBuffer(string _name);
   bool HasTexture(string _name);
   bool HasSampler(string _name);
+  bool HasUnordererAccess(string _name);
+
+  ConstantBufferInfo GetConstantBufferInfo(string _name);
+  ResourceBindingInfo GetResourceInfo(string _name);
+  SamplerBindingInfo GetSamplerInfo(string _name);
+  bool IsCompatibleWith(IShader _otherShader);
 }

@@ -120,4 +120,29 @@ public class DX12Shader: IShader
     if(p_disposed)
       throw new ObjectDisposedException(nameof(DX12Shader));
   }
+
+  public bool HasUnordererAccess(string _name)
+  {
+    throw new NotImplementedException();
+  }
+
+  public ConstantBufferInfo GetConstantBufferInfo(string _name)
+  {
+    throw new NotImplementedException();
+  }
+
+  public ResourceBindingInfo GetResourceInfo(string _name)
+  {
+    throw new NotImplementedException();
+  }
+
+  public SamplerBindingInfo GetSamplerInfo(string _name)
+  {
+    throw new NotImplementedException();
+  }
+
+  public bool IsCompatibleWith(IShader _otherShader)
+  {
+    throw new NotImplementedException();
+  }
 }

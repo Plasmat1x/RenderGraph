@@ -1,3 +1,5 @@
+using Directx12Impl.Tools;
+
 using GraphicsAPI;
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
@@ -285,7 +287,7 @@ public unsafe class DX12Buffer: IBuffer
 
     var resourceDesc = new ResourceDesc
     {
-      Dimension = ResourceDimension.Buffer,
+      Dimension = Silk.NET.Direct3D12.ResourceDimension.Buffer,
       Alignment = 0,
       Width = p_description.Size,
       Height = 1,
@@ -386,7 +388,7 @@ public unsafe class DX12Buffer: IBuffer
         {
           Format = Format.FormatUnknown,
           ViewDimension = SrvDimension.Buffer,
-          Shader4ComponentMapping = D3D12.Shader4ComponentMapping
+          Shader4ComponentMapping = (uint)DX12ShaderComponentMapping.Default4ComponentMapping()
         };
 
         var elementCount = (uint)((_description.Size == ulong.MaxValue ? _description.Size : _description.Size) /
