@@ -11,6 +11,6 @@ public interface ITextureView: IDisposable
 {
   ITexture Texture { get; }
   TextureViewType ViewType { get; }
-  TextureViewDescription Description { get; }
+  _TextureViewDescription Description { get; }
   IntPtr GetNativeHandle();
 }

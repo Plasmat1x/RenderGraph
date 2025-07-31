@@ -1,5 +1,8 @@
 namespace Resources.Enums;
 
+/// <summary>
+/// Расширенное использование буферов
+/// </summary>
 public enum BufferUsage
 {
   Vertex,
@@ -13,5 +16,5 @@ public enum BufferUsage
   Consume,
   Staging,
   Upload,
-  Readback,
+  Readback
 }

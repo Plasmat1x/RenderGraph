@@ -1,5 +1,7 @@
 using Silk.NET.Direct3D12;
 
+using System.Runtime.InteropServices;
+
 namespace Directx12Impl;
 
 public class DescriptorAllocation: IDisposable
@@ -10,6 +12,11 @@ public class DescriptorAllocation: IDisposable
   private readonly uint p_descriptorSize;
   private readonly CpuDescriptorHandle p_cpuHandle;
   private bool p_disposed;
+
+  public CpuDescriptorHandle CpuHandle;
+  public GpuDescriptorHandle GpuHandle;
+  public uint Index;
+  public bool IsValid => CpuHandle.Ptr != 0;
 
   internal DescriptorAllocation(
     StaticDescriptorHeap _heap,
@@ -25,8 +32,21 @@ public class DescriptorAllocation: IDisposable
     p_cpuHandle = _cpuHandle;
   }
 
+  public DescriptorAllocation(CpuDescriptorHandle _cpuHandle, GpuDescriptorHandle _gpuHandle, uint _index)
+  {
+    CpuHandle = _cpuHandle;
+    GpuHandle = _gpuHandle;
+    Index = _index;
+  }
+
+  public DescriptorAllocation(CpuDescriptorHandle _cpuHandle, uint _index)
+  {
+    CpuHandle = _cpuHandle;
+    GpuHandle = default;
+    Index = _index;
+  }
+
   public uint Count => p_count;
-  public CpuDescriptorHandle CpuHandle => p_cpuHandle;
 
   public CpuDescriptorHandle GetHandle(uint _index = 0)
   {

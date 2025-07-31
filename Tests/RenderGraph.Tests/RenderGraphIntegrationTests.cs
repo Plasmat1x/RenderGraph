@@ -20,9 +20,9 @@ public class RenderGraphIntegrationTests: IDisposable
   {
     var executionOrder = new List<string>();
 
-    var pass1 = new MockRenderPass("Pass1");
-    var pass2 = new MockRenderPass("Pass2");
-    var pass3 = new MockRenderPass("Pass3");
+    var pass1 = new MockRenderPass("Pass1") { AlwaysExecute = true};
+    var pass2 = new MockRenderPass("Pass2") { AlwaysExecute = true};
+    var pass3 = new MockRenderPass("Pass3") { AlwaysExecute = true};
 
     pass1.OnExecute = () => executionOrder.Add("Pass1");
     pass2.OnExecute = () => executionOrder.Add("Pass2");
@@ -45,9 +45,9 @@ public class RenderGraphIntegrationTests: IDisposable
   [Fact]
   public void RenderGraph_Should_Skip_Disabled_Passes()
   {
-    var pass1 = new MockRenderPass("EnabledPass");
+    var pass1 = new MockRenderPass("EnabledPass") { AlwaysExecute = true };
     var pass2 = new MockRenderPass("DisabledPass") { Enabled = false };
-    var pass3 = new MockRenderPass("AnotherEnabledPass");
+    var pass3 = new MockRenderPass("AnotherEnabledPass") { AlwaysExecute = true };
 
     var executionOrder = new List<string>();
     pass1.OnExecute = () => executionOrder.Add("Pass1");
@@ -129,27 +129,13 @@ public class RenderGraphIntegrationTests: IDisposable
     p_renderGraph.AddPass(pass2);
     p_renderGraph.Compile();
 
-    Console.WriteLine($"BEFORE - Pass1: Enabled={pass1.Enabled}, WasExecuted={pass1.Statistics.WasExecutedThisFrame}");
-    Console.WriteLine($"BEFORE - Pass2: Enabled={pass2.Enabled}, WasExecuted={pass2.Statistics.WasExecutedThisFrame}");
-    Console.WriteLine($"BEFORE - Pass1.CanExecute={pass1.CanExecute()}");
-    Console.WriteLine($"BEFORE - Pass2.CanExecute={pass2.CanExecute()}");
-
     pass1.Statistics.Reset();
     pass1.Statistics.StartFrame();
     pass2.Statistics.Reset();
     pass2.Statistics.StartFrame();
 
-    Console.WriteLine($"AFTER RESET - Pass1: Enabled={pass1.Enabled}, WasExecuted={pass1.Statistics.WasExecutedThisFrame}");
-    Console.WriteLine($"AFTER RESET - Pass2: Enabled={pass2.Enabled}, WasExecuted={pass2.Statistics.WasExecutedThisFrame}");
-    Console.WriteLine($"AFTER RESET - Pass1.CanExecute={pass1.CanExecute()}");
-    Console.WriteLine($"AFTER RESET - Pass2.CanExecute={pass2.CanExecute()}");
-
     using var commandBuffer = p_device.CreateCommandBuffer();
     p_renderGraph.Execute(commandBuffer);
-
-    Console.WriteLine($"AFTER EXECUTION - Pass1: WasExecuted={pass1.Statistics.WasExecutedThisFrame}");
-    Console.WriteLine($"AFTER EXECUTION - Pass2: WasExecuted={pass2.Statistics.WasExecutedThisFrame}");
-    Console.WriteLine($"Execution order: [{string.Join(", ", executionOrder)}]");
 
     Assert.Equal(new[] { "Pass1", "Pass2" }, executionOrder);
   }

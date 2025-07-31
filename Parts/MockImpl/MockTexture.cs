@@ -31,7 +31,7 @@ public class MockTexture: ITexture
   public TextureFormat Format => Description.Format;
   public uint SampleCount => Description.SampleCount;
 
-  public ITextureView CreateView(TextureViewDescription _description)
+  public ITextureView CreateView(_TextureViewDescription _description)
   {
     Console.WriteLine($"    [Resource] Creating texture view for {Name} ({_description.ViewType})");
     return new MockTextureView(this, _description);
@@ -41,7 +41,7 @@ public class MockTexture: ITexture
   {
     if(!_defaultViews.ContainsKey(TextureViewType.ShaderResource))
     {
-      var desc = new TextureViewDescription
+      var desc = new _TextureViewDescription
       {
         ViewType = TextureViewType.ShaderResource,
         Format = Format,
@@ -57,7 +57,7 @@ public class MockTexture: ITexture
   {
     if(!_defaultViews.ContainsKey(TextureViewType.RenderTarget))
     {
-      var desc = new TextureViewDescription
+      var desc = new _TextureViewDescription
       {
         ViewType = TextureViewType.RenderTarget,
         Format = Format,
@@ -73,7 +73,7 @@ public class MockTexture: ITexture
   {
     if(!_defaultViews.ContainsKey(TextureViewType.DepthStencil))
     {
-      var desc = new TextureViewDescription
+      var desc = new _TextureViewDescription
       {
         ViewType = TextureViewType.DepthStencil,
         Format = Format,
@@ -89,7 +89,7 @@ public class MockTexture: ITexture
   {
     if(!_defaultViews.ContainsKey(TextureViewType.UnorderedAccess))
     {
-      var desc = new TextureViewDescription
+      var desc = new _TextureViewDescription
       {
         ViewType = TextureViewType.UnorderedAccess,
         Format = Format,

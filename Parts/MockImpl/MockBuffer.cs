@@ -46,8 +46,8 @@ public class MockBuffer: IBuffer
       var desc = new BufferViewDescription
       {
         ViewType = BufferViewType.ShaderResource,
-        Size = Size,
-        Stride = Stride
+        NumElements = Size,
+        StructureByteStride = Stride
       };
       p_defaultViews[BufferViewType.ShaderResource] = CreateView(desc);
     }
@@ -61,8 +61,8 @@ public class MockBuffer: IBuffer
       var desc = new BufferViewDescription
       {
         ViewType = BufferViewType.UnorderedAccess,
-        Size = Size,
-        Stride = Stride
+        NumElements = Size,
+        StructureByteStride = Stride
       };
       p_defaultViews[BufferViewType.UnorderedAccess] = CreateView(desc);
     }

@@ -2,6 +2,7 @@ using GraphicsAPI.Enums;
 
 using Resources.Enums;
 
+using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
@@ -10,6 +11,11 @@ using System;
 namespace Directx12Impl;
 public static class DX12Helpers
 {
+  /// <summary>
+  /// Константа для стандартного маппинга компонентов шейдера
+  /// </summary>
+  public const uint D3D12DefaultShader4ComponentMapping = 0x1688; // D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING
+
   public static Format ConvertFormat(TextureFormat _format) => _format switch
   {
     TextureFormat.Unknown => Format.FormatUnknown,
@@ -66,7 +72,6 @@ public static class DX12Helpers
 
   public static ResourceStates ConvertResourceState(ResourceState _state) => _state switch
   {
-    ResourceState.Undefined => ResourceStates.Common,
     ResourceState.Common => ResourceStates.Common,
     ResourceState.RenderTarget => ResourceStates.RenderTarget,
     ResourceState.UnorderedAccess => ResourceStates.UnorderedAccess,
@@ -75,9 +80,9 @@ public static class DX12Helpers
     ResourceState.ShaderResource => ResourceStates.PixelShaderResource | ResourceStates.NonPixelShaderResource,
     ResourceState.StreamOut => ResourceStates.StreamOut,
     ResourceState.IndirectArgument => ResourceStates.IndirectArgument,
-    ResourceState.CopyDestination => ResourceStates.CopyDest,
+    ResourceState.CopyDest => ResourceStates.CopyDest,
     ResourceState.CopySource => ResourceStates.CopySource,
-    ResourceState.ResolveDestination => ResourceStates.ResolveDest,
+    ResourceState.ResolveDest => ResourceStates.ResolveDest,
     ResourceState.ResolveSource => ResourceStates.ResolveSource,
     ResourceState.Present => ResourceStates.Present,
     _ => throw new ArgumentException($"Unsupported resource state: {_state}")
@@ -399,5 +404,34 @@ public static class DX12Helpers
     }
 
     return totalSize;
+  }
+
+  public static void ThrowIfFailed(HResult _hr, string _message)
+  {
+    if(_hr.IsFailure)
+    {
+      throw new Exception($"{_message} (HRESULT: 0x{_hr.Value:X8})");
+    }
+  }
+
+  internal static Format ConvertIndexFormat(IndexFormat _format)
+  {
+    throw new NotImplementedException();
+  }
+
+  internal static unsafe void SetResourceName(ID3D12Resource* _resource, string _name)
+  {
+    if(_resource != null && !string.IsNullOrEmpty(_name))
+    {
+      var namePtr = System.Runtime.InteropServices.Marshal.StringToHGlobalUni(_name);
+      try
+      {
+        _resource->SetName((char*)namePtr);
+      }
+      finally
+      {
+        System.Runtime.InteropServices.Marshal.FreeHGlobal(namePtr);
+      }
+    }
   }
 }

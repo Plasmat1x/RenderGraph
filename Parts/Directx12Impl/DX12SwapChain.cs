@@ -26,7 +26,7 @@ public unsafe class DX12SwapChain: ISwapChain
   private readonly SwapChainDescription p_description;
 
   private IDXGISwapChain3* p_swapChain;
-  private DX12Texture[] p_backBuffers;
+  private _DX12Texture[] p_backBuffers;
   private DescriptorAllocation[] p_rtvAllocations;
   private uint p_currentBackBufferIndex;
   private bool p_disposed;
@@ -69,7 +69,7 @@ public unsafe class DX12SwapChain: ISwapChain
       throw new ArgumentOutOfRangeException(nameof(_index));
 
     // Создаем view обертку для RTV
-    var viewDesc = new TextureViewDescription
+    var viewDesc = new _TextureViewDescription
     {
       Format = p_description.Format,
       MostDetailedMip = 0,
@@ -78,7 +78,7 @@ public unsafe class DX12SwapChain: ISwapChain
       ArraySize = 1
     };
 
-    return new DX12TextureView(
+    return new _DX12TextureView(
         p_backBuffers[_index],
         TextureViewType.RenderTarget,
         viewDesc,
@@ -223,7 +223,7 @@ public unsafe class DX12SwapChain: ISwapChain
 
   private void CreateBackBufferResources()
   {
-    p_backBuffers = new DX12Texture[p_description.BufferCount];
+    p_backBuffers = new _DX12Texture[p_description.BufferCount];
     p_rtvAllocations = new DescriptorAllocation[p_description.BufferCount];
 
     for(uint i = 0; i < p_description.BufferCount; i++)
@@ -249,7 +249,7 @@ public unsafe class DX12SwapChain: ISwapChain
         TextureUsage = TextureUsage.RenderTarget | TextureUsage.BackBuffer
       };
 
-      p_backBuffers[i] = new DX12Texture(
+      p_backBuffers[i] = new _DX12Texture(
           p_device,
           null,
           backBuffer,

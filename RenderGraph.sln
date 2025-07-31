@@ -54,6 +54,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MockDemos", "MockDemos", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockShaderReflection", "MockShaderReflection\MockShaderReflection.csproj", "{57EE3D9B-A582-448D-8FF4-5239787ECA9D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenericCommandBuffer", "Examples\GenericCommandBuffer\GenericCommandBuffer.csproj", "{04F7940D-1FB5-4385-B746-CE4D6822B011}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -104,6 +106,10 @@ Global
 		{57EE3D9B-A582-448D-8FF4-5239787ECA9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{57EE3D9B-A582-448D-8FF4-5239787ECA9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{57EE3D9B-A582-448D-8FF4-5239787ECA9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04F7940D-1FB5-4385-B746-CE4D6822B011}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04F7940D-1FB5-4385-B746-CE4D6822B011}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04F7940D-1FB5-4385-B746-CE4D6822B011}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04F7940D-1FB5-4385-B746-CE4D6822B011}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -123,6 +129,7 @@ Global
 		{20320571-623D-4EFB-AD53-BCDE75E1ECEB} = {01519A95-037D-431C-838C-355DB46C9F37}
 		{FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE} = {46DDC729-7715-4190-9CBC-4151DD4B5A6E}
 		{57EE3D9B-A582-448D-8FF4-5239787ECA9D} = {FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE}
+		{04F7940D-1FB5-4385-B746-CE4D6822B011} = {FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {376DA86B-0E5C-4A57-9198-A072E5FD6F04}

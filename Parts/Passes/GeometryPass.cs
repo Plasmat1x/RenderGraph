@@ -68,7 +68,7 @@ public class GeometryPass: RenderPass
 
     if(ClearDepth)
     {
-      commandBuffer.ClearDepthStencil(depthView, ClearFlags.DepthStencil, ClearDepthValue, 0);
+      commandBuffer.ClearDepthStencil(depthView, ClearFlags.DepthAndStencil, ClearDepthValue, 0);
     }
 
     UpdateCameraConstants(_context, cameraBuffer);

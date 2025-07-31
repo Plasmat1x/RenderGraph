@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Directx12Impl;
-public class DX12ResourceStateTracker
+public class DX12ResourceStateTracker: IDisposable
 {
   private static readonly Dictionary<ComPtr<ID3D12Resource>, ResourceStates> s_globalResourceStates = [];
   private static readonly object s_globalMutex = new();
@@ -17,6 +17,8 @@ public class DX12ResourceStateTracker
   private readonly Dictionary<ComPtr<ID3D12Resource>, ResourceStates> p_pendingResourceStates = [];
   private List<ResourceBarrier> p_pendingResourceBarriers = [];
   private List<ResourceBarrier> p_resourceBarriers = [];
+
+  private bool p_disposed;
 
   public DX12ResourceStateTracker() { }
 
@@ -167,5 +169,29 @@ public class DX12ResourceStateTracker
     {
       s_globalResourceStates.Clear();
     }
+  }
+
+  public void Dispose()
+  {
+    if(p_disposed)
+      return;
+
+    s_globalResourceStates.Clear();
+    p_finalResourceStates.Clear();
+    p_pendingResourceStates.Clear();
+    p_pendingResourceBarriers.Clear();
+    p_resourceBarriers.Clear();
+
+    p_disposed = true;  
+  }
+
+  internal int GetBarrierFlushCount()
+  {
+    throw new NotImplementedException();
+  }
+
+  internal int GetTransitionCount()
+  {
+    throw new NotImplementedException();
   }
 }
