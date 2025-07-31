@@ -15,6 +15,7 @@ public abstract class RenderPass: IDisposable
   }
 
   public string Name { get; protected set; }
+
   public bool Enabled
   {
     get => p_enabled;

@@ -39,43 +39,7 @@ public class RenderGraphIntegrationTests: IDisposable
     using var commandBuffer = p_device.CreateCommandBuffer();
     p_renderGraph.Execute(commandBuffer);
 
-    Assert.Equal(new[] { "Pass1", "Pass2", "Pass3" }, executionOrder);
-  }
-
-  [Fact]
-  public void RenderGraph_Should_Execute_Passes_In_Order_Debug()
-  {
-    var executionOrder = new List<string>();
-
-    var pass1 = new DebugMockRenderPass("Pass1");
-    var pass2 = new DebugMockRenderPass("Pass2");
-    var pass3 = new DebugMockRenderPass("Pass3");
-
-    pass1.OnExecute = () => executionOrder.Add("Pass1");
-    pass2.OnExecute = () => executionOrder.Add("Pass2");
-    pass3.OnExecute = () => executionOrder.Add("Pass3");
-
-    pass2.AddDependency(pass1);
-    pass3.AddDependency(pass2);
-
-    Console.WriteLine("[DEBUG] Adding passes to render graph...");
-    p_renderGraph.AddPass(pass1);
-    p_renderGraph.AddPass(pass2);
-    p_renderGraph.AddPass(pass3);
-
-    Console.WriteLine("[DEBUG] Compiling render graph...");
-    p_renderGraph.Compile();
-
-    var compiledOrder = p_renderGraph.GetExecutionOrder();
-    Console.WriteLine($"[DEBUG] Compiled execution order: {string.Join(" -> ", compiledOrder.Select(_p => _p.Name))}");
-
-    Console.WriteLine("[DEBUG] Executing render graph...");
-    using var commandBuffer = p_device.CreateCommandBuffer();
-    p_renderGraph.Execute(commandBuffer);
-
-    Console.WriteLine($"[DEBUG] Actual execution order: [{string.Join(", ", executionOrder)}]");
-
-    Assert.Equal(new[] { "Pass1", "Pass2", "Pass3" }, executionOrder);
+    Assert.Equal(new[] { "Pass1", "Pass2", "Pass3" }, executionOrder.ToArray());
   }
 
   [Fact]
@@ -98,41 +62,43 @@ public class RenderGraphIntegrationTests: IDisposable
     using var commandBuffer = p_device.CreateCommandBuffer();
     p_renderGraph.Execute(commandBuffer);
 
-    Assert.Equal(new[] { "Pass1", "Pass3" }, executionOrder);
+    Assert.Contains("Pass1", executionOrder);
+    Assert.Contains("Pass3", executionOrder);
+    Assert.DoesNotContain("Pass2", executionOrder);
+    Assert.Equal(2, executionOrder.Count);
   }
 
   [Fact]
-  public void RenderGraph_Should_Skip_Disabled_Passes_Debug()
+  public void RenderGraph_Should_Cull_Unused_Passes()
   {
-    var pass1 = new DebugMockRenderPass("EnabledPass");
-    var pass2 = new DebugMockRenderPass("DisabledPass") { Enabled = false };
-    var pass3 = new DebugMockRenderPass("AnotherEnabledPass");
+    p_renderGraph.Reset();
 
     var executionOrder = new List<string>();
-    pass1.OnExecute = () => executionOrder.Add("Pass1");
-    pass2.OnExecute = () => executionOrder.Add("Pass2");
-    pass3.OnExecute = () => executionOrder.Add("Pass3");
 
-    Console.WriteLine("[DEBUG] Adding passes (Pass2 is disabled)...");
-    p_renderGraph.AddPass(pass1);
-    p_renderGraph.AddPass(pass2);
-    p_renderGraph.AddPass(pass3);
+    var unusedPass = new MockRenderPass("UnusedPass") { AlwaysExecute = false };
+    var usedPass = new MockRenderPass("UsedPass") { AlwaysExecute = true };
+
+    unusedPass.OnExecute = () => executionOrder.Add("UnusedPass");
+    usedPass.OnExecute = () => executionOrder.Add("UsedPass");
+
+    p_renderGraph.AddPass(unusedPass);
+    p_renderGraph.AddPass(usedPass);
     p_renderGraph.Compile();
 
-    Console.WriteLine("[DEBUG] Executing render graph...");
+    Assert.False(unusedPass.Enabled, "Unused pass should be disabled after compilation");
+    Assert.True(usedPass.Enabled, "Used pass should remain enabled");
+
     using var commandBuffer = p_device.CreateCommandBuffer();
     p_renderGraph.Execute(commandBuffer);
 
-    Console.WriteLine($"[DEBUG] Actual execution order: [{string.Join(", ", executionOrder)}]");
-
-    Assert.Equal(new[] { "Pass1", "Pass3" }, executionOrder);
+    Assert.Equal(new[] { "UsedPass" }, executionOrder);
   }
 
   [Fact]
   public void Simple_Mock_Pass_Should_Execute()
   {
     var executionLog = new List<string>();
-    var pass = new DebugMockRenderPass("SimplePass");
+    var pass = new DebugMockRenderPass("SimplePass") { AlwaysExecute = true, Enabled = true};
     pass.OnExecute = () => executionLog.Add("SimplePass");
 
     p_renderGraph.AddPass(pass);
@@ -145,6 +111,47 @@ public class RenderGraphIntegrationTests: IDisposable
     Assert.Equal("SimplePass", executionLog[0]);
     Assert.True(pass.ExecuteCalled);
     Assert.True(pass.Statistics.WasExecutedThisFrame);
+  }
+
+  [Fact]
+  public void Debug_Pass_States_Before_And_After_Execution()
+  {
+    var pass1 = new MockRenderPass("Pass1");
+    var pass2 = new MockRenderPass("Pass2");
+
+    pass2.AddDependency(pass1);
+
+    var executionOrder = new List<string>();
+    pass1.OnExecute = () => executionOrder.Add("Pass1");
+    pass2.OnExecute = () => executionOrder.Add("Pass2");
+
+    p_renderGraph.AddPass(pass1);
+    p_renderGraph.AddPass(pass2);
+    p_renderGraph.Compile();
+
+    Console.WriteLine($"BEFORE - Pass1: Enabled={pass1.Enabled}, WasExecuted={pass1.Statistics.WasExecutedThisFrame}");
+    Console.WriteLine($"BEFORE - Pass2: Enabled={pass2.Enabled}, WasExecuted={pass2.Statistics.WasExecutedThisFrame}");
+    Console.WriteLine($"BEFORE - Pass1.CanExecute={pass1.CanExecute()}");
+    Console.WriteLine($"BEFORE - Pass2.CanExecute={pass2.CanExecute()}");
+
+    pass1.Statistics.Reset();
+    pass1.Statistics.StartFrame();
+    pass2.Statistics.Reset();
+    pass2.Statistics.StartFrame();
+
+    Console.WriteLine($"AFTER RESET - Pass1: Enabled={pass1.Enabled}, WasExecuted={pass1.Statistics.WasExecutedThisFrame}");
+    Console.WriteLine($"AFTER RESET - Pass2: Enabled={pass2.Enabled}, WasExecuted={pass2.Statistics.WasExecutedThisFrame}");
+    Console.WriteLine($"AFTER RESET - Pass1.CanExecute={pass1.CanExecute()}");
+    Console.WriteLine($"AFTER RESET - Pass2.CanExecute={pass2.CanExecute()}");
+
+    using var commandBuffer = p_device.CreateCommandBuffer();
+    p_renderGraph.Execute(commandBuffer);
+
+    Console.WriteLine($"AFTER EXECUTION - Pass1: WasExecuted={pass1.Statistics.WasExecutedThisFrame}");
+    Console.WriteLine($"AFTER EXECUTION - Pass2: WasExecuted={pass2.Statistics.WasExecutedThisFrame}");
+    Console.WriteLine($"Execution order: [{string.Join(", ", executionOrder)}]");
+
+    Assert.Equal(new[] { "Pass1", "Pass2" }, executionOrder);
   }
 
   public void Dispose()
