@@ -65,4 +65,19 @@ public class MockSwapChain: ISwapChain
     }
     p_backBuffers.Clear();
   }
+
+  public ITextureView GetBackBufferRTV(uint _index)
+  {
+    throw new NotImplementedException();
+  }
+
+  public void SetFullscreenState(bool _fullscreen, IMonitor _monitor = null)
+  {
+    throw new NotImplementedException();
+  }
+
+  public bool IsFullscreen()
+  {
+    throw new NotImplementedException();
+  }
 }

@@ -101,10 +101,8 @@ public unsafe class DX12SwapChain: ISwapChain
     if(_width == 0 || _height == 0)
       return;
 
-    // Освобождаем старые ресурсы
     ReleaseBackBufferResources();
 
-    // Изменяем размер swap chain
     HResult hr = p_swapChain->ResizeBuffers(
         p_description.BufferCount,
         _width,
@@ -118,7 +116,6 @@ public unsafe class DX12SwapChain: ISwapChain
     p_description.Width = _width;
     p_description.Height = _height;
 
-    // Пересоздаем back buffer ресурсы
     CreateBackBufferResources();
   }
 

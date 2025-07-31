@@ -360,7 +360,7 @@ public class MockCommandBuffer: CommandBuffer
 
   public override void SetPrimitiveTopology(PrimitiveTopology _topology)
   {
-    Console.Write($"    [CMD] Set primitive topology ({_topology})");
+    Console.WriteLine($"    [CMD] Set primitive topology ({_topology})");
   }
 
   public override void Dispose()

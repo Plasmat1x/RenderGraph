@@ -130,7 +130,8 @@ public class MockGraphicsDevice: IGraphicsDevice
   public ulong GetTotalMemory() => GetMemoryInfo().TotalMemory;
   public ulong GetAvailableMemory() => GetMemoryInfo().AvailableMemory;
 
-  public ISwapChain CreateSwapChain(SwapChainDescription _description)
+
+  public ISwapChain CreateSwapChain(SwapChainDescription _description, nint _windowHandle)
   {
     Console.WriteLine($"  [GPU] Creating swapchain ({_description.Width}x{_description.Height}, {_description.Format})");
     return new MockSwapChain(_description);
