@@ -15,7 +15,7 @@ using Silk.NET.DXGI;
 using System.Runtime.InteropServices;
 
 namespace Directx12Impl;
-public class DX12GraphicsDevice: IGraphicsDevice
+public unsafe class DX12GraphicsDevice: IGraphicsDevice
 {
   private readonly D3D12 p_d3d12;
   private readonly DXGI p_dxgi;

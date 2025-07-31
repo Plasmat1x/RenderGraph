@@ -248,10 +248,10 @@ public class TextureDescription: ResourceDescription
       TextureFormat.R32_UINT or
       TextureFormat.R32_SINT => 4,
 
-      TextureFormat.R24G8_TYPELESS or
-      TextureFormat.D24_UNORM_S8_UINT or
-      TextureFormat.R24_UNORM_X8_TYPELESS or
-      TextureFormat.X24_TYPELESS_G8_UINT => 4,
+      //TextureFormat.R24G8_TYPELESS or
+      //TextureFormat.D24_UNORM_S8_UINT or
+      //TextureFormat.R24_UNORM_X8_TYPELESS or
+      //TextureFormat.X24_TYPELESS_G8_UINT => 4,
 
       TextureFormat.R8G8_TYPELESS or
       TextureFormat.R8G8_UNORM or
@@ -271,8 +271,8 @@ public class TextureDescription: ResourceDescription
       TextureFormat.R8_UNORM or
       TextureFormat.R8_UINT or
       TextureFormat.R8_SNORM or
-      TextureFormat.R8_SINT or
-      TextureFormat.A8_UNORM => 1,
+      TextureFormat.R8_SINT => 1,
+      //TextureFormat.A8_UNORM => 1,
 
       // Compressed formats (приблизительный размер)
       TextureFormat.BC1_TYPELESS or

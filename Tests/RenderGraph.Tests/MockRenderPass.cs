@@ -13,6 +13,7 @@ public class MockRenderPass: RenderPass
   {
     Category = PassCategory.Rendering;
     Priority = PassPriority.Normal;
+    AlwaysExecute = true;
   }
 
   public override void Setup(RenderGraphBuilder _builder)

@@ -1,5 +1,8 @@
 namespace Resources.Enums;
 
+/// <summary>
+/// Форматы индексных буферов
+/// </summary>
 public enum IndexFormat
 {
   UInt16,

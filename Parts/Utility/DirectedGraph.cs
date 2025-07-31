@@ -75,6 +75,49 @@ public class DirectedGraph<T> where T : class
       p_reverseEdges[_to].Remove(_from);
   }
 
+  public List<T> GetTopologicalSortKahn()
+  {
+    var result = new List<T>();
+    var inDegree = new Dictionary<T, int>();
+    var queue = new Queue<T>();
+
+    foreach(var node in p_nodes)
+    {
+      inDegree[node] = p_reverseEdges[node].Count;
+    }
+
+    foreach(var node in p_nodes)
+    {
+      if(inDegree[node] == 0)
+      {
+        queue.Enqueue(node);
+      }
+    }
+
+    while(queue.Count > 0)
+    {
+      var current = queue.Dequeue();
+      result.Add(current);
+
+      foreach(var neighbor in p_edges[current])
+      {
+        inDegree[neighbor]--;
+
+        if(inDegree[neighbor] == 0)
+        {
+          queue.Enqueue(neighbor);
+        }
+      }
+    }
+
+    if(result.Count != p_nodes.Count)
+    {
+      throw new InvalidOperationException("Graph contains cycles - Kahn's algorithm cannot complete");
+    }
+
+    return result;
+  }
+
   public List<T> GetTopologicalSort()
   {
     var result = new List<T>();

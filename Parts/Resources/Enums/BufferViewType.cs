@@ -1,9 +1,13 @@
 namespace Resources.Enums;
+
+/// <summary>
+/// Типы буферных представлений
+/// </summary>
 public enum BufferViewType
 {
   ShaderResource,
   UnorderedAccess,
-  VertexBuffer,
-  IndexBuffer,
   ConstantBuffer,
+  VertexBuffer,
+  IndexBuffer
 }

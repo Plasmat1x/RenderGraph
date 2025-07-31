@@ -20,7 +20,7 @@ public class MockCommandBuffer: CommandBuffer
   public override CommandBufferType Type { get; }
   public int CommandCount { get; private set; }
 
-
+  // === Основные операции ===
   public override void Begin()
   {
     IsRecording = true;
@@ -41,6 +41,7 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] Reset command buffer");
   }
 
+  // === Render Targets ===
   public override void SetRenderTargets(ITextureView[] _colorTargets, ITextureView _depthTarget)
   {
     CommandCount++;
@@ -54,6 +55,7 @@ public class MockCommandBuffer: CommandBuffer
     SetRenderTargets(_colorTarget != null ? new[] { _colorTarget } : null, _depthTarget);
   }
 
+  // === Viewport и Scissor ===
   public override void SetViewport(Viewport _viewport)
   {
     CommandCount++;
@@ -78,6 +80,7 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] SetScissorRects({_rects.Length} rects)");
   }
 
+  // === Clear операции ===
   public override void ClearRenderTarget(ITextureView _target, Vector4 _color)
   {
     CommandCount++;
@@ -95,15 +98,18 @@ public class MockCommandBuffer: CommandBuffer
   public override void ClearUnorderedAccess(ITextureView _target, Vector4 _value)
   {
     CommandCount++;
-    Console.WriteLine($"    [CMD] ClearUnorderedAccess(Texture) -> {_value}");
+    var textureName = (_target as MockTextureView)?.Texture.Name ?? "Unknown";
+    Console.WriteLine($"    [CMD] ClearUnorderedAccess(Texture: {textureName}) -> {_value}");
   }
 
   public override void ClearUnorderedAccess(IBufferView _target, uint _value)
   {
     CommandCount++;
-    Console.WriteLine($"    [CMD] ClearUnorderedAccess(Buffer) -> {_value}");
+    var bufferName = (_target as MockBufferView)?.Buffer.Name ?? "Unknown";
+    Console.WriteLine($"    [CMD] ClearUnorderedAccess(Buffer: {bufferName}) -> {_value}");
   }
 
+  // === Resource State Transitions ===
   public override void TransitionResource(IResource _resource, ResourceState _newState)
   {
     CommandCount++;
@@ -113,9 +119,17 @@ public class MockCommandBuffer: CommandBuffer
   public override void TransitionResources(IResource[] _resources, ResourceState[] _newStates)
   {
     CommandCount++;
+    if(_resources.Length != _newStates.Length)
+      throw new ArgumentException("Resources and states arrays must have the same length");
+
     Console.WriteLine($"    [CMD] TransitionResources({_resources.Length} resources)");
+    for(int i = 0; i < _resources.Length; i++)
+    {
+      Console.WriteLine($"      - {_resources[i].Name} -> {_newStates[i]}");
+    }
   }
 
+  // === UAV Barriers ===
   public override void UAVBarrier(IResource _resource)
   {
     CommandCount++;
@@ -126,8 +140,13 @@ public class MockCommandBuffer: CommandBuffer
   {
     CommandCount++;
     Console.WriteLine($"    [CMD] UAVBarriers({_resources.Length} resources)");
+    foreach(var resource in _resources)
+    {
+      Console.WriteLine($"      - {resource.Name}");
+    }
   }
 
+  // === Vertex/Index Buffers ===
   public override void SetVertexBuffer(IBufferView _buffer, uint _slot = 0)
   {
     CommandCount++;
@@ -139,6 +158,11 @@ public class MockCommandBuffer: CommandBuffer
   {
     CommandCount++;
     Console.WriteLine($"    [CMD] SetVertexBuffers({_buffers.Length} buffers, start slot: {_startSlot})");
+    for(uint i = 0; i < _buffers.Length; i++)
+    {
+      var bufferName = (_buffers[i] as MockBufferView)?.Buffer.Name ?? "Unknown";
+      Console.WriteLine($"      - Slot {_startSlot + i}: {bufferName}");
+    }
   }
 
   public override void SetIndexBuffer(IBufferView _buffer, IndexFormat _format)
@@ -148,6 +172,7 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] SetIndexBuffer({bufferName}, {_format})");
   }
 
+  // === Shaders ===
   public override void SetVertexShader(IShader _shader)
   {
     CommandCount++;
@@ -184,6 +209,7 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] SetDomainShader({_shader?.Name ?? "null"})");
   }
 
+  // === Shader Resources ===
   public override void SetShaderResource(ShaderStage _stage, uint _slot, ITextureView _resource)
   {
     CommandCount++;
@@ -195,8 +221,14 @@ public class MockCommandBuffer: CommandBuffer
   {
     CommandCount++;
     Console.WriteLine($"    [CMD] SetShaderResources({_stage}, {_resources.Length} resources, start slot: {_startSlot})");
+    for(uint i = 0; i < _resources.Length; i++)
+    {
+      var textureName = (_resources[i] as MockTextureView)?.Texture.Name ?? "null";
+      Console.WriteLine($"      - Slot {_startSlot + i}: {textureName}");
+    }
   }
 
+  // === Unordered Access ===
   public override void SetUnorderedAccess(ShaderStage _stage, uint _slot, ITextureView _resource)
   {
     CommandCount++;
@@ -208,8 +240,14 @@ public class MockCommandBuffer: CommandBuffer
   {
     CommandCount++;
     Console.WriteLine($"    [CMD] SetUnorderedAccesses({_stage}, {_resources.Length} resources, start slot: {_startSlot})");
+    for(uint i = 0; i < _resources.Length; i++)
+    {
+      var textureName = (_resources[i] as MockTextureView)?.Texture.Name ?? "null";
+      Console.WriteLine($"      - Slot {_startSlot + i}: {textureName}");
+    }
   }
 
+  // === Constant Buffers ===
   public override void SetConstantBuffer(ShaderStage _stage, uint _slot, IBufferView _buffer)
   {
     CommandCount++;
@@ -221,8 +259,14 @@ public class MockCommandBuffer: CommandBuffer
   {
     CommandCount++;
     Console.WriteLine($"    [CMD] SetConstantBuffers({_stage}, {_buffers.Length} buffers, start slot: {_startSlot})");
+    for(uint i = 0; i < _buffers.Length; i++)
+    {
+      var bufferName = (_buffers[i] as MockBufferView)?.Buffer.Name ?? "null";
+      Console.WriteLine($"      - Slot {_startSlot + i}: {bufferName}");
+    }
   }
 
+  // === Samplers ===
   public override void SetSampler(ShaderStage _stage, uint _slot, ISampler _sampler)
   {
     CommandCount++;
@@ -233,8 +277,13 @@ public class MockCommandBuffer: CommandBuffer
   {
     CommandCount++;
     Console.WriteLine($"    [CMD] SetSamplers({_stage}, {_samplers.Length} samplers, start slot: {_startSlot})");
+    for(uint i = 0; i < _samplers.Length; i++)
+    {
+      Console.WriteLine($"      - Slot {_startSlot + i}: {_samplers[i]?.Name ?? "null"}");
+    }
   }
 
+  // === Render States ===
   public override void SetRenderState(IRenderState _renderState)
   {
     CommandCount++;
@@ -259,6 +308,13 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] SetRasterizerState");
   }
 
+  public override void SetPrimitiveTopology(PrimitiveTopology _topology)
+  {
+    CommandCount++;
+    Console.WriteLine($"    [CMD] SetPrimitiveTopology({_topology})");
+  }
+
+  // === Draw Commands ===
   public override void Draw(uint _vertexCount, uint _instanceCount = 1, uint _startVertex = 0, uint _startInstance = 0)
   {
     CommandCount++;
@@ -285,6 +341,7 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] DrawIndexedIndirect({bufferName}, offset: {_offset})");
   }
 
+  // === Compute Commands ===
   public override void Dispatch(uint _groupCountX, uint _groupCountY = 1, uint _groupCountZ = 1)
   {
     CommandCount++;
@@ -298,6 +355,7 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] DispatchIndirect({bufferName}, offset: {_offset})");
   }
 
+  // === Copy Operations ===
   public override void CopyTexture(ITexture _src, ITexture _dst)
   {
     CommandCount++;
@@ -328,6 +386,7 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] ResolveTexture({_src.Name}[{_srcArray}] -> {_dst.Name}[{_dstArray}], {_format})");
   }
 
+  // === Queries ===
   public override void BeginQuery(IQuery _query)
   {
     CommandCount++;
@@ -340,6 +399,7 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] EndQuery({_query.Type})");
   }
 
+  // === Debug ===
   public override void PushDebugGroup(string _name)
   {
     CommandCount++;
@@ -358,11 +418,7 @@ public class MockCommandBuffer: CommandBuffer
     Console.WriteLine($"    [CMD] InsertDebugMarker({_name})");
   }
 
-  public override void SetPrimitiveTopology(PrimitiveTopology _topology)
-  {
-    Console.WriteLine($"    [CMD] Set primitive topology ({_topology})");
-  }
-
+  // === Cleanup ===
   public override void Dispose()
   {
     Console.WriteLine($"    [CMD] Command buffer disposed ({CommandCount} total commands)");

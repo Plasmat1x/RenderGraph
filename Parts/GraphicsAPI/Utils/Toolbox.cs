@@ -53,10 +53,10 @@ internal static class Toolbox
     TextureFormat.R32_FLOAT or
     TextureFormat.R32_UINT or
     TextureFormat.R32_SINT or
-    TextureFormat.R24G8_TYPELESS or
-    TextureFormat.D24_UNORM_S8_UINT or
-    TextureFormat.R24_UNORM_X8_TYPELESS or
-    TextureFormat.X24_TYPELESS_G8_UINT => 4,
+    //TextureFormat.R24G8_TYPELESS or
+    TextureFormat.D24_UNORM_S8_UINT => 4,
+    //TextureFormat.R24_UNORM_X8_TYPELESS or
+    //TextureFormat.X24_TYPELESS_G8_UINT => 4,
 
     TextureFormat.R8G8_TYPELESS or
     TextureFormat.R8G8_UNORM or
@@ -75,8 +75,8 @@ internal static class Toolbox
     TextureFormat.R8_UNORM or
     TextureFormat.R8_UINT or
     TextureFormat.R8_SNORM or
-    TextureFormat.R8_SINT or
-    TextureFormat.A8_UNORM => 1,
+    TextureFormat.R8_SINT => 1,
+    //TextureFormat.A8_UNORM => 1,
 
     TextureFormat.BC1_TYPELESS or
     TextureFormat.BC1_UNORM or

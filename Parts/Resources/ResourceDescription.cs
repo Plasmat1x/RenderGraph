@@ -176,7 +176,7 @@ public abstract class ResourceDescription
     if(this is TextureDescription)
       return 512;
 
-    if(this is BufferDescription bufferDesc && bufferDesc.IsStructured())
+    if(this is _BufferDescription bufferDesc && bufferDesc.IsStructured())
       return Math.Max(16, bufferDesc.StructureByteStride);
 
     return 16;

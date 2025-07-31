@@ -47,7 +47,7 @@ public class DemoGeometryPass: RenderPass
     _context.SetFullScreenViewport();
 
     commandBuffer.ClearRenderTarget(colorTexture.GetDefaultRenderTargetView(), ClearColor);
-    commandBuffer.ClearDepthStencil(depthTexture.GetDefaultDepthStencilView(), ClearFlags.DepthStencil, 1.0f, 0);
+    commandBuffer.ClearDepthStencil(depthTexture.GetDefaultDepthStencilView(), ClearFlags.DepthAndStencil, 1.0f, 0);
 
     for(int i = 0; i < 3; i++)
     {

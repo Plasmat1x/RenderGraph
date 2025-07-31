@@ -80,7 +80,7 @@ public class DependencyResolver
   {
     try
     {
-      return p_passGraph.GetTopologicalSort();
+      return p_passGraph.GetTopologicalSortKahn();
     }
     catch(InvalidOperationException ex)
     {

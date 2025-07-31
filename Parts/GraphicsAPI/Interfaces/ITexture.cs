@@ -18,7 +18,7 @@ public interface ITexture: IResource
   uint ArraySize { get; }
   TextureFormat Format { get; }
   uint SampleCount { get; }
-  ITextureView CreateView(TextureViewDescription _description);
+  ITextureView CreateView(_TextureViewDescription _description);
   ITextureView GetDefaultShaderResourceView();
   ITextureView GetDefaultRenderTargetView();
   ITextureView GetDefaultDepthStencilView();

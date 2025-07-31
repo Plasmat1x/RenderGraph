@@ -7,6 +7,7 @@ namespace GraphicsAPI.Descriptions;
 
 public class PipelineStateDescription
 {
+  public string Name { get; set; }
   public IShader VertexShader { get; set; }
   public IShader PixelShader { get; set; }
   public IShader DomainShader { get; set; }
