@@ -31,7 +31,7 @@ public static class ShaderReflectionUtils
     return true;
   }
 
-  public static void ApplyRefectioToPipelineState(
+  public static void ApplyReflectionToPipelineState(
       PipelineStateDescription _pipelineState,
       ShaderReflection _vertexShaderReflection,
       ShaderReflection _pixelShaderReflection = null)
