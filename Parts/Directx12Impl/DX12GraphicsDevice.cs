@@ -19,6 +19,8 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 {
   private readonly D3D12 p_d3d12;
   private readonly DXGI p_dxgi;
+  private readonly Queue<CommandBuffer> p_submissionQueue = [];
+  private readonly object p_submissionLock = new();
 
   private ComPtr<ID3D12Device> p_device;
   private ComPtr<IDXGIFactory4> p_dxgiFactory;
@@ -116,42 +118,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   }
 
   public DX12DescriptorHeapManager GetDescriptorManager() => p_descriptorManager;
-
-  public unsafe void ExecuteCommandBuffer(CommandBuffer _commandBuffer)
-  {
-    if(_commandBuffer is not DX12CommandBuffer dx12CommandBuffer)
-      throw new ArgumentException("Invalid command buffer type");
-
-    var commandList = dx12CommandBuffer.GetCommandList();
-    ID3D12CommandList* lists = (ID3D12CommandList*)commandList;
-
-    var queue = _commandBuffer.Type switch
-    {
-      CommandBufferType.Compute => p_computeQueue,
-      CommandBufferType.Copy => p_copyQueue,
-      _ => p_directQueue
-    };
-
-    queue.ExecuteCommandLists(1, &lists);
-  }
-
-  public unsafe void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers)
-  {
-    if(_commandBuffers == null || _commandBuffers.Length == 0)
-      return;
-
-    var commandLists = stackalloc ID3D12CommandList*[_commandBuffers.Length];
-
-    for(int i = 0; i < _commandBuffers.Length; i++)
-    {
-      if(_commandBuffers[i] is not DX12CommandBuffer dx12CommandBuffer)
-        throw new ArgumentException($"Invalid command buffer type at index {i}");
-
-      commandLists[i] = (ID3D12CommandList*)dx12CommandBuffer.GetCommandList();
-    }
-
-    p_directQueue.ExecuteCommandLists((uint)_commandBuffers.Length, commandLists);
-  }
 
   public void WaitForGPU()
   {
@@ -471,14 +437,92 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     p_frameManager = new FrameFenceManager(p_device, p_frameCount);
   }
 
-  private void WaitForFenceValue(ulong _fenceValue)
+  private void WaitForFenceValue(IFence _fence, ulong _value)
   {
-    throw new NotImplementedException();
-    //p_frameManager.Wait(_fenceValue);
+    if(_fence is DX12Fence dx12Fence)
+    {
+      dx12Fence.WaitForValue(_value);
+    }
   }
 
   private ComPtr<ID3D12Device> GetID3D12Device()
   {
     return p_device;
+  }
+
+  public void Submit(CommandBuffer _commandBuffer)
+  {
+    if(_commandBuffer == null)
+      throw new ArgumentNullException(nameof(_commandBuffer));
+
+
+    if(_commandBuffer is GenericCommandBuffer genericCmd)
+    {
+      genericCmd.Execute();
+    }
+  }
+
+  public void Submit(CommandBuffer[] _commandBuffers)
+  {
+    if(_commandBuffers == null || _commandBuffers.Length == 0)
+      return;
+
+    foreach(var cmd in _commandBuffers)
+    {
+      Submit(cmd);
+    }
+  }
+
+  public void Submit(CommandBuffer _commandBuffer, IFence _fence, ulong _fenceValue)
+  {
+    Submit(_commandBuffer);
+
+    // Signal fence after execution
+    if(_fence is DX12Fence dx12Fence)
+    {
+      dx12Fence.Signal(_fenceValue);
+    }
+  }
+
+  public Task SubmitAsync(CommandBuffer _commandBuffer)
+  {
+    return Task.Run(() => Submit(_commandBuffer));
+  }
+
+  public void Present(ISwapChain _swapChain)
+  {
+    if(_swapChain is DX12SwapChain dx12SwapChain)
+    {
+      dx12SwapChain.Present();
+    }
+  }
+
+  public void SetDebugName(IResource _resource, string _name)
+  {
+    if(_resource is DX12Resource dx12Resource && !string.IsNullOrEmpty(_name))
+    {
+      DX12Helpers.SetResourceName(dx12Resource.GetResource(), _name);
+    }
+  }
+
+  public void BeginEvent(string _name)
+  {
+    // Можно реализовать через PIX events или другие профайлеры
+    Console.WriteLine($"[DEBUG] Begin Event: {_name}");
+  }
+
+  public void EndEvent()
+  {
+    Console.WriteLine($"[DEBUG] End Event");
+  }
+
+  public void SetMarker(string _name)
+  {
+    Console.WriteLine($"[DEBUG] Marker: {_name}");
+  }
+
+  void IGraphicsDevice.WaitForFenceValue(IFence _fence, ulong _value)
+  {
+    WaitForFenceValue(_fence, _value);
   }
 }

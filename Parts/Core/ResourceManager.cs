@@ -176,7 +176,7 @@ public class ResourceManager: IDisposable
 
       if(description is TextureDescription)
         totalTextuMemory += memorySize;
-      else if(description is _BufferDescription)
+      else if(description is BufferDescription)
         totalBufferMemory += memorySize;
     }
 
