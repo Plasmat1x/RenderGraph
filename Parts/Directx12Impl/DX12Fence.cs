@@ -145,4 +145,9 @@ public class DX12Fence: IFence
     if(p_disposed)
       throw new ObjectDisposedException(nameof(DX12Fence));
   }
+
+  internal void WaitForValue(ulong value)
+  {
+    throw new NotImplementedException();
+  }
 }

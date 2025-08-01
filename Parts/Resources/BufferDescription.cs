@@ -3,7 +3,7 @@ using Resources.Enums;
 namespace Resources;
 
 /// <summary>
-/// ??????????? ???????? ?????? ? ?????????? DX12
+/// Расширенное описание буфера с поддержкой DX12
 /// </summary>
 public class BufferDescription: ResourceDescription
 {
@@ -14,7 +14,7 @@ public class BufferDescription: ResourceDescription
   public uint StructureByteStride { get; set; } = 0;
 
   /// <summary>
-  /// ????????????? ????????? ElementCount ?? ?????? Size ? Stride
+  /// Автоматически вычислить ElementCount на основе Size и Stride
   /// </summary>
   public void UpdateElementCount()
   {
@@ -29,7 +29,7 @@ public class BufferDescription: ResourceDescription
   }
 
   /// <summary>
-  /// ????????? ???????? ?? ????? structured buffer
+  /// Проверить является ли буфер structured buffer
   /// </summary>
   public bool IsStructured()
   {
@@ -38,7 +38,7 @@ public class BufferDescription: ResourceDescription
   }
 
   /// <summary>
-  /// ????????? ???????? ?? ????? constant buffer
+  /// Проверить является ли буфер constant buffer
   /// </summary>
   public bool IsConstant()
   {
@@ -46,7 +46,7 @@ public class BufferDescription: ResourceDescription
   }
 
   /// <summary>
-  /// ????????? ???????? ?? ????? vertex buffer
+  /// Проверить является ли буфер vertex buffer
   /// </summary>
   public bool IsVertex()
   {
@@ -54,7 +54,7 @@ public class BufferDescription: ResourceDescription
   }
 
   /// <summary>
-  /// ????????? ???????? ?? ????? index buffer
+  /// Проверить является ли буфер index buffer
   /// </summary>
   public bool IsIndex()
   {
@@ -62,7 +62,7 @@ public class BufferDescription: ResourceDescription
   }
 
   /// <summary>
-  /// ??????? ???????? ??? Vertex Buffer
+  /// Создать описание для Vertex Buffer
   /// </summary>
   public static BufferDescription CreateVertexBuffer(ulong _size, uint _stride, string _name = "")
   {
@@ -78,7 +78,7 @@ public class BufferDescription: ResourceDescription
   }
 
   /// <summary>
-  /// ??????? ???????? ??? Index Buffer
+  /// Создать описание для Index Buffer
   /// </summary>
   public static BufferDescription CreateIndexBuffer(ulong _size, string _name = "")
   {
@@ -94,11 +94,11 @@ public class BufferDescription: ResourceDescription
   }
 
   /// <summary>
-  /// ??????? ???????? ??? Constant Buffer
+  /// Создать описание для Constant Buffer
   /// </summary>
   public static BufferDescription CreateConstantBuffer(ulong _size, string _name = "")
   {
-    // ??????????? ?????? ?? 256 ???? (?????????? DX12)
+    // Выравниваем размер до 256 байт (требование DX12)
     var alignedSize = (_size + 255) & ~255UL;
 
     return new BufferDescription
@@ -114,7 +114,7 @@ public class BufferDescription: ResourceDescription
   }
 
   /// <summary>
-  /// ??????? ???????? ??? Structured Buffer
+  /// Создать описание для Structured Buffer
   /// </summary>
   public static BufferDescription CreateStructuredBuffer(ulong _elementCount, uint _elementSize, string _name = "", bool _allowUAV = false)
   {
@@ -136,7 +136,7 @@ public class BufferDescription: ResourceDescription
   }
 
   /// <summary>
-  /// ??????? ???????? ??? Raw Buffer (ByteAddressBuffer)
+  /// Создать описание для Raw Buffer (ByteAddressBuffer)
   /// </summary>
   public static BufferDescription CreateRawBuffer(ulong _sizeInBytes, string _name = "", bool _allowUAV = false)
   {

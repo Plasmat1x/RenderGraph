@@ -169,4 +169,55 @@ public class MockGraphicsDevice: IGraphicsDevice
     p_disposed = true;
 
   }
+
+  public void Submit(CommandBuffer _commandBuffer)
+  {
+    Console.WriteLine("  [GPU] Submit command buffer");
+  }
+
+  public void Submit(CommandBuffer[] _commandBuffers)
+  {
+    Console.WriteLine("  [GPU] Submit command buffers");
+  }
+
+  public void Submit(CommandBuffer _commandBuffer, IFence _fence, ulong _fenceValue)
+  {
+    Console.WriteLine($"  [GPU] Submit command buffer with fence ({_fenceValue})");
+  }
+
+  public Task SubmitAsync(CommandBuffer _commandBuffer)
+  {
+    Console.WriteLine($"  [GPU] Submit async command buffer");
+    return Task.CompletedTask;
+  }
+
+  public void WaitForFenceValue(IFence _fence, ulong _value)
+  {
+    Console.WriteLine($"  [GPU] Waiting for fence ({_value})");
+  }
+
+  public void Present(ISwapChain _swapChain)
+  {
+    Console.WriteLine($"  [GPU] Present to swapchain");
+  }
+
+  public void SetDebugName(IResource _resource, string _name)
+  {
+    Console.WriteLine($"  [GPU] Set debug name ({_name})");
+  }
+
+  public void BeginEvent(string _name)
+  {
+    Console.WriteLine($"  [GPU] Begin event ({_name})");
+  }
+
+  public void EndEvent()
+  {
+    Console.WriteLine($"  [GPU] EndEvent");
+  }
+
+  public void SetMarker(string _name)
+  {
+    Console.WriteLine($"  [GPU] SetMarker ({_name})");
+  }
 }

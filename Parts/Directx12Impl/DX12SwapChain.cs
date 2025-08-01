@@ -85,7 +85,7 @@ public unsafe class DX12SwapChain: ISwapChain
         p_rtvAllocations[_index]);
   }
 
-  public void Present(uint _syncInterval)
+  public void Present(uint _syncInterval = 0)
   {
     var flags = _syncInterval == 0 ? (uint)PresentFlags.PresentAllowTearing : 0;
     HResult hr = p_swapChain->Present(_syncInterval, flags);
