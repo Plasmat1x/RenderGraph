@@ -74,9 +74,9 @@ public class MockGraphicsDevice: IGraphicsDevice
     return new MockCommandBuffer(CommandBufferType.Direct);
   }
 
-  public CommandBuffer CreateCommandBuffer(CommandBufferType _type)
+  public CommandBuffer CreateCommandBuffer(CommandBufferType _type, CommandBufferExecutionMode _mode)
   {
-    Console.WriteLine($"  [GPU] Creating command buffer ({_type})");
+    Console.WriteLine($"  [GPU] Creating command buffer ({_type}) with mode ({_mode})");
     return new MockCommandBuffer(_type);
   }
 
