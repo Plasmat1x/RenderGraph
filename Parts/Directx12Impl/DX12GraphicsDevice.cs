@@ -96,9 +96,9 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     return CreateCommandBuffer(CommandBufferType.Direct);
   }
 
-  public CommandBuffer CreateCommandBuffer(CommandBufferType _type)
+  public CommandBuffer CreateCommandBuffer(CommandBufferType _type, CommandBufferExecutionMode _mode = CommandBufferExecutionMode.Immediate)
   {
-    return new DX12CommandBuffer(p_device, p_d3d12, _type);
+    return new DX12CommandBuffer(p_device, p_d3d12, _type, _mode);
   }
 
   public unsafe ISwapChain CreateSwapChain(SwapChainDescription _desc, IntPtr _windowHandle)

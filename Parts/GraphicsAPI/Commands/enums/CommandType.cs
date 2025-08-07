@@ -80,5 +80,6 @@ public enum CommandType
   // Debug Commands
   PushDebugGroup,
   PopDebugGroup,
-  InsertDebugMarker
+  InsertDebugMarker,
+  BeginEvent
 }

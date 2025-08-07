@@ -23,7 +23,7 @@ public interface IGraphicsDevice: IDisposable
 
   // === Создание командных буферов ===
   CommandBuffer CreateCommandBuffer();
-  CommandBuffer CreateCommandBuffer(CommandBufferType _type);
+  CommandBuffer CreateCommandBuffer(CommandBufferType _type, CommandBufferExecutionMode _mode);
 
   // === ОБНОВЛЕННЫЕ методы выполнения для Generic архитектуры ===
 

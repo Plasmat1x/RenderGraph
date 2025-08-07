@@ -366,7 +366,7 @@ public static class CommandBufferExample
     Console.WriteLine("\n--- Mock Implementation Example ---");
 
     var device = new MockGraphicsDevice();
-    using var commandBuffer = device.CreateCommandBuffer(CommandBufferType.Direct);
+    using var commandBuffer = device.CreateCommandBuffer(CommandBufferType.Direct, CommandBufferExecutionMode.Immediate);
 
     // Создаем простые ресурсы
     var vertexBuffer = device.CreateBuffer(new BufferDescription
