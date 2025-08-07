@@ -220,4 +220,10 @@ public class MockGraphicsDevice: IGraphicsDevice
   {
     Console.WriteLine($"  [GPU] SetMarker ({_name})");
   }
+
+  public IRenderState CreateRenderState(RenderStateDescription _renderStateDesc, PipelineStateDescription _pipelineStateDesc)
+  {
+    Console.WriteLine($"  [GPU] Creating render state");
+    return new MockRenderState(_renderStateDesc);
+  }
 }

@@ -25,13 +25,14 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   private readonly ID3D12Device* p_device;
   private ID3D12GraphicsCommandList* p_commandList;
   private ID3D12CommandAllocator* p_commandAllocator;
-  private readonly DX12ResourceStateTracker p_stateTracker;
-  private ID3D12PipelineState* p_currentPipelineState;
-  private ID3D12RootSignature* p_currentRootSignature;
+  private readonly DX12ResourceStateTracker p_stateTracker = new();
+
   private readonly CpuDescriptorHandle[] p_currentRenderTargets = new CpuDescriptorHandle[8];
   private CpuDescriptorHandle? p_currentDepthStencil;
   private uint p_renderTargetCount;
   private CommandBufferExecutionMode p_executionMode;
+
+  private DX12RenderState p_renderState;
 
   public DX12CommandBuffer(ID3D12Device* _device, D3D12 _d3d12, CommandBufferType _type, CommandBufferExecutionMode _executionMode)
     : base(_type)
@@ -298,7 +299,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     {
       for(int i = 0; i < Math.Min(_colorTargets.Length, p_currentRenderTargets.Length); i++)
       {
-        if(_colorTargets[i] is _DX12TextureView dx12View)
+        if(_colorTargets[i] is DX12TextureView dx12View)
         {
           p_currentRenderTargets[i] = dx12View.GetRenderTargetView();
           p_renderTargetCount++;
@@ -306,7 +307,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
       }
     }
 
-    if(_depthTarget is _DX12TextureView depthView)
+    if(_depthTarget is DX12TextureView depthView)
     {
       p_currentDepthStencil = depthView.GetDepthStencilView();
     }
@@ -320,7 +321,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void ClearRenderTargetDirectly(ITextureView _target, Vector4 _color)
   {
-    if(_target is not _DX12TextureView dx12View)
+    if(_target is not DX12TextureView dx12View)
       throw new ArgumentException("Invalid texture view type");
 
     var clearColor = stackalloc float[4] { _color.X, _color.Y, _color.Z, _color.W };
@@ -331,13 +332,13 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void ClearDepthStencilDirectly(ITextureView _target, GraphicsAPI.Enums.ClearFlags _flags, float _depth, byte _stencil)
   {
-    if(_target is not _DX12TextureView dx12View)
+    if(_target is not DX12TextureView dx12View)
       throw new ArgumentException("Invalid texture view type");
 
     var d3d12Flags = ConvertClearFlags(_flags);
     var dsvHandle = dx12View.GetDepthStencilView();
 
-    p_commandList->ClearDepthStencilView(dsvHandle.Value, d3d12Flags, _depth, _stencil, 0, null);
+    p_commandList->ClearDepthStencilView(dsvHandle, d3d12Flags, _depth, _stencil, 0, null);
   }
 
   private void SetViewportDirectly(Resources.Viewport _viewport)
@@ -377,9 +378,8 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   {
     if(_shader is DX12Shader dx12Shader)
     {
-      var pipelineState = dx12Shader.GetComputePipelineState();
-      p_commandList->SetComputeRootSignature(dx12Shader.GetRootSignature());
-      p_commandList->SetPipelineState(pipelineState);
+      p_commandList->SetComputeRootSignature(p_renderState.GetRootSignature());
+      p_commandList->SetPipelineState(p_renderState.GetPipelineState());
     }
   }
 
@@ -420,8 +420,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void ResetDX12State()
   {
-    p_currentPipelineState = null;
-    p_currentRootSignature = null;
+    p_renderState = null;
     p_renderTargetCount = 0;
     p_currentDepthStencil = null;
     Array.Clear(p_currentRenderTargets);

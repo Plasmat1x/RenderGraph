@@ -15,12 +15,12 @@ namespace Directx12Impl;
 public unsafe class DX12TextureView: ITextureView
 {
   private readonly DX12Texture p_texture;
-  private readonly _TextureViewDescription p_description;
+  private readonly TextureViewDescription p_description;
   private readonly TextureViewType p_viewType;
   private readonly DX12DescriptorHandle p_descriptorHandle;
   private bool p_disposed;
 
-  public DX12TextureView(DX12Texture _texture, _TextureViewDescription _description, DX12DescriptorHeapManager _descriptorManager)
+  public DX12TextureView(DX12Texture _texture, TextureViewDescription _description, DX12DescriptorHeapManager _descriptorManager)
   {
     p_texture = _texture ?? throw new ArgumentNullException(nameof(_texture));
     p_description = _description;
@@ -30,9 +30,19 @@ public unsafe class DX12TextureView: ITextureView
     p_descriptorHandle = CreateDescriptor(_descriptorManager);
   }
 
+  public DX12TextureView(DX12Texture _texture, TextureViewType _viewType, TextureViewDescription _description, DescriptorAllocation _allocation)
+  {
+    p_texture = _texture ?? throw new ArgumentNullException(nameof(_texture));
+    p_description = _description;
+    p_viewType = _viewType;
+
+    // Создаем дескриптор в зависимости от типа представления
+    p_descriptorHandle = new(_allocation.CpuHandle, _allocation.GpuHandle);
+  }
+
   public ITexture Texture => p_texture;
   public TextureViewType ViewType => p_viewType;
-  public _TextureViewDescription Description => p_description;
+  public TextureViewDescription Description => p_description;
   public bool IsDisposed => p_disposed;
 
   /// <summary>

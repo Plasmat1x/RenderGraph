@@ -31,6 +31,15 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     CreateTextureResource();
   }
 
+  public DX12Texture(ID3D12Device* _device, D3D12 _d3d12, ComPtr<ID3D12Resource> _resource, TextureDescription _description, DX12DescriptorHeapManager _descriptorManager)
+  : base(_device, _description.Name)
+  {
+    p_d3d12 = _d3d12;
+    p_description = _description;
+    p_descriptorManager = _descriptorManager;
+    p_resource = _resource;
+  }
+
   // === ITexture implementation ===
   public TextureDescription Description => p_description;
   public override ResourceType ResourceType => GetTextureResourceType();
@@ -42,7 +51,7 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   public TextureFormat Format => p_description.Format;
   public uint SampleCount => p_description.SampleCount;
 
-  public ITextureView CreateView(_TextureViewDescription _description)
+  public ITextureView CreateView(TextureViewDescription _description)
   {
     var key = new TextureViewKey(_description.ViewType, _description);
 
@@ -57,7 +66,7 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   public ITextureView GetDefaultShaderResourceView()
   {
-    return CreateView(new _TextureViewDescription
+    return CreateView(new TextureViewDescription
     {
       ViewType = TextureViewType.ShaderResource,
       Format = p_description.Format,
@@ -70,7 +79,7 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   public ITextureView GetDefaultRenderTargetView()
   {
-    return CreateView(new _TextureViewDescription
+    return CreateView(new TextureViewDescription
     {
       ViewType = TextureViewType.RenderTarget,
       Format = p_description.Format,
@@ -83,7 +92,7 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   public ITextureView GetDefaultDepthStencilView()
   {
-    return CreateView(new _TextureViewDescription
+    return CreateView(new TextureViewDescription
     {
       ViewType = TextureViewType.DepthStencil,
       Format = p_description.Format,
@@ -96,7 +105,7 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   public ITextureView GetDefaultUnorderedAccessView()
   {
-    return CreateView(new _TextureViewDescription
+    return CreateView(new TextureViewDescription
     {
       ViewType = TextureViewType.UnorderedAccess,
       Format = p_description.Format,
@@ -281,9 +290,9 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   private struct TextureViewKey: IEquatable<TextureViewKey>
   {
     public TextureViewType ViewType;
-    public _TextureViewDescription Description;
+    public TextureViewDescription Description;
 
-    public TextureViewKey(TextureViewType _viewType, _TextureViewDescription _description)
+    public TextureViewKey(TextureViewType _viewType, TextureViewDescription _description)
     {
       ViewType = _viewType;
       Description = _description;
