@@ -2,11 +2,13 @@
 
 using GraphicsAPI;
 using GraphicsAPI.Commands;
+using GraphicsAPI.Commands.Interfaces;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
 using Resources.Enums;
 
+using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 
 using System.Numerics;
@@ -21,8 +23,8 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 {
   private readonly D3D12 p_d3d12;
   private readonly ID3D12Device* p_device;
-  private readonly ID3D12GraphicsCommandList* p_commandList;
-  private readonly ID3D12CommandAllocator* p_commandAllocator;
+  private ID3D12GraphicsCommandList* p_commandList;
+  private ID3D12CommandAllocator* p_commandAllocator;
   private readonly DX12ResourceStateTracker p_stateTracker;
 
   // DX12-specific state
@@ -377,9 +379,9 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     p_commandList->IASetIndexBuffer(&ibView);
   }
 
-  private void SetComputeShaderDirectly(IShader shader)
+  private void SetComputeShaderDirectly(IShader _shader)
   {
-    if(shader is DX12Shader dx12Shader)
+    if(_shader is DX12Shader dx12Shader)
     {
       var pipelineState = dx12Shader.GetComputePipelineState();
       p_commandList->SetComputeRootSignature(dx12Shader.GetRootSignature());
@@ -387,18 +389,18 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     }
   }
 
-  private void SetVertexShaderDirectly(IShader shader)
+  private void SetVertexShaderDirectly(IShader _shader)
   {
     // Vertex shader устанавливается через pipeline state
     // Здесь мы сохраняем ссылку для последующего создания PSO
-    p_currentShaders[(int)ShaderStage.Vertex] = shader;
+    p_currentShaders[(int)ShaderStage.Vertex] = _shader;
     UpdateGraphicsPipelineState();
   }
 
-  private void SetPixelShaderDirectly(IShader shader)
+  private void SetPixelShaderDirectly(IShader _shader)
   {
     // Pixel shader устанавливается через pipeline state
-    p_currentShaders[(int)ShaderStage.Pixel] = shader;
+    p_currentShaders[(int)ShaderStage.Pixel] = _shader;
     UpdateGraphicsPipelineState();
   }
 
@@ -432,8 +434,38 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void CreateCommandListAndAllocator()
   {
-    // Создание command allocator и command list
-    // Упрощенная версия - в реальности нужна полная инициализация
+    var listType = Type switch
+    {
+      CommandBufferType.Direct => CommandListType.Direct,
+      CommandBufferType.Compute => CommandListType.Compute,
+      CommandBufferType.Copy => CommandListType.Copy,
+      CommandBufferType.Bundle => CommandListType.Bundle,
+      _ => CommandListType.Direct
+    };
+
+    ID3D12CommandAllocator* allocator;
+    HResult hr = p_device->CreateCommandAllocator(
+        listType,
+        SilkMarshal.GuidPtrOf<ID3D12CommandAllocator>(),
+        (void**)&allocator);
+
+    DX12Helpers.ThrowIfFailed(hr, "Failed to create command allocator");
+
+    p_commandAllocator = allocator;
+
+    ID3D12GraphicsCommandList* commandList;
+    hr = p_device->CreateCommandList(
+        0, // Node mask
+        listType,
+        p_commandAllocator,
+        null, // Initial pipeline state
+        SilkMarshal.GuidPtrOf<ID3D12GraphicsCommandList>(),
+        (void**)&commandList);
+
+    DX12Helpers.ThrowIfFailed(hr, "Failed to create command list");
+    p_commandList = commandList;
+
+    p_commandList->Close();
   }
 
   // === Conversion helpers ===

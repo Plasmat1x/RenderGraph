@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GraphicsAPI.Commands;
+namespace GraphicsAPI.Commands.Interfaces;
 
 /// <summary>
 /// Базовый интерфейс для всех команд командного буфера

@@ -1,4 +1,5 @@
 using GraphicsAPI.Commands.enums;
+using GraphicsAPI.Commands.Interfaces;
 using GraphicsAPI.Interfaces;
 
 namespace GraphicsAPI.Commands;

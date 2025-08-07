@@ -14,15 +14,46 @@ namespace Directx12Impl;
 /// </summary>
 public struct DX12CommandBufferStats
 {
-  public CommandBufferStats BaseStats;
-  public int StateTransitions;
-  public int BarrierFlushes;
-  public CommandBufferExecutionMode ExecutionMode;
-  public IntPtr NativeCommandListPtr;
+  /// <summary>
+  /// Базовая статистика из GenericCommandBuffer
+  /// </summary>
+  public CommandBufferStats BaseStats { get; set; }
 
-  public override readonly string ToString()
+  /// <summary>
+  /// Количество переходов состояний ресурсов
+  /// </summary>
+  public int StateTransitions { get; set; }
+
+  /// <summary>
+  /// Количество сбросов барьеров
+  /// </summary>
+  public int BarrierFlushes { get; set; }
+
+  /// <summary>
+  /// Текущий режим выполнения
+  /// </summary>
+  public CommandBufferExecutionMode ExecutionMode { get; set; }
+
+  /// <summary>
+  /// Указатель на нативный command list (для отладки)
+  /// </summary>
+  public IntPtr NativeCommandListPtr { get; set; }
+
+  /// <summary>
+  /// Количество установленных дескрипторов
+  /// </summary>
+  public int DescriptorsSet { get; set; }
+
+  /// <summary>
+  /// Количество смен pipeline state
+  /// </summary>
+  public int PipelineStateChanges { get; set; }
+
+  public override string ToString()
   {
-    return $"{BaseStats}, DX12: Transitions={StateTransitions}, Flushes={BarrierFlushes}, Mode={ExecutionMode}";
+    return $"DX12 Stats: Mode={ExecutionMode}, Commands={BaseStats.TotalCommands}, " +
+           $"StateTransitions={StateTransitions}, BarrierFlushes={BarrierFlushes}, " +
+           $"PSO Changes={PipelineStateChanges}";
   }
 }
 

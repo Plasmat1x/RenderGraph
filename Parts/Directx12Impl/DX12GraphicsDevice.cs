@@ -35,6 +35,8 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   private uint p_cbvSrvUavDescriptorSize;
   private uint p_samplerDescriptorSize;
 
+  private readonly List<CommandBuffer> p_commandBuffers = [];
+
   private DX12DescriptorHeapManager p_descriptorManager;
 
   private FrameFenceManager p_frameManager;
@@ -44,6 +46,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   private DX12RootSignatureCache p_rootSignatureCache;
 
   private DeviceCapabilities p_capabilities;
+  private bool p_immediateSync;
   private bool p_disposed;
 
   public DX12GraphicsDevice(bool _enableDebugLayer = false)
@@ -93,12 +96,25 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   public CommandBuffer CreateCommandBuffer()
   {
-    return CreateCommandBuffer(CommandBufferType.Direct);
+    return CreateCommandBuffer(CommandBufferType.Direct, CommandBufferExecutionMode.Immediate);
+  }
+
+  public CommandBuffer CreateCommandBuffer(CommandBufferType _type)
+  {
+    return CreateCommandBuffer(_type, CommandBufferExecutionMode.Immediate);
+
   }
 
   public CommandBuffer CreateCommandBuffer(CommandBufferType _type, CommandBufferExecutionMode _mode = CommandBufferExecutionMode.Immediate)
   {
-    return new DX12CommandBuffer(p_device, p_d3d12, _type, _mode);
+    var commandBuffer = new DX12CommandBuffer(p_device, p_d3d12, _type, _mode);
+
+    lock(p_commandBuffers)
+    {
+      p_commandBuffers.Add(commandBuffer);
+    }
+
+    return commandBuffer;
   }
 
   public unsafe ISwapChain CreateSwapChain(SwapChainDescription _desc, IntPtr _windowHandle)
@@ -505,6 +521,53 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     }
   }
 
+  /// <summary>
+  /// Выполнить командный буфер
+  /// </summary>
+  public void ExecuteCommandBuffer(CommandBuffer _commandBuffer)
+  {
+    if(_commandBuffer is not DX12CommandBuffer dx12Buffer)
+      throw new ArgumentException("Invalid command buffer type");
+
+    ExecuteCommandBuffers(new[] { dx12Buffer });
+  }
+
+  /// <summary>
+  /// Выполнить несколько командных буферов
+  /// </summary>
+  public void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers)
+  {
+    var dx12Buffers = new ID3D12CommandList*[_commandBuffers.Length];
+
+    for(int i = 0; i < _commandBuffers.Length; i++)
+    {
+      if(_commandBuffers[i] is not DX12CommandBuffer dx12Buffer)
+        throw new ArgumentException($"Invalid command buffer type at index {i}");
+
+      // Если буфер в deferred режиме, выполняем накопленные команды
+      if(dx12Buffer.ImmediateMode == CommandBufferExecutionMode.Deferred)
+      {
+        dx12Buffer.Execute();
+      }
+
+      dx12Buffers[i] = (ID3D12CommandList*)dx12Buffer.GetNativeCommandList();
+    }
+
+    // Определяем очередь на основе типа первого буфера
+    var queue = GetQueueForCommandBuffer(_commandBuffers[0] as DX12CommandBuffer);
+
+    fixed(ID3D12CommandList** ppCommandLists = dx12Buffers)
+    {
+      queue->ExecuteCommandLists((uint)dx12Buffers.Length, ppCommandLists);
+    }
+
+    // Синхронизация если нужно
+    if(p_immediateSync)
+    {
+      WaitForGPU();
+    }
+  }
+
   public void BeginEvent(string _name)
   {
     // Можно реализовать через PIX events или другие профайлеры
@@ -521,8 +584,30 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     Console.WriteLine($"[DEBUG] Marker: {_name}");
   }
 
+  /// <summary>
+  /// Установить режим немедленной синхронизации (для отладки)
+  /// </summary>
+  public void SetImmediateSync(bool _enable)
+  {
+    p_immediateSync = _enable;
+  }
+
   void IGraphicsDevice.WaitForFenceValue(IFence _fence, ulong _value)
   {
     WaitForFenceValue(_fence, _value);
+  }
+
+  /// <summary>
+  /// Получить очередь для типа командного буфера
+  /// </summary>
+  private ID3D12CommandQueue* GetQueueForCommandBuffer(DX12CommandBuffer _buffer)
+  {
+    return _buffer.Type switch
+    {
+      CommandBufferType.Direct => p_directQueue,
+      CommandBufferType.Compute => p_computeQueue,
+      CommandBufferType.Copy => p_copyQueue,
+      _ => p_directQueue
+    };
   }
 }
