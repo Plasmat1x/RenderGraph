@@ -8,11 +8,11 @@ namespace GraphicsAPI;
 
 public struct CommandBufferStats
 {
-  public int TotalCommands;
-  public int DrawCalls;
-  public int DispatchCalls;
-  public int ResourceBindings;
-  public int ResourceTransitions;
+  public int TotalCommands { get; set; }
+  public int DrawCalls { get; set; }
+  public int DispatchCalls { get; set; }
+  public int ResourceBindings { get; set; }
+  public int ResourceTransitions { get; set; }
 
   public override readonly string ToString()
   {
