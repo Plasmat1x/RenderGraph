@@ -101,7 +101,7 @@ internal class TextureViewStub: ITextureView
 
   public TextureViewType ViewType { get;}
 
-  public _TextureViewDescription Description => throw new NotImplementedException();
+  public TextureViewDescription Description => throw new NotImplementedException();
 
   public void Dispose()
   {

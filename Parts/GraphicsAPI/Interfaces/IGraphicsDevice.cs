@@ -17,6 +17,7 @@ public interface IGraphicsDevice: IDisposable
   IBuffer CreateBuffer(BufferDescription _description);
   IShader CreateShader(ShaderDescription _description);
   IRenderState CreateRenderState(RenderStateDescription _description);
+  IRenderState CreateRenderState(RenderStateDescription _renderStateDesc, PipelineStateDescription _pipelineStateDesc);
   ISampler CreateSampler(SamplerDescription _description);
   IFence CreateFence(ulong _initialValue = 0);
   ISwapChain CreateSwapChain(SwapChainDescription _description, IntPtr _windowHandle);

@@ -7,7 +7,7 @@ namespace MockImpl;
 
 public class MockTextureView: ITextureView
 {
-  public MockTextureView(ITexture _texture, _TextureViewDescription _description)
+  public MockTextureView(ITexture _texture, TextureViewDescription _description)
   {
     Texture = _texture;
     ViewType = _description.ViewType;
@@ -16,7 +16,7 @@ public class MockTextureView: ITextureView
 
   public ITexture Texture { get; }
   public TextureViewType ViewType { get; }
-  public _TextureViewDescription Description { get; }
+  public TextureViewDescription Description { get; }
 
   public IntPtr GetNativeHandle() => new IntPtr(((MockTexture)Texture).Id + (uint)ViewType * 10000);
 
