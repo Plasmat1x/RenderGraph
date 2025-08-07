@@ -22,5 +22,6 @@ public enum ResourceDimension
   StructuredBuffer,
   ByteAddressBuffer,
   Stream,
-  AccelerationStructure
+  AccelerationStructure,
+  BufferEx
 }

@@ -1,5 +1,6 @@
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
+using GraphicsAPI.Reflections.Enums;
 
 using Resources.Enums;
 
@@ -19,10 +20,10 @@ public class InputParameterInfo
 
   public int GetComponentCount()
   {
-    int count = 0;
-    for (int i = 0; i<4; i++)
+    var count = 0;
+    for (var i = 0; i<4; i++)
     {
-      if ((Mask & (1 << i)) != 0)
+      if ((Mask & 1 << i) != 0)
         count++;
     }
 
@@ -45,7 +46,7 @@ public class InputParameterInfo
 
   private TextureFormat GetFormatFromComponentType()
   {
-    int componentCount = GetComponentCount();
+    var componentCount = GetComponentCount();
 
     return ComponentType switch
     {

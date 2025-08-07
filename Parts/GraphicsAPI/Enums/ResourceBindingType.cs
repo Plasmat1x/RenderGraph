@@ -12,5 +12,9 @@ public enum ResourceBindingType
   ByteAddressBuffer,
   UnorderedAccessView,
   RWStructuredBuffer,
-  RWByteAddressBuffer
+  RWByteAddressBuffer,
+  TextureBuffer,
+  AppendStructuredBuffer,
+  ConsumeStructuredBuffer,
+  RWStructuredBufferWithCounter
 }

@@ -1,4 +1,4 @@
-namespace GraphicsAPI.Reflections;
+namespace GraphicsAPI.Reflections.Enums;
 
 public enum RegisterComponentType
 {

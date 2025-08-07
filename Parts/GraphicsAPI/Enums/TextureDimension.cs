@@ -9,5 +9,5 @@ public enum TextureDimension
   TextureCube,
   Texture1DArray,
   Texture2DArray,
-  TextureCubeArray
+  TextureCubeArray,
 }

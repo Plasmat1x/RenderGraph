@@ -1,6 +1,6 @@
 using GraphicsAPI.Enums;
 
-namespace GraphicsAPI.Reflections;
+namespace GraphicsAPI.Reflections.Interfaces;
 
 public interface IShaderReflectionProvider
 {

@@ -1,6 +1,7 @@
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 using GraphicsAPI.Reflections;
+using GraphicsAPI.Reflections.Enums;
 using GraphicsAPI.Utils;
 
 using Resources.Enums;
