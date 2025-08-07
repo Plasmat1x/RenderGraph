@@ -1,4 +1,4 @@
-namespace GraphicsAPI.Reflections;
+namespace GraphicsAPI.Reflections.Enums;
 
 public enum ResourceReturnType
 {
@@ -11,5 +11,6 @@ public enum ResourceReturnType
   Mixed,
   Double,
   Continued,
-  UNormSRGB
+  UNormSRGB,
+  Unknown
 }

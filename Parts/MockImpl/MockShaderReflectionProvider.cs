@@ -1,5 +1,6 @@
 using GraphicsAPI.Enums;
 using GraphicsAPI.Reflections;
+using GraphicsAPI.Reflections.Enums;
 
 using System;
 using System.Collections.Generic;

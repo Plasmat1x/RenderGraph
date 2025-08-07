@@ -1,6 +1,6 @@
-namespace GraphicsAPI.Reflections;
+namespace GraphicsAPI.Reflections.Enums;
 
-public enum ResourceBindingFlags
+public enum SamplerBindingFlags
 {
   None = 0,
   UsedByVertexShader = 1 << 0,

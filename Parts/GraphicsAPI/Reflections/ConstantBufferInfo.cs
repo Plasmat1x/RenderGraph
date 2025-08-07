@@ -1,3 +1,5 @@
+using GraphicsAPI.Reflections.Enums;
+
 namespace GraphicsAPI.Reflections;
 
 public class ConstantBufferInfo

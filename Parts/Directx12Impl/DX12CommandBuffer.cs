@@ -26,15 +26,11 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   private ID3D12GraphicsCommandList* p_commandList;
   private ID3D12CommandAllocator* p_commandAllocator;
   private readonly DX12ResourceStateTracker p_stateTracker;
-
-  // DX12-specific state
   private ID3D12PipelineState* p_currentPipelineState;
   private ID3D12RootSignature* p_currentRootSignature;
   private readonly CpuDescriptorHandle[] p_currentRenderTargets = new CpuDescriptorHandle[8];
   private CpuDescriptorHandle? p_currentDepthStencil;
   private uint p_renderTargetCount;
-
-  // Performance mode flag
   private CommandBufferExecutionMode p_executionMode;
 
   public DX12CommandBuffer(ID3D12Device* _device, D3D12 _d3d12, CommandBufferType _type, CommandBufferExecutionMode _executionMode)
@@ -245,7 +241,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
         break;
 
       default:
-        // Для неоптимизированных команд используем общую логику
         ExecuteCommandGeneric(_command);
         break;
     }
@@ -288,14 +283,13 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
         break;
 
       default:
-        // Если команда не поддерживается, выводим предупреждение
         Console.WriteLine($"Warning: Unsupported command type {_command.GetType().Name}");
         break;
     }
   }
 
   // === DX12-специфичные методы ===
-
+  #region Immediate
   private void SetRenderTargetsDirectly(ITextureView[] _colorTargets, ITextureView _depthTarget)
   {
     p_renderTargetCount = 0;
@@ -403,6 +397,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     p_currentShaders[(int)ShaderStage.Pixel] = _shader;
     UpdateGraphicsPipelineState();
   }
+  #endregion
 
   private void UpdateGraphicsPipelineState()
   {

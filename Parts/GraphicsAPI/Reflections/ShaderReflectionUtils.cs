@@ -1,5 +1,6 @@
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
+using GraphicsAPI.Reflections.Enums;
 
 namespace GraphicsAPI.Reflections;
 
