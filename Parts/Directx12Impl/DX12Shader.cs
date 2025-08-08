@@ -36,7 +36,6 @@ public unsafe class DX12Shader: IShader
     p_description = _desc ?? throw new ArgumentNullException(nameof(_desc));
     p_stage = _desc.Stage;
 
-    // Получение байткода
     if(_desc.ByteCode != null && _desc.ByteCode.Length > 0)
     {
       p_bytecode = _desc.ByteCode;
@@ -54,7 +53,6 @@ public unsafe class DX12Shader: IShader
       throw new ArgumentException("Shader description must contain ByteCode, FilePath, or SourceCode");
     }
 
-    // Создание D3D12 структуры байткода
     p_bytecodeHandle = GCHandle.Alloc(p_bytecode, GCHandleType.Pinned);
     p_d3d12Bytecode = new ShaderBytecode
     {
