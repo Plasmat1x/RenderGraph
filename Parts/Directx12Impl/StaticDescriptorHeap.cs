@@ -85,5 +85,5 @@ public unsafe class StaticDescriptorHeap: IDisposable
     p_heap.Dispose();
     p_disposed = true;
   }
-
 }
+
