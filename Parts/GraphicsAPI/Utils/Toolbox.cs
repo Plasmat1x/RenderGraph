@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace GraphicsAPI.Utils;
-internal static class Toolbox
+public static class Toolbox
 {
   public static uint GetFormatSize(TextureFormat _format) => _format switch
   {
