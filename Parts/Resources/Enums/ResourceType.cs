@@ -35,7 +35,10 @@ public enum ResourceType
   Fence,
   SwapChain,
 
+  ShaderResource,
+  UnorderedAccess,
+
   // Представления (views) 
   TextureView,
-  BufferView
+  BufferView,
 }

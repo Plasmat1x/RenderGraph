@@ -5,7 +5,6 @@ using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D12;
 
 using System.Linq.Expressions;
-
 using System.Security.Cryptography;
 
 namespace Directx12Impl;

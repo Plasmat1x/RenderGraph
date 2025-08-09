@@ -32,7 +32,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   private uint p_renderTargetCount;
   private CommandBufferExecutionMode p_executionMode;
 
-  private DX12RenderState p_renderState;
+  private DX12RenderState p_currentRenderState;
 
   public DX12CommandBuffer(ID3D12Device* _device, D3D12 _d3d12, CommandBufferType _type, CommandBufferExecutionMode _executionMode)
     : base(_type)
@@ -168,6 +168,19 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     else
     {
       base.ClearRenderTarget(_target, _color);
+    }
+  }
+
+  public override void SetRenderState(IRenderState _renderState)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      SetRenderStateDirectly(_renderState);
+    }
+    else
+    {
+      base.SetRenderState(_renderState);
     }
   }
 
@@ -378,8 +391,8 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   {
     if(_shader is DX12Shader dx12Shader)
     {
-      p_commandList->SetComputeRootSignature(p_renderState.GetRootSignature());
-      p_commandList->SetPipelineState(p_renderState.GetPipelineState());
+      p_commandList->SetComputeRootSignature(p_currentRenderState.GetRootSignature());
+      p_commandList->SetPipelineState(p_currentRenderState.GetPipelineState());
     }
   }
 
@@ -397,7 +410,116 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     p_currentShaders[(int)ShaderStage.Pixel] = _shader;
     UpdateGraphicsPipelineState();
   }
+
+  private void SetConstantBufferDirectly(SetConstantBufferCommand _cmd)
+  {
+    if(p_currentRenderState == null)
+      throw new InvalidOperationException("RenderState must be set before setting constant buffers");
+
+    if(_cmd.Buffer is not DX12BufferView dx12View)
+      throw new ArgumentException("Invalid buffer view type");
+
+    // Используем информацию из RenderState для правильной установки CBV
+    var rootSignature = p_currentRenderState.GetRootSignature();
+    var cbvHandle = dx12View.GetConstantBufferView();
+
+    // Определяем root parameter index на основе stage и slot
+    uint rootParamIndex = GetRootParameterIndex(_cmd.Stage, _cmd.Slot, ResourceType.ConstantBuffer);
+
+    if(_cmd.Stage == ShaderStage.Compute)
+      p_commandList->SetComputeRootConstantBufferView(rootParamIndex, dx12View.GetResource()->GetGPUVirtualAddress());
+    else
+      p_commandList->SetGraphicsRootConstantBufferView(rootParamIndex, dx12View.GetResource()->GetGPUVirtualAddress());
+  }
+
+  private void SetRenderStateDirectly(IRenderState _renderState)
+  {
+    if(_renderState is not DX12RenderState dx12RenderState)
+      throw new ArgumentException("Invalid render state type");
+
+    // Сохраняем текущий RenderState
+    p_currentRenderState = dx12RenderState;
+
+    // Применяем Pipeline State и Root Signature из RenderState
+    var pipelineState = dx12RenderState.GetPipelineState();
+    var rootSignature = dx12RenderState.GetRootSignature();
+
+    p_commandList->SetPipelineState(pipelineState);
+
+    if(Type == CommandBufferType.Compute)
+      p_commandList->SetComputeRootSignature(rootSignature);
+    else
+      p_commandList->SetGraphicsRootSignature(rootSignature);
+  }
+
+  private void SetShaderResourceDirectly(SetShaderResourceCommand _cmd)
+  {
+    if(p_currentRenderState == null)
+      throw new InvalidOperationException("RenderState must be set before setting shader resources");
+
+    // Определяем root parameter index
+    uint rootParamIndex = GetRootParameterIndex(_cmd.Stage, _cmd.Slot, ResourceType.ShaderResource);
+
+    if(_cmd.Resource is DX12TextureView texView)
+    {
+      var srvHandle = texView.GetShaderResourceView();
+      // Здесь нужно использовать descriptor table
+      // Это требует GPU-visible descriptor heap
+    }
+    else if(_cmd.Resource is DX12BufferView bufView)
+    {
+      var srvHandle = bufView.GetShaderResourceView();
+      // Аналогично
+    }
+  }
+
+  private void SetSamplerDirectly(SetSamplerCommand _cmd)
+  {
+    if(p_currentRenderState == null)
+      throw new InvalidOperationException("RenderState must be set before setting samplers");
+
+    if(_cmd.Sampler is not DX12Sampler dx12Sampler)
+      throw new ArgumentException("Invalid sampler type");
+
+    uint rootParamIndex = GetRootParameterIndex(_cmd.Stage, _cmd.Slot, ResourceType.Sampler);
+
+    // Samplers также требуют descriptor table
+    var samplerHandle = dx12Sampler.GetDescriptorHandle();
+    // Установка через descriptor table
+  }
+
+  private void SetUnorderedAccessDirectly(SetUnorderedAccessCommand _cmd)
+  {
+    if(p_currentRenderState == null)
+      throw new InvalidOperationException("RenderState must be set before setting UAVs");
+
+    uint rootParamIndex = GetRootParameterIndex(_cmd.Stage, _cmd.Slot, ResourceType.UnorderedAccess);
+
+    // UAV также через descriptor table
+  }
+
   #endregion
+
+  private uint GetRootParameterIndex(ShaderStage _stage, uint _slot, ResourceType _resourceType)
+  {
+    // Здесь должна быть логика маппинга на основе root signature layout
+    // Пока используем простую схему:
+    // 0-3: Constant Buffers
+    // 4-7: Shader Resources  
+    // 8-11: UAVs
+    // 12-15: Samplers
+
+    uint baseIndex = _resourceType switch
+    {
+      ResourceType.ConstantBuffer => 0,
+      ResourceType.ShaderResource => 4,
+      ResourceType.UnorderedAccess => 8,
+      ResourceType.Sampler => 12,
+      _ => throw new ArgumentException($"Unsupported resource type: {_resourceType}")
+    };
+
+    return baseIndex + _slot;
+  }
 
   private void UpdateGraphicsPipelineState()
   {
@@ -420,7 +542,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void ResetDX12State()
   {
-    p_renderState = null;
+    p_currentRenderState = null;
     p_renderTargetCount = 0;
     p_currentDepthStencil = null;
     Array.Clear(p_currentRenderTargets);
