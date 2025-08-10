@@ -1,0 +1,216 @@
+@startuml Resources
+
+package "Resource Descriptions" {
+    abstract class ResourceDescription {
+        + Name: string
+        + Usage: ResourceUsage
+        + BindFlags: BindFlags
+        + CPUAccessFlags: CPUAccessFlags
+        + MiscFlags: ResourceMiscFlags
+        --
+        + {abstract} GetMemorySize(): ulong
+        + {abstract} IsCompatible(other: ResourceDescription): bool
+        + {abstract} Clone(): ResourceDescription
+        + RequiresCPUAccess(): bool
+        + IsReadOnlyCPU(): bool
+        + IsWriteOnlyCPU(): bool
+        + IsReadWriteCPU(): bool
+        + IsImmutable(): bool
+        + IsDynamic(): bool
+        + IsStaging(): bool
+        + IsDefault(): bool
+        + SupportsShaderResource(): bool
+        + SupportsRenderTarget(): bool
+        + SupportsDepthStencil(): bool
+        + SupportsUnorderedAccess(): bool
+        + SupportsVertexBuffer(): bool
+        + SupportsIndexBuffer(): bool
+        + SupportsConstantBuffer(): bool
+        + IsShared(): bool
+        + CanGenerateMips(): bool
+        + IsGDICompatible(): bool
+        + Validate(out errorMessage: string): bool
+        + GetBindFlagsString(): string
+        + GetCPUAccessFlagsString(): string
+        + GetMiscFlagsString(): string
+        + GetMemoryAlignment(): ulong
+        + CanAliasWith(other: ResourceDescription): bool
+        + ApplyModifications(modifier: Action<ResourceDescription>): void
+        + Equals(obj: object): bool
+        + GetHashCode(): int
+        + ToString(): string
+    }
+
+    class TextureDescription {
+        + Width: uint
+        + Height: uint
+        + Depth: uint
+        + MipLevels: uint
+        + ArraySize: uint
+        + Format: TextureFormat
+        + SampleCount: uint
+        + SampleQuality: uint
+        + TextureUsage: TextureUsage
+        --
+        + GetMemorySize(): ulong
+        + IsCompatible(other: ResourceDescription): bool
+        + Clone(): ResourceDescription
+        + CreateMipChain(): List<TextureDescription>
+        + IsRenderTarget(): bool
+        + IsDepthStencil(): bool
+        + IsShaderResource(): bool
+        + IsUnorderedAccess(): bool
+        + IsMultisampled(): bool
+        + IsArray(): bool
+        + IsVolume(): bool
+        + IsCubemap(): bool
+        + Validate(out errorMessage: string): bool
+        + ToString(): string
+    }
+
+    class BufferDescription {
+        + Size: ulong
+        + Stride: uint
+        + BufferUsage: BufferUsage
+        + ElementCount: uint
+        + StructureByteStride: uint
+        --
+        + GetMemorySize(): ulong
+        + IsCompatible(other: ResourceDescription): bool
+        + Clone(): ResourceDescription
+        + IsStructured(): bool
+        + IsConstant(): bool
+        + IsVertex(): bool
+        + IsIndex(): bool
+        + IsUnorderedAccess(): bool
+        + IsShaderResource(): bool
+        + IsIndirectArgs(): bool
+        + IsAppendConsume(): bool
+        + GetElementCount(): uint
+        + SetElementCount(count: uint): void
+        + Validate(out errorMessage: string): bool
+        + ToString(): string
+    }
+
+    enum ResourceUsage {
+        Default
+        Immutable
+        Dynamic
+        Staging
+    }
+
+    enum TextureUsage {
+        RenderTarget
+        DepthStencil
+        ShaderResource
+        UnorderedAccess
+        BackBuffer
+        Staging
+        ResolveTarget
+        ResolveSource
+        CubeMap
+        VolumeTexture
+    }
+
+    enum BufferUsage {
+        Vertex
+        Index
+        Constant
+        Structured
+        Raw
+        IndirectArgs
+        Counter
+        Append
+        Consume
+        Staging
+        Upload
+        Readback
+    }
+
+    enum TextureFormat {
+        Unknown
+        R32G32B32A32_TYPELESS
+        R32G32B32A32_FLOAT
+        R32G32B32A32_UINT
+        R32G32B32A32_SINT
+        R8G8B8A8_TYPELESS
+        R8G8B8A8_UNORM
+        R8G8B8A8_UNORM_SRGB
+        R8G8B8A8_UINT
+        R8G8B8A8_SNORM
+        R8G8B8A8_SINT
+        D32_FLOAT
+        D24_UNORM_S8_UINT
+        BC1_TYPELESS
+        BC1_UNORM
+        BC1_UNORM_SRGB
+        BC3_TYPELESS
+        BC3_UNORM
+        BC3_UNORM_SRGB
+        BC7_TYPELESS
+        BC7_UNORM
+        BC7_UNORM_SRGB
+    }
+
+    enum BindFlags {
+        None
+        VertexBuffer
+        IndexBuffer
+        ConstantBuffer
+        ShaderResource
+        StreamOutput
+        RenderTarget
+        DepthStencil
+        UnorderedAccess
+        Decoder
+        VideoEncoder
+    }
+
+    enum CPUAccessFlags {
+        None
+        Write
+        Read
+        ReadWrite
+    }
+
+    enum ResourceMiscFlags {
+        None
+        GenerateMips
+        Shared
+        TextureCube
+        DrawIndirectArgs
+        BufferAllowRawViews
+        BufferStructured
+        ResourceClamp
+        SharedKeyedMutex
+        GDICompatible
+    }
+
+    enum IndexFormat {
+        UInt16
+        UInt32
+    }
+
+    enum TextureAddressMode{
+        Wrap
+        Mirror
+        Clamp
+        Border
+        MirrorOnce
+    }
+
+    enum TextureFilter{
+
+    }
+}
+
+' Resource Descriptions
+ResourceDescription <|-- TextureDescription
+ResourceDescription <|-- BufferDescription
+
+ITexture --> TextureDescription : has
+IBuffer --> BufferDescription : has
+IShader --> ShaderDescription : has
+ISampler --> SamplerDescription : has
+
+@enduml

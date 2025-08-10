@@ -158,4 +158,3 @@ public unsafe class DX12RootSignatureBuilder
     return null; // Заглушка
   }
 }
-}

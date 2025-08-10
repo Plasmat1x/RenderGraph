@@ -19,24 +19,28 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   private readonly D3D12 p_d3d12;
   private readonly TextureDescription p_description;
   private readonly DX12DescriptorHeapManager p_descriptorManager;
+  private readonly DX12UploadHeapManager p_uploadManager;
   private readonly Dictionary<TextureViewKey, DX12TextureView> p_views = new();
 
-  public DX12Texture(ID3D12Device* _device, D3D12 _d3d12, TextureDescription _description, DX12DescriptorHeapManager _descriptorManager)
+  public DX12Texture(ID3D12Device* _device, D3D12 _d3d12, TextureDescription _description, DX12DescriptorHeapManager _descriptorManager, DX12UploadHeapManager _uploadManager)
     : base(_device, _description.Name)
   {
     p_d3d12 = _d3d12;
     p_description = _description;
     p_descriptorManager = _descriptorManager;
+    p_uploadManager = _uploadManager;
 
     CreateTextureResource();
+
   }
 
-  public DX12Texture(ID3D12Device* _device, D3D12 _d3d12, ComPtr<ID3D12Resource> _resource, TextureDescription _description, DX12DescriptorHeapManager _descriptorManager)
+  public DX12Texture(ID3D12Device* _device, D3D12 _d3d12, ComPtr<ID3D12Resource> _resource, TextureDescription _description, DX12DescriptorHeapManager _descriptorManager, DX12UploadHeapManager _uploadManager)
   : base(_device, _description.Name)
   {
     p_d3d12 = _d3d12;
     p_description = _description;
     p_descriptorManager = _descriptorManager;
+    p_uploadManager = _uploadManager;
     p_resource = _resource;
   }
 
