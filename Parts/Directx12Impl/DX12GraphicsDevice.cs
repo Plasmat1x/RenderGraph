@@ -495,7 +495,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   {
     Submit(_commandBuffer);
 
-    // Signal fence after execution
     if(_fence is DX12Fence dx12Fence)
     {
       dx12Fence.Signal(_fenceValue);
@@ -546,7 +545,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
       if(_commandBuffers[i] is not DX12CommandBuffer dx12Buffer)
         throw new ArgumentException($"Invalid command buffer type at index {i}");
 
-      // Если буфер в deferred режиме, выполняем накопленные команды
       if(dx12Buffer.ImmediateMode == CommandBufferExecutionMode.Deferred)
       {
         dx12Buffer.Execute();
@@ -555,7 +553,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
       dx12Buffers[i] = (ID3D12CommandList*)dx12Buffer.GetNativeCommandList();
     }
 
-    // Определяем очередь на основе типа первого буфера
     var queue = GetQueueForCommandBuffer(_commandBuffers[0] as DX12CommandBuffer);
 
     fixed(ID3D12CommandList** ppCommandLists = dx12Buffers)
@@ -563,7 +560,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
       queue->ExecuteCommandLists((uint)dx12Buffers.Length, ppCommandLists);
     }
 
-    // Синхронизация если нужно
     if(p_immediateSync)
     {
       WaitForGPU();
@@ -572,7 +568,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   public void BeginEvent(string _name)
   {
-    // Можно реализовать через PIX events или другие профайлеры
     Console.WriteLine($"[DEBUG] Begin Event: {_name}");
   }
 
