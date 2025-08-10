@@ -108,4 +108,3 @@ public static class ShaderValidator
     return missing;
   }
 }
-}

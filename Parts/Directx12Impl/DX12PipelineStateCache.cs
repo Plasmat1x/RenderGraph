@@ -1,8 +1,12 @@
 using GraphicsAPI.Descriptions;
+using GraphicsAPI.Enums;
+
+using Resources.Enums;
 
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D12;
+using Silk.NET.DXGI;
 
 using System.Linq.Expressions;
 using System.Security.Cryptography;
@@ -52,15 +56,15 @@ public unsafe class DX12PipelineStateCache: IDisposable
   //  p_computeCache.Clear();
   //}
 
-  public unsafe ID3D12PipelineState* GetOrCreatePSO(PSOCacheKey key)
+  public unsafe ID3D12PipelineState* GetOrCreatePSO(PSOCacheKey _key)
   {
     lock(p_cacheLock)
     {
-      if(p_graphicsCache.TryGetValue(key, out var pso))
+      if(p_graphicsCache.TryGetValue(_key, out var pso))
         return pso;
 
-      pso = CreateGraphicsPSO(key);
-      p_graphicsCache[key] = pso;
+      pso = CreateGraphicsPSO(_key);
+      p_graphicsCache[_key] = pso;
       return pso;
     }
   }
@@ -95,10 +99,68 @@ public unsafe class DX12PipelineStateCache: IDisposable
     var vsReflection = _key.VertexShader.GetReflection();
     var inputLayout = InputLayoutDescription.FromReflection(vsReflection);
 
-    // Здесь создается PSO аналогично DX12RenderState.CreateGraphicsPipelineState
-    // ... код создания PSO ...
+    var vs = _key.VertexShader;
+    var ps = _key.PixelShader;
+    var ds = _key.DomainShader;
+    var hs = _key.HullShader;
+    var gs = _key.GeometryShader;
 
-    return null; // Заглушка
+    if(vs == null)
+      throw new ArgumentException("Vertex shader is required for graphics pipeline");
+
+    var inputElements = DX12Helpers.CreateInputLayout(_key.PipelineStateDescription.InputLayout);
+
+    var psoDesc = new GraphicsPipelineStateDesc
+    {
+      PRootSignature = _key.RootSignature,
+      VS = vs.GetD3D12Bytecode(),
+      PS = ps?.GetD3D12Bytecode() ?? default,
+      DS = ds?.GetD3D12Bytecode() ?? default,
+      HS = hs?.GetD3D12Bytecode() ?? default,
+      GS = gs?.GetD3D12Bytecode() ?? default,
+      StreamOutput = default, // TODO: Stream output support
+      BlendState = DX12Helpers.ConvertBlendState(_key.RenderStateDescription.BlendState),
+      SampleMask = _key.PipelineStateDescription.SampleMask,
+      RasterizerState = DX12Helpers.ConvertRasterizerState(_key.RenderStateDescription.RasterizerState),
+      DepthStencilState = DX12Helpers.ConvertDepthStencilState(_key.RenderStateDescription.DepthStencilState),
+      InputLayout = new InputLayoutDesc
+      {
+        PInputElementDescs = inputElements.Length > 0 ? (InputElementDesc*)SilkMarshal.Allocate(inputElements.Length) : null,
+        NumElements = (uint)inputElements.Length
+      },
+      IBStripCutValue = IndexBufferStripCutValue.ValueDisabled,
+      PrimitiveTopologyType = DX12Helpers.ConvertPrimitiveTopologyType(_key.PipelineStateDescription.PrimitiveTopology),
+      NumRenderTargets = _key.PipelineStateDescription.RenderTargetCount,
+      DSVFormat = DX12Helpers.ConvertFormat(_key.PipelineStateDescription.DepthStencilFormat),
+      SampleDesc = new SampleDesc
+      {
+        Count = _key.PipelineStateDescription.SampleCount,
+        Quality = _key.PipelineStateDescription.SampleQuality
+      },
+      NodeMask = 0,
+      Flags = PipelineStateFlags.None
+    };
+
+    for(int i = 0; i < 8; i++)
+    {
+      if(_key.PipelineStateDescription.RenderTargetFormats != null && i < _key.PipelineStateDescription.RenderTargetFormats.Length)
+      {
+        psoDesc.RTVFormats[i] = DX12Helpers.ConvertFormat(_key.PipelineStateDescription.RenderTargetFormats[i]);
+      }
+      else
+      {
+        psoDesc.RTVFormats[i] = Format.FormatUnknown;
+      }
+    }
+
+    ID3D12PipelineState* pipelineState;
+    fixed(Guid* pGuid = &ID3D12PipelineState.Guid)
+    {
+      var hr = p_device.CreateGraphicsPipelineState(&psoDesc, pGuid, (void**)&pipelineState);
+      DX12Helpers.ThrowIfFailed(hr, "Failed to create graphics pipeline state");
+    }
+
+    return pipelineState;
   }
 
   private unsafe ID3D12PipelineState* CreateComputePSO(ComputePSOCacheKey _key)

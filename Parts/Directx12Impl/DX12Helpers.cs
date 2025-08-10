@@ -1,3 +1,4 @@
+using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 
 using Resources.Enums;
@@ -404,6 +405,138 @@ public static class DX12Helpers
     }
 
     return totalSize;
+  }
+
+  public static unsafe InputElementDesc[] CreateInputLayout(InputLayoutDescription _layoutDesc)
+  {
+    if(_layoutDesc?.Elements == null || _layoutDesc.Elements.Count == 0)
+      return Array.Empty<InputElementDesc>();
+
+    var elements = new InputElementDesc[_layoutDesc.Elements.Count];
+
+    for(int i = 0; i < _layoutDesc.Elements.Count; i++)
+    {
+      var element = _layoutDesc.Elements[i];
+      elements[i] = new InputElementDesc
+      {
+        SemanticName = (byte*)SilkMarshal.StringToPtr(element.SemanticName),
+        SemanticIndex = element.SemanticIndex,
+        Format = DX12Helpers.ConvertFormat(element.Format),
+        InputSlot = element.InputSlot,
+        AlignedByteOffset = element.AlignedByteOffset == uint.MaxValue
+              ? D3D12.AppendAlignedElement
+              : element.AlignedByteOffset,
+        InputSlotClass = element.InputSlotClass == GraphicsAPI.Enums.InputClassification.PerVertexData
+              ? Silk.NET.Direct3D12.InputClassification.PerVertexData
+              : Silk.NET.Direct3D12.InputClassification.PerInstanceData,
+        InstanceDataStepRate = element.InstanceDataStepRate
+      };
+    }
+
+    return elements;
+  }
+
+  public static RasterizerDesc ConvertRasterizerState(RasterizerStateDescription _desc)
+  {
+    if(_desc == null)
+      _desc = new RasterizerStateDescription();
+
+    return new RasterizerDesc
+    {
+      FillMode = _desc.FillMode == GraphicsAPI.Enums.FillMode.Solid ? Silk.NET.Direct3D12.FillMode.Solid : Silk.NET.Direct3D12.FillMode.Wireframe,
+      CullMode = DX12Helpers.ConvertCullMode(_desc.CullMode),
+      FrontCounterClockwise = _desc.FrontCounterClockwise,
+      DepthBias = _desc.DepthBias,
+      DepthBiasClamp = _desc.DepthBiasClamp,
+      SlopeScaledDepthBias = _desc.SlopeScaledDepthBias,
+      DepthClipEnable = _desc.DepthClipEnable,
+      MultisampleEnable = _desc.MultisampleEnable,
+      AntialiasedLineEnable = _desc.AntialiasedLineEnable,
+      ForcedSampleCount = 0,
+      ConservativeRaster = ConservativeRasterizationMode.Off
+    };
+  }
+
+  public static DepthStencilDesc ConvertDepthStencilState(DepthStencilStateDescription _desc)
+  {
+    if(_desc == null)
+      _desc = new DepthStencilStateDescription();
+
+    return new DepthStencilDesc
+    {
+      DepthEnable = _desc.DepthEnable,
+      DepthWriteMask = _desc.DepthWriteEnable
+            ? DepthWriteMask.All
+            : DepthWriteMask.Zero,
+      DepthFunc = ConvertComparisonFunc(_desc.DepthFunction),
+      StencilEnable = _desc.StencilEnable,
+      StencilReadMask = _desc.StencilReadMask,
+      StencilWriteMask = _desc.StencilWriteMask,
+      FrontFace = ConvertStencilOp(_desc.FrontFace),
+      BackFace = ConvertStencilOp(_desc.BackFace)
+    };
+  }
+
+  public static DepthStencilopDesc ConvertStencilOp(StencilOpDescription _desc)
+  {
+    return new DepthStencilopDesc
+    {
+      StencilFailOp = ConvertStencilOperation(_desc.StencilFailOp),
+      StencilDepthFailOp = ConvertStencilOperation(_desc.StencilDepthFailOp),
+      StencilPassOp = ConvertStencilOperation(_desc.StencilPassOp),
+      StencilFunc = ConvertComparisonFunc(_desc.StencilFunction)
+    };
+  }
+
+  public static BlendDesc ConvertBlendState(BlendStateDescription _desc)
+  {
+    if(_desc == null)
+      _desc = new BlendStateDescription();
+
+    var blendDesc = new BlendDesc
+    {
+      AlphaToCoverageEnable = _desc.AlphaToCoverageEnable,
+      IndependentBlendEnable = _desc.IndependentBlendEnable
+    };
+
+    for(int i = 0; i < 8; i++)
+    {
+      if(i < _desc.RenderTargets.Length)
+      {
+        var rt = _desc.RenderTargets[i];
+        blendDesc.RenderTarget[i] = new RenderTargetBlendDesc
+        {
+          BlendEnable = rt.BlendEnable,
+          LogicOpEnable = false,
+          SrcBlend = ConvertBlend(rt.SrcBlend),
+          DestBlend = ConvertBlend(rt.DstBlend),
+          BlendOp = ConvertBlendOp(rt.BlendOp),
+          SrcBlendAlpha = ConvertBlend(rt.SrcBlendAlpha),
+          DestBlendAlpha = ConvertBlend(rt.DstBlendAlpha),
+          BlendOpAlpha = ConvertBlendOp(rt.BlendOpAlpha),
+          LogicOp = LogicOp.Noop,
+          RenderTargetWriteMask = (byte)rt.WriteMask
+        };
+      }
+      else
+      {
+        blendDesc.RenderTarget[i] = new RenderTargetBlendDesc
+        {
+          BlendEnable = false,
+          LogicOpEnable = false,
+          SrcBlend = Blend.One,
+          DestBlend = Blend.Zero,
+          BlendOp = BlendOp.Add,
+          SrcBlendAlpha = Blend.One,
+          DestBlendAlpha = Blend.Zero,
+          BlendOpAlpha = BlendOp.Add,
+          LogicOp = LogicOp.Noop,
+          RenderTargetWriteMask = (byte)ColorWriteMask.All
+        };
+      }
+    }
+
+    return blendDesc;
   }
 
   public static void ThrowIfFailed(HResult _hr, string _message)

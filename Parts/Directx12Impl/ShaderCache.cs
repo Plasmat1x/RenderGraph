@@ -5,7 +5,7 @@ namespace Directx12Impl;
 /// <summary>
 /// Кэш скомпилированных шейдеров
 /// </summary>
-public partial class ShaderCache
+public class ShaderCache
 {
   private readonly string p_cacheDirectory;
   private readonly Dictionary<string, CachedShaderInfo> p_cache = new();

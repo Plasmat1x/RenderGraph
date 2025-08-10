@@ -2,15 +2,15 @@ using Silk.NET.Direct3D12;
 
 namespace Directx12Impl;
 
-public struct ComputePSOCacheKey: IEquatable<ComputePSOCacheKey>
+public unsafe struct ComputePSOCacheKey: IEquatable<ComputePSOCacheKey>
 {
   public DX12Shader ComputeShader;
   public ID3D12RootSignature* RootSignature;
 
-  public bool Equals(ComputePSOCacheKey other)
+  public bool Equals(ComputePSOCacheKey _other)
   {
-    return ComputeShader == other.ComputeShader &&
-           RootSignature == other.RootSignature;
+    return ComputeShader == _other.ComputeShader &&
+           RootSignature == _other.RootSignature;
   }
 
   public override int GetHashCode()

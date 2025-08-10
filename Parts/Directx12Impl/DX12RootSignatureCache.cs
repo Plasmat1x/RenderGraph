@@ -59,7 +59,7 @@ public class DX12RootSignatureCache: IDisposable
         error->Release();
         throw new InvalidOperationException($"Failed to serialize root signature: {errorMessage}");
       }
-      throw new InvalidOperationException($"Failed to serialize root signature: {hr}");
+      throw new InvalidOperationException($"Failed to serialize root signature: {hr}", hr.GetException());
     }
 
     ID3D12RootSignature* newRootSignature;
@@ -75,7 +75,7 @@ public class DX12RootSignatureCache: IDisposable
       error->Release();
 
     if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to create root signature: {hr}");
+      throw new InvalidOperationException($"Failed to create root signature: {hr}", hr.GetException());
 
     p_cache[_desc] = newRootSignature;
     return newRootSignature;
@@ -145,7 +145,7 @@ public class DX12RootSignatureCache: IDisposable
         error->Release();
         throw new InvalidOperationException($"Failed to serialize root signature: {errorMessage}");
       }
-      throw new InvalidOperationException($"Failed to serialize root signature: {hr}");
+      throw new InvalidOperationException($"Failed to serialize root signature: {hr}", hr.GetException());
     }
 
     ID3D12RootSignature* newRootSignature;
@@ -161,7 +161,7 @@ public class DX12RootSignatureCache: IDisposable
       error->Release();
 
     if(createHr.IsFailure)
-      throw new InvalidOperationException($"Failed to create root signature: {createHr}");
+      throw new InvalidOperationException($"Failed to create root signature: {createHr}", createHr.GetException());
 
     p_cache[key] = newRootSignature;
     return newRootSignature;

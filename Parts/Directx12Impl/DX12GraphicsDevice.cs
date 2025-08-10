@@ -38,6 +38,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   private readonly List<CommandBuffer> p_commandBuffers = [];
 
   private DX12DescriptorHeapManager p_descriptorManager;
+  private DX12UploadHeapManager p_uploadHeapManager;
 
   private FrameFenceManager p_frameManager;
   private const int p_frameCount = 3;
@@ -65,12 +66,12 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   public ITexture CreateTexture(TextureDescription _desc)
   {
-    return new DX12Texture(p_device, p_d3d12, _desc, p_descriptorManager);
+    return new DX12Texture(p_device, p_d3d12, _desc, p_descriptorManager, p_uploadHeapManager);
   }
 
   public IBuffer CreateBuffer(BufferDescription _desc)
   {
-    return new DX12Buffer(p_device, p_d3d12, _desc, p_descriptorManager);
+    return new DX12Buffer(p_device, p_d3d12, _desc, p_descriptorManager, p_uploadHeapManager);
   }
 
   public IShader CreateShader(ShaderDescription _desc)
@@ -85,13 +86,13 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   public IRenderState CreateRenderState(RenderStateDescription _description, PipelineStateDescription _pipelineDescription)
   {
-    return new DX12RenderState(p_device, p_d3d12, _description, _pipelineDescription, p_rootSignatureCache, p_pipelineStateCache);
+    return new DX12RenderState(_description, _pipelineDescription, p_rootSignatureCache, p_pipelineStateCache);
   }
 
   public ISampler CreateSampler(SamplerDescription _desc)
   {
     var allocation = p_descriptorManager.AllocateSampler();
-    return new DX12Sampler(p_device, _desc,  allocation);
+    return new DX12Sampler(p_device, _desc, allocation);
   }
 
   public CommandBuffer CreateCommandBuffer()
@@ -124,6 +125,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     p_dxgiFactory,
     p_directQueue,
     p_descriptorManager,
+    p_uploadHeapManager,
     _desc,
     _windowHandle);
   }
@@ -236,7 +238,8 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     CreateDevice();
     CreateCommandQueues();
 
-    p_descriptorManager = new DX12DescriptorHeapManager(p_device);
+    p_descriptorManager = new(p_device);
+    p_uploadHeapManager = new(p_device);
 
     CreateFence();
 
@@ -279,13 +282,12 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     IDXGIFactory4* factory;
     HResult hr = p_dxgi.CreateDXGIFactory2(
         dxgiFactoryFlags,
-        SilkMarshal.GuidPtrOf<IDXGIFactory4>(),
-        (void**)&factory);
+        out p_dxgiFactory);
 
     if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to create DXGI factory: {hr}");
-
-    p_dxgiFactory = factory;
+    {
+      throw new InvalidOperationException($"Failed to create DXGI factory: {hr}", Marshal.GetExceptionForHR(hr));
+    }
   }
 
   private unsafe void CreateDevice()

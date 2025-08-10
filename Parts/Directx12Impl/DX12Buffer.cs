@@ -9,6 +9,8 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
+using System;
+
 namespace Directx12Impl;
 
 /// <summary>
@@ -19,15 +21,18 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
   private readonly D3D12 p_d3d12;
   private readonly BufferDescription p_description;
   private readonly DX12DescriptorHeapManager p_descriptorManager;
+  private readonly DX12UploadHeapManager p_uploadManager;
   private readonly Dictionary<BufferViewKey, DX12BufferView> p_views = new();
   private void* p_mappedData;
+  private bool p_isMappable;
 
-  public DX12Buffer(ID3D12Device* _device, D3D12 _d3d12, BufferDescription _description, DX12DescriptorHeapManager _descriptorManager)
+  public DX12Buffer(ID3D12Device* _device, D3D12 _d3d12, BufferDescription _description, DX12DescriptorHeapManager _descriptorManager, DX12UploadHeapManager _uploadHeapManager)
     : base(_device, _description.Name)
   {
     p_d3d12 = _d3d12;
     p_description = _description;
     p_descriptorManager = _descriptorManager;
+    p_uploadManager = _uploadHeapManager;
 
     CreateBufferResource();
   }
@@ -84,6 +89,10 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
       readRange.Begin = 0;
       readRange.End = (nuint)p_description.Size;
     }
+    else
+    {
+      readRange = new Silk.NET.Direct3D12.Range { Begin = 0, End = 0 }; // CPU не читает
+    }
 
     fixed(void** ppMappedData = &p_mappedData)
     {
@@ -99,7 +108,8 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
     if(p_mappedData == null)
       throw new InvalidOperationException("Buffer is not mapped");
 
-    p_resource->Unmap(0, null);
+    var range = new Silk.NET.Direct3D12.Range { Begin = 0, End = (nuint)Size };
+    p_resource->Unmap(0, &range);
     p_mappedData = null;
   }
 
@@ -157,9 +167,114 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
     return GetData<T>(_offset, 1)[0];
   }
 
+  // === Data Transfer Methods ===
+
+  /// <summary>
+  /// Загрузить данные в буфер (требует command list)
+  /// </summary>
+  public void SetData<T>(ID3D12GraphicsCommandList* _commandList, T[] _data, ulong _offset = 0) where T : unmanaged
+  {
+    if(_data == null || _data.Length == 0)
+      throw new ArgumentException("Data cannot be null or empty");
+
+    var dataSize = (ulong)(_data.Length * sizeof(T));
+    if(_offset + dataSize > Size)
+      throw new ArgumentException("Data size exceeds buffer size");
+
+    fixed(T* pData = _data)
+    {
+      SetDataInternal(_commandList, pData, dataSize, _offset);
+    }
+  }
+
+  /// <summary>
+  /// Получить данные из буфера (только для читаемых буферов)
+  /// </summary>
+  public T[] GetData<T>(ID3D12GraphicsCommandList* _commandList, ulong _offset = 0, int _count = -1) where T : unmanaged
+  {
+    if(p_description.Usage != ResourceUsage.Staging &&
+        (p_description.CPUAccessFlags & CPUAccessFlags.Read) == 0)
+    {
+      throw new InvalidOperationException("Buffer must be created with staging usage or read access to read data");
+    }
+
+    if(_count < 0)
+      _count = (int)((Size - _offset) / (ulong)sizeof(T));
+
+    var data = new T[_count];
+    fixed(T* pData = data)
+    {
+      GetDataInternal(_commandList, pData, (ulong)(_count * sizeof(T)), _offset);
+    }
+    return data;
+  }
+
+  /// <summary>
+  /// Загрузить одиночное значение
+  /// </summary>
+  public void SetData<T>(ID3D12GraphicsCommandList* _commandList, T _data, ulong _offset = 0) where T : unmanaged
+  {
+    SetDataInternal(_commandList, &_data, (ulong)sizeof(T), _offset);
+  }
+
+  /// <summary>
+  /// Загрузить сырые данные
+  /// </summary>
+  public void SetData(ID3D12GraphicsCommandList* _commandList, IntPtr _data, ulong _dataSize, ulong _offset = 0)
+  {
+    SetDataInternal(_commandList, _data.ToPointer(), _dataSize, _offset);
+  }
+
+
   public override ulong GetMemorySize()
   {
     return p_description.Size;
+  }
+
+  private void SetDataInternal(ID3D12GraphicsCommandList* _commandList, void* _data, ulong _dataSize, ulong _offset)
+  {
+    if(p_description.Usage == ResourceUsage.Dynamic && p_isMappable)
+    {
+      // Для dynamic буферов используем Map/Unmap
+      var mapped = Map(MapMode.WriteDiscard);
+      var dst = (byte*)mapped + _offset;
+      Buffer.MemoryCopy(_data, dst, Size - _offset, _dataSize);
+      Unmap();
+    }
+    else
+    {
+      // Для default буферов используем upload heap
+      if(p_uploadManager == null)
+        throw new InvalidOperationException("Upload manager is required for default usage buffers");
+
+      // Переводим буфер в состояние копирования
+      var barrier = new ResourceBarrier
+      {
+        Type = ResourceBarrierType.Transition,
+        Transition = new ResourceTransitionBarrier
+        {
+          PResource = p_resource,
+          StateBefore = p_currentState,
+          StateAfter = ResourceStates.CopyDest,
+          Subresource = D3D12.ResourceBarrierAllSubresources
+        }
+      };
+      _commandList->ResourceBarrier(1, &barrier);
+
+      // Загружаем данные
+      p_uploadManager.UploadBufferData(_commandList, p_resource, _offset, _data, _dataSize);
+
+      // Возвращаем в исходное состояние
+      barrier.Transition.StateBefore = ResourceStates.CopyDest;
+      barrier.Transition.StateAfter = p_currentState;
+      _commandList->ResourceBarrier(1, &barrier);
+    }
+  }
+
+  private void GetDataInternal(ID3D12GraphicsCommandList* _commandList, void* _data, ulong _dataSize, ulong _offset)
+  {
+    // TODO: Implement readback using staging buffer
+    throw new NotImplementedException("Buffer readback not yet implemented");
   }
 
   private void CreateBufferResource()

@@ -18,7 +18,7 @@ public class FrameFenceManager : IDisposable
 
   public FrameFenceManager(ComPtr<ID3D12Device> _device, int _frameCount = 3)
   {
-    if(p_frameCount < 1)
+    if(_frameCount < 1)
       throw new ArgumentException("Frame count must be at least 1", nameof(_frameCount));
 
     p_frameCount = _frameCount;

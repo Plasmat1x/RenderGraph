@@ -23,6 +23,7 @@ public unsafe class DX12SwapChain: ISwapChain
   private readonly IDXGIFactory4* p_dxgiFactory;
   private readonly ID3D12CommandQueue* p_directQueue;
   private readonly DX12DescriptorHeapManager p_descriptorManager;
+  private readonly DX12UploadHeapManager p_uploadHeapManager;
   private readonly SwapChainDescription p_description;
 
   private IDXGISwapChain3* p_swapChain;
@@ -39,6 +40,7 @@ public unsafe class DX12SwapChain: ISwapChain
       IDXGIFactory4* _dxgiFactory,
       ID3D12CommandQueue* _directQueue,
       DX12DescriptorHeapManager _descriptorManager,
+      DX12UploadHeapManager _uploadHeapManager,
       SwapChainDescription _description,
       IntPtr _windowHandle)
   {
@@ -46,6 +48,7 @@ public unsafe class DX12SwapChain: ISwapChain
     p_dxgiFactory = _dxgiFactory;
     p_directQueue = _directQueue;
     p_descriptorManager = _descriptorManager ?? throw new ArgumentNullException(nameof(_descriptorManager));
+    p_uploadHeapManager = _uploadHeapManager;
     p_description = _description ?? throw new ArgumentNullException(nameof(_description));
 
     if(_windowHandle == IntPtr.Zero)
@@ -254,7 +257,8 @@ public unsafe class DX12SwapChain: ISwapChain
           null,
           backBuffer,
           textureDesc,
-          p_descriptorManager);
+          p_descriptorManager,
+          p_uploadHeapManager);
 
       p_rtvAllocations[i] = p_descriptorManager.AllocateRTV();
 
