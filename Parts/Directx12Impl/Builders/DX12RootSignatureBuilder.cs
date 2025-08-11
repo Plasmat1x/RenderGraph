@@ -1,8 +1,13 @@
+using Directx12Impl.Extensions;
+
 using GraphicsAPI.Enums;
 
+using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 
 using System.Runtime.InteropServices;
+
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Directx12Impl.Builders;
 
@@ -151,10 +156,26 @@ public unsafe class DX12RootSignatureBuilder
     return range;
   }
 
-  public ID3D12RootSignature* Build(ID3D12Device* device)
+  public ID3D12RootSignature* Build(ComPtr<ID3D12Device> _device)
   {
-    // Создание Root Signature Description
-    // ... код создания ...
-    return null; // Заглушка
+    ID3D10Blob* signature = null;
+    ID3D10Blob* error = null;
+
+    ID3D12RootSignature* newRootSignature;
+    HResult createHr = _device.CreateRootSignature(
+        0,
+        signature->GetBufferPointer(),
+        signature->GetBufferSize(),
+        SilkMarshal.GuidPtrOf<ID3D12RootSignature>(),
+        (void**)&newRootSignature);
+
+    signature->Release();
+    if(error != null)
+      error->Release();
+
+    if(createHr.IsFailure)
+      throw new InvalidOperationException($"Failed to create root signature: {createHr}", createHr.GetException());
+
+    return newRootSignature;
   }
 }
