@@ -2,18 +2,18 @@ using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Reflections.Enums;
 
-namespace GraphicsAPI.Reflections;
+namespace GraphicsAPI.Reflections.Extensions;
 
-public static class ShaderReflectionUtils
+public static class ShaderReflectionExtensions
 {
-  public static bool AreStagesCompatible(ShaderReflection _staget1, ShaderReflection _staget2)
+  public static bool Compatible(this ShaderReflection _stage, ShaderReflection _other)
   {
-    if(_staget1 == null || _staget2 == null)
+    if(_stage == null || _other == null)
       return false;
 
-    foreach(var output in _staget1.OutputParameters)
+    foreach(var output in _stage.OutputParameters)
     {
-      var  matchingInput = _staget2.InputParameters.FirstOrDefault(
+      var  matchingInput = _other.InputParameters.FirstOrDefault(
         _input => _input.SemanticName == output.SemanticName && 
         _input.SemanticIndex == output.SemanticIndex);
 
@@ -32,22 +32,7 @@ public static class ShaderReflectionUtils
     return true;
   }
 
-  public static void ApplyReflectionToPipelineState(
-      PipelineStateDescription _pipelineState,
-      ShaderReflection _vertexShaderReflection,
-      ShaderReflection _pixelShaderReflection = null)
-  {
-    if(_vertexShaderReflection != null)
-      _pipelineState.InputLayout = ShaderReflectionProviderBase.CreateInputLayoutFromReflection(_vertexShaderReflection);
-
-    if(_vertexShaderReflection != null && _pixelShaderReflection != null)
-    {
-      if(!AreStagesCompatible(_vertexShaderReflection, _pixelShaderReflection))
-        throw new InvalidOperationException("Vertex shader outputs do not match pixel shader inputs");
-    }
-  }
-
-  public static uint CalculateTotalConstantBufferSize(ShaderReflection _reflection)
+  public static uint CalculateTotalConstantBufferSize(this ShaderReflection _reflection)
   {
     if(_reflection?.ConstantBuffers == null)
       return 0;
@@ -61,14 +46,14 @@ public static class ShaderReflectionUtils
     return totalSize;
   }
 
-  public static HashSet<uint> GetUsedResourceSlots(ShaderReflection _reflection, ResourceBindingType _type)
+  public static HashSet<uint> GetUsedResourceSlots(this ShaderReflection _reflection, ResourceBindingType _type)
   {
     var slots = new HashSet<uint>();
 
     if(_reflection == null)
       return slots;
 
-    IEnumerable<ResourceBindingInfo> resources = _type switch
+    var resources = _type switch
     {
       ResourceBindingType.ConstantBuffer => _reflection.ConstantBuffers.Select(cb => new ResourceBindingInfo
       {

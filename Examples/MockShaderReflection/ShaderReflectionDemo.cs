@@ -1,6 +1,7 @@
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
-using GraphicsAPI.Reflections;
+using GraphicsAPI.Extensions;
+using GraphicsAPI.Reflections.Extensions;
 
 using MockImpl;
 
@@ -143,10 +144,8 @@ public class ShaderReflectionDemo
       ByteCode = new byte[] { 0x44, 0x58, 0x42, 0x43 }
     });
 
-    bool areCompatible = ShaderReflectionUtils.AreStagesCompatible(
-        vs1.GetReflection(),
-        ps1.GetReflection()
-    );
+    bool areCompatible = vs1.GetReflection()
+      .Compatible(ps1.GetReflection());
 
     Console.WriteLine($"\n✅ Vertex Shader '{vs1.Name}' and Pixel Shader '{ps1.Name}':");
     Console.WriteLine($"   Compatibility: {(areCompatible ? "✓ Compatible" : "✗ Incompatible")}");
@@ -202,7 +201,7 @@ public class ShaderReflectionDemo
     }
 
     // Вычисление общего размера
-    uint totalCBSize = ShaderReflectionUtils.CalculateTotalConstantBufferSize(reflection);
+    uint totalCBSize = ShaderReflectionExtensions.CalculateTotalConstantBufferSize(reflection);
     Console.WriteLine($"\n📊 Total constant buffer memory: {totalCBSize} bytes");
 
     shader.Dispose();
@@ -256,7 +255,7 @@ public class ShaderReflectionDemo
     }
 
     // Используемые слоты
-    var usedTextureSlots = ShaderReflectionUtils.GetUsedResourceSlots(
+    var usedTextureSlots = ShaderReflectionExtensions.GetUsedResourceSlots(
         reflection,
         ResourceBindingType.ShaderResource
     );
@@ -296,9 +295,7 @@ public class ShaderReflectionDemo
       PixelShader = ps
     };
 
-    // Автоматически применяем рефлексию к pipeline state
-    ShaderReflectionUtils.ApplyReflectionToPipelineState(
-        pipelineDesc,
+    pipelineDesc.ApplyReflectionToPipelineState(
         vs.GetReflection(),
         ps.GetReflection()
     );
