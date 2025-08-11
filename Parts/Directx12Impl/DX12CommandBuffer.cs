@@ -1,5 +1,9 @@
 
 
+using Directx12Impl.Extensions;
+using Directx12Impl.Parts;
+using Directx12Impl.Tools;
+
 using GraphicsAPI;
 using GraphicsAPI.Commands;
 using GraphicsAPI.Commands.Interfaces;
@@ -233,7 +237,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
         if(transition.Resource is DX12Resource dx12Resource)
         {
           p_stateTracker.TransitionResource(dx12Resource.GetResource(),
-            DX12Helpers.ConvertResourceState(transition.NewState));
+            transition.NewState.Convert());
         }
         break;
 

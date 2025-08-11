@@ -1,3 +1,5 @@
+using Directx12Impl.Parts;
+
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
@@ -42,7 +44,17 @@ public unsafe class DX12Shader: IShader
     }
     else if(!string.IsNullOrEmpty(_desc.FilePath))
     {
-      p_bytecode = File.ReadAllBytes(_desc.FilePath);
+      if(_desc.FilePath.EndsWith(".hlsl", StringComparison.OrdinalIgnoreCase))
+      {
+        var sourceCode = File.ReadAllText(_desc.FilePath);
+        var tempDesc = _desc.Clone() as ShaderDescription;
+        tempDesc.SourceCode = sourceCode;
+        p_bytecode = CompileFromSource(tempDesc);
+      }
+      else
+      {
+        p_bytecode = File.ReadAllBytes(_desc.FilePath);
+      }
     }
     else if(!string.IsNullOrEmpty(_desc.SourceCode))
     {
