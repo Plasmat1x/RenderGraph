@@ -1,5 +1,8 @@
+using Directx12Impl.Builders;
 using Directx12Impl.Extensions;
 using Directx12Impl.Parts.Utils;
+
+using GraphicsAPI.Enums;
 
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
@@ -7,28 +10,8 @@ using Silk.NET.Direct3D12;
 
 namespace Directx12Impl.Parts.Structures;
 
-public class DX12RootSignatureCache: IDisposable
+public partial class DX12RootSignatureCache: IDisposable
 {
-  private class RootSignatureDescComparer: IEqualityComparer<RootSignatureDesc>
-  {
-    public unsafe bool Equals(RootSignatureDesc _x, RootSignatureDesc _y)
-    {
-      return _x.NumParameters == _y.NumParameters &&
-             _x.NumStaticSamplers == _y.NumStaticSamplers &&
-             _x.Flags == _y.Flags &&
-             _x.PStaticSamplers == _y.PStaticSamplers &&
-             _x.PParameters == _y.PParameters;
-    }
-
-    public int GetHashCode(RootSignatureDesc _obj)
-    {
-      return HashCode.Combine(
-          _obj.NumParameters,
-          _obj.NumStaticSamplers,
-          _obj.Flags);
-    }
-  }
-
   private readonly ComPtr<ID3D12Device> p_device;
   private readonly D3D12 p_d3d12;
   private Dictionary<RootSignatureDesc, ComPtr<ID3D12RootSignature>> p_cache = [];
@@ -82,6 +65,59 @@ public class DX12RootSignatureCache: IDisposable
 
     p_cache[_desc] = newRootSignature;
     return newRootSignature;
+  }
+
+  public ComPtr<ID3D12RootSignature> GetOrCreateFromShaderReflection(
+    params DX12Shader[] _shaders)
+  {
+    var builder = new DX12RootSignatureDescBuilderEx();
+
+    var cbSlots = new HashSet<uint>();
+    var srvSlots = new HashSet<uint>();
+    var uavSlots = new HashSet<uint>();
+    var samplerSlots = new HashSet<uint>();
+
+    foreach(var shader in _shaders.Where(s => s != null))
+    {
+      var reflection = shader.GetReflection();
+
+      foreach(var cb in reflection.ConstantBuffers)
+      {
+        if(cbSlots.Add(cb.BindPoint))
+        {
+          builder.AddRootCBV(cb.BindPoint, 0);
+        }
+      }
+
+      foreach(var srv in reflection.BoundResources)
+      {
+        if(srv.Type == ResourceBindingType.ShaderResource)
+        {
+          if(srvSlots.Add(srv.BindPoint))
+          {
+            builder.AddDescriptorTableSRV(srv.BindPoint, 0);
+          }
+        }
+      }
+
+      foreach(var uav in reflection.UnorderedAccessViews)
+      {
+        if(uavSlots.Add(uav.BindPoint))
+        {
+          builder.AddDescriptorTableUAV(uav.BindPoint, 0);
+        }
+      }
+
+      foreach(var sampler in reflection.Samplers)
+      {
+        if(samplerSlots.Add(sampler.BindPoint))
+        {
+          builder.AddDescriptorTableSamplers(sampler.BindPoint, 0);
+        }
+      }
+    }
+
+    return GetOrCreateFromDesc1(builder.Build());
   }
 
   /// <summary>

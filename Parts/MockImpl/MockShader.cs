@@ -3,6 +3,7 @@ using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 using GraphicsAPI.Reflections;
+using GraphicsAPI.Reflections.Extensions;
 
 using Resources.Enums;
 
@@ -76,7 +77,7 @@ public class MockShader: IShader
       return false;
 
     var otherReflection = _otherShader.GetReflection();
-    return ShaderReflectionUtils.AreStagesCompatible(p_reflection, otherReflection);
+    return p_reflection.Compatible(otherReflection);
   }
 
   public void Dispose()

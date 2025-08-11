@@ -29,37 +29,6 @@ public unsafe class DX12PipelineStateCache: IDisposable
     p_device = _device;
   }
 
-  //public ComPtr<ID3D12PipelineState> GetOrCreateGraphicsPipeline(GraphicsPipelineStateDesc _desc)
-  //{
-  //  if(p_graphicsCache.TryGetValue(_desc, out var pso))
-  //    return pso;
-
-  //  ComPtr<ID3D12PipelineState> newPso;
-  //  p_device.CreateGraphicsPipelineState(ref _desc, out newPso);
-  //  p_graphicsCache[_desc] = newPso;
-
-  //  return newPso;
-  //}
-
-  //public ComPtr<ID3D12PipelineState> GetOrCreateComputePipeline(ComputePipelineStateDesc _desc)
-  //{
-  //  if(p_computeCache.TryGetValue(_desc, out var pso))
-  //    return pso;
-
-  //  ComPtr<ID3D12PipelineState> newPso;
-  //  p_device.CreateComputePipelineState(ref _desc, out newPso);
-  //  p_computeCache[_desc] = newPso;
-
-  //  return newPso;
-  //}
-
-
-  //public void Clear()
-  //{
-  //  p_graphicsCache.Clear();
-  //  p_computeCache.Clear();
-  //}
-
   public unsafe ID3D12PipelineState* GetOrCreatePSO(PSOCacheKey _key)
   {
     lock(p_cacheLock)
@@ -88,7 +57,6 @@ public unsafe class DX12PipelineStateCache: IDisposable
 
   private unsafe ID3D12PipelineState* CreateGraphicsPSO(PSOCacheKey _key)
   {
-    // Валидация шейдеров
     if(_key.VertexShader == null)
       throw new ArgumentException("Vertex shader is required");
 
@@ -99,7 +67,6 @@ public unsafe class DX12PipelineStateCache: IDisposable
         _key.HullShader,
         _key.DomainShader);
 
-    // Создание Input Layout из рефлексии VS
     var vsReflection = _key.VertexShader.GetReflection();
     var inputLayout = InputLayoutDescription.FromReflection(vsReflection);
 

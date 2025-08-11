@@ -97,7 +97,7 @@ public unsafe class DX12RenderState: IRenderState
     }
     else
     {
-      p_rootSignature = p_rootSignatureCache.GetDefaultGraphicsRootSignature();
+      p_rootSignature = p_rootSignatureCache.GetOrCreateFromShaderReflection();
       CreateGraphicsPipelineState();
     }
   }

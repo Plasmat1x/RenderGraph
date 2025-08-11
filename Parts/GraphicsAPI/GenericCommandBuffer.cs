@@ -1,4 +1,5 @@
 using GraphicsAPI.Commands;
+using GraphicsAPI.Commands.Extensions;
 using GraphicsAPI.Commands.Interfaces;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
@@ -580,7 +581,7 @@ public abstract class GenericCommandBuffer: CommandBuffer
       var commandType = command.GetType();
 
       // Для state команд - сохраняем только последнюю
-      if(IsStateCommand(command))
+      if(command.IsStateCommand())
       {
         lastStateCommands[commandType] = command;
       }
@@ -605,18 +606,6 @@ public abstract class GenericCommandBuffer: CommandBuffer
 
     p_commands.Clear();
     p_commands.AddRange(optimizedCommands);
-  }
-
-  private static bool IsStateCommand(ICommand _command)
-  {
-    return _command is SetViewportCommand ||
-           _command is SetRenderTargetsCommand ||
-           _command is SetShaderCommand ||
-           _command is SetRenderStateCommand ||
-           _command is SetPrimitiveTopologyCommand ||
-           _command is SetBlendStateCommand ||
-           _command is SetDepthStencilStateCommand ||
-           _command is SetRasterizerStateCommand;
   }
 
   public override void Dispose()

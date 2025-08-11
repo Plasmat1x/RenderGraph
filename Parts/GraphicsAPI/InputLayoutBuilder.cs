@@ -35,7 +35,7 @@ public class InputLayoutBuilder
     p_elements.Add(element);
 
     if(!_alignedByteOffset.HasValue)
-      p_currentOffset += GetFormatSize(_format);
+      p_currentOffset += _format.GetFormatSize();
 
     return this;
   }
@@ -51,6 +51,4 @@ public class InputLayoutBuilder
   {
     return new InputLayoutDescription { Elements = p_elements };
   }
-
-  private uint GetFormatSize(TextureFormat _format) => _format.GetFormatSize();
 }
