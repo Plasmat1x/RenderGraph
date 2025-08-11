@@ -51,6 +51,7 @@ public unsafe class DX12Shader: IShader
         var tempDesc = _desc.Clone() as ShaderDescription;
         tempDesc.SourceCode = sourceCode;
         p_bytecode = CompileFromSource(tempDesc);
+        p_description = tempDesc;
       }
       else
       {

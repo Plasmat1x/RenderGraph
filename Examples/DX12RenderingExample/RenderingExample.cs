@@ -26,14 +26,9 @@ public class RenderingExample
 
   public void Initialize(IntPtr windowHandle, uint width, uint height)
   {
-    bool debug = false;
-
-#if DEBUG
-    debug = true;
-#endif
 
     // 1. Создаем устройство
-    device = new DX12GraphicsDevice(debug);
+    device = new DX12GraphicsDevice(true);
 
     // 2. Создаем SwapChain
     var swapChainDesc = new SwapChainDescription
