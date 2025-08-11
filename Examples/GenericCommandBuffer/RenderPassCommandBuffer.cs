@@ -1,6 +1,6 @@
 using GraphicsAPI;
+using GraphicsAPI.Commands.Extensions;
 using GraphicsAPI.Commands.Interfaces;
-using GraphicsAPI.Commands.utils;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
@@ -44,7 +44,7 @@ public class RenderPassCommandBuffer: GraphicsAPI.GenericCommandBuffer
     Console.WriteLine($"[{p_passName}] Executing: {_command.Type}");
 
     // Можно добавить специфичную для прохода логику
-    if(CommandUtils.IsDrawCommand(_command))
+    if(_command.IsDrawCommand())
     {
       // Логирование draw calls
       Console.WriteLine($"[{p_passName}] Draw call executed");

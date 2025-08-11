@@ -1,8 +1,11 @@
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
+using GraphicsAPI.Extensions;
 using GraphicsAPI.Reflections.Enums;
 using GraphicsAPI.Reflections.Interfaces;
 using GraphicsAPI.Utils;
+
+using Resources.Extensions;
 
 namespace GraphicsAPI.Reflections;
 
@@ -25,7 +28,7 @@ public abstract class ShaderReflectionProviderBase: IShaderReflectionProvider
     {
       var element = param.ToInputElement();
       element.AlignedByteOffset = currentOffset;
-      uint elementSize = Toolbox.GetFormatSize(element.Format);
+      uint elementSize = element.Format.GetFormatSize();
       currentOffset += elementSize;
       layout.Elements.Add(element);
     }

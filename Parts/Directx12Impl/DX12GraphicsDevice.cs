@@ -1,6 +1,8 @@
 using Directx12Impl.Extensions;
 using Directx12Impl.Parts;
-using Directx12Impl.Tools;
+using Directx12Impl.Parts.Managers;
+using Directx12Impl.Parts.Structures;
+using Directx12Impl.Parts.Utils;
 
 using GraphicsAPI;
 using GraphicsAPI.Descriptions;
@@ -14,6 +16,7 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace Directx12Impl;
@@ -40,7 +43,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   private readonly List<CommandBuffer> p_commandBuffers = [];
 
   private DX12DescriptorHeapManager p_descriptorManager;
-  private DX12UploadHeapManager p_uploadHeapManager;
+  private DX12UploadHeapManager p_uploadManager;
 
   private DX12FrameFenceManager p_frameManager;
   private const int p_frameCount = 3;
@@ -68,12 +71,12 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   public ITexture CreateTexture(TextureDescription _desc)
   {
-    return new DX12Texture(p_device, p_d3d12, _desc, p_descriptorManager, p_uploadHeapManager);
+    return new DX12Texture(p_device, p_d3d12, _desc, p_descriptorManager, this);
   }
 
   public IBuffer CreateBuffer(BufferDescription _desc)
   {
-    return new DX12Buffer(p_device, p_d3d12, _desc, p_descriptorManager, p_uploadHeapManager);
+    return new DX12Buffer(p_device, p_d3d12, _desc, p_descriptorManager, this);
   }
 
   public IShader CreateShader(ShaderDescription _desc)
@@ -114,10 +117,89 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     lock(p_commandBuffers)
     {
-      p_commandBuffers.Add(commandBuffer); 
+      p_commandBuffers.Add(commandBuffer);
     }
 
     return commandBuffer;
+  }
+
+  // === Публичные методы для загрузки данных(скрывают command list) ===
+
+  /// <summary>
+  /// Загрузить данные в буфер (внутренний метод для DX12Buffer)
+  /// </summary>
+  internal void UploadBufferData<T>(DX12Buffer _buffer, T[] _data, ulong _offset = 0) where T : unmanaged
+  {
+    if(_data == null || _data.Length == 0)
+      throw new ArgumentException("Data cannot be null or empty");
+
+    var dataSize = (ulong)(_data.Length * sizeof(T));
+
+    // Начинаем upload batch
+    var commandList = BeginResourceUpload();
+
+    try
+    {
+      fixed(T* pData = _data)
+      {
+        _buffer.SetDataInternal(commandList, pData, dataSize, _offset);
+      }
+
+      // Завершаем и ждем
+      EndResourceUpload(true);
+    }
+    catch
+    {
+      // В случае ошибки все равно закрываем command list
+      EndResourceUpload(false);
+      throw;
+    }
+  }
+
+  /// <summary>
+  /// Загрузить данные в текстуру (внутренний метод для DX12Texture)
+  /// </summary>
+  internal void UploadTextureData<T>(DX12Texture _texture, T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : unmanaged
+  {
+    if(_data == null || _data.Length == 0)
+      throw new ArgumentException("Data cannot be null or empty");
+
+    var commandList = BeginResourceUpload();
+
+    try
+    {
+      fixed(T* pData = _data)
+      {
+        _texture.SetDataInternal(commandList, pData, _data.Length * sizeof(T), _mipLevel, _arraySlice);
+      }
+
+      EndResourceUpload(true);
+    }
+    catch
+    {
+      EndResourceUpload(false);
+      throw;
+    }
+  }
+
+  /// <summary>
+  /// Пакетная загрузка нескольких ресурсов
+  /// </summary>
+  public void BatchUploadResources(Action<IBatchUploader> uploadAction)
+  {
+    var commandList = BeginResourceUpload();
+    var uploader = new DX12BatchUploader(this, commandList);
+
+    try
+    {
+      uploadAction(uploader);
+      EndResourceUpload(true);
+    }
+    catch
+    {
+      EndResourceUpload(false);
+      throw;
+    }
   }
 
   public unsafe ISwapChain CreateSwapChain(SwapChainDescription _desc, IntPtr _windowHandle)
@@ -127,7 +209,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     p_dxgiFactory,
     p_directQueue,
     p_descriptorManager,
-    p_uploadHeapManager,
+    this,
     _desc,
     _windowHandle);
   }
@@ -194,6 +276,132 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     throw new NotImplementedException();
   }
 
+  public void Submit(CommandBuffer _commandBuffer)
+  {
+    if(_commandBuffer == null)
+      throw new ArgumentNullException(nameof(_commandBuffer));
+
+
+    if(_commandBuffer is GenericCommandBuffer genericCmd)
+    {
+      genericCmd.Execute();
+    }
+  }
+
+  public void Submit(CommandBuffer[] _commandBuffers)
+  {
+    if(_commandBuffers == null || _commandBuffers.Length == 0)
+      return;
+
+    foreach(var cmd in _commandBuffers)
+    {
+      Submit(cmd);
+    }
+  }
+
+  public void Submit(CommandBuffer _commandBuffer, IFence _fence, ulong _fenceValue)
+  {
+    Submit(_commandBuffer);
+
+    if(_fence is DX12Fence dx12Fence)
+    {
+      dx12Fence.Signal(_fenceValue);
+    }
+  }
+
+  public Task SubmitAsync(CommandBuffer _commandBuffer)
+  {
+    return Task.Run(() => Submit(_commandBuffer));
+  }
+
+  public void Present(ISwapChain _swapChain)
+  {
+    if(_swapChain is DX12SwapChain dx12SwapChain)
+    {
+      dx12SwapChain.Present();
+    }
+  }
+
+  public void SetDebugName(IResource _resource, string _name)
+  {
+    if(_resource is DX12Resource dx12Resource && !string.IsNullOrEmpty(_name))
+    {
+      DX12Helpers.SetResourceName(dx12Resource.GetResource(), _name);
+    }
+  }
+
+  /// <summary>
+  /// Выполнить командный буфер
+  /// </summary>
+  public void ExecuteCommandBuffer(CommandBuffer _commandBuffer)
+  {
+    if(_commandBuffer is not DX12CommandBuffer dx12Buffer)
+      throw new ArgumentException("Invalid command buffer type");
+
+    ExecuteCommandBuffers(new[] { dx12Buffer });
+  }
+
+  /// <summary>
+  /// Выполнить несколько командных буферов
+  /// </summary>
+  public void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers)
+  {
+    var dx12Buffers = new ID3D12CommandList*[_commandBuffers.Length];
+
+    for(int i = 0; i < _commandBuffers.Length; i++)
+    {
+      if(_commandBuffers[i] is not DX12CommandBuffer dx12Buffer)
+        throw new ArgumentException($"Invalid command buffer type at index {i}");
+
+      if(dx12Buffer.ImmediateMode == CommandBufferExecutionMode.Deferred)
+      {
+        dx12Buffer.Execute();
+      }
+
+      dx12Buffers[i] = (ID3D12CommandList*)dx12Buffer.GetNativeCommandList();
+    }
+
+    var queue = GetQueueForCommandBuffer(_commandBuffers[0] as DX12CommandBuffer);
+
+    fixed(ID3D12CommandList** ppCommandLists = dx12Buffers)
+    {
+      queue->ExecuteCommandLists((uint)dx12Buffers.Length, ppCommandLists);
+    }
+
+    if(p_immediateSync)
+    {
+      WaitForGPU();
+    }
+  }
+
+  public void BeginEvent(string _name)
+  {
+    Console.WriteLine($"[DEBUG] Begin Event: {_name}");
+  }
+
+  public void EndEvent()
+  {
+    Console.WriteLine($"[DEBUG] End Event");
+  }
+
+  public void SetMarker(string _name)
+  {
+    Console.WriteLine($"[DEBUG] Marker: {_name}");
+  }
+
+  /// <summary>
+  /// Установить режим немедленной синхронизации (для отладки)
+  /// </summary>
+  public void SetImmediateSync(bool _enable)
+  {
+    p_immediateSync = _enable;
+  }
+
+  void IGraphicsDevice.WaitForFenceValue(IFence _fence, ulong _value)
+  {
+    WaitForFenceValue(_fence, _value);
+  }
+
   public unsafe void Dispose()
   {
     if(p_disposed)
@@ -220,6 +428,23 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     p_disposed = true;
   }
 
+  private void EndResourceUpload(bool v)
+  {
+    throw new NotImplementedException();
+  }
+
+  private ID3D12GraphicsCommandList* BeginResourceUpload()
+  {
+    throw new NotImplementedException();
+  }
+
+  /// <summary>
+  /// Получить upload manager (для внутреннего использования)
+  /// </summary>
+  internal DX12UploadHeapManager GetUploadManager()
+  {
+    return p_uploadManager;
+  }
 
   private void ReleaseDescriptor(CpuDescriptorHandle _descriptor)
   {
@@ -241,7 +466,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     CreateCommandQueues();
 
     p_descriptorManager = new(p_device);
-    p_uploadHeapManager = new(p_device);
+    p_uploadManager = new(p_device);
 
     CreateFence();
 
@@ -468,132 +693,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   private ComPtr<ID3D12Device> GetID3D12Device()
   {
     return p_device;
-  }
-
-  public void Submit(CommandBuffer _commandBuffer)
-  {
-    if(_commandBuffer == null)
-      throw new ArgumentNullException(nameof(_commandBuffer));
-
-
-    if(_commandBuffer is GenericCommandBuffer genericCmd)
-    {
-      genericCmd.Execute();
-    }
-  }
-
-  public void Submit(CommandBuffer[] _commandBuffers)
-  {
-    if(_commandBuffers == null || _commandBuffers.Length == 0)
-      return;
-
-    foreach(var cmd in _commandBuffers)
-    {
-      Submit(cmd);
-    }
-  }
-
-  public void Submit(CommandBuffer _commandBuffer, IFence _fence, ulong _fenceValue)
-  {
-    Submit(_commandBuffer);
-
-    if(_fence is DX12Fence dx12Fence)
-    {
-      dx12Fence.Signal(_fenceValue);
-    }
-  }
-
-  public Task SubmitAsync(CommandBuffer _commandBuffer)
-  {
-    return Task.Run(() => Submit(_commandBuffer));
-  }
-
-  public void Present(ISwapChain _swapChain)
-  {
-    if(_swapChain is DX12SwapChain dx12SwapChain)
-    {
-      dx12SwapChain.Present();
-    }
-  }
-
-  public void SetDebugName(IResource _resource, string _name)
-  {
-    if(_resource is DX12Resource dx12Resource && !string.IsNullOrEmpty(_name))
-    {
-      DX12Helpers.SetResourceName(dx12Resource.GetResource(), _name);
-    }
-  }
-
-  /// <summary>
-  /// Выполнить командный буфер
-  /// </summary>
-  public void ExecuteCommandBuffer(CommandBuffer _commandBuffer)
-  {
-    if(_commandBuffer is not DX12CommandBuffer dx12Buffer)
-      throw new ArgumentException("Invalid command buffer type");
-
-    ExecuteCommandBuffers(new[] { dx12Buffer });
-  }
-
-  /// <summary>
-  /// Выполнить несколько командных буферов
-  /// </summary>
-  public void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers)
-  {
-    var dx12Buffers = new ID3D12CommandList*[_commandBuffers.Length];
-
-    for(int i = 0; i < _commandBuffers.Length; i++)
-    {
-      if(_commandBuffers[i] is not DX12CommandBuffer dx12Buffer)
-        throw new ArgumentException($"Invalid command buffer type at index {i}");
-
-      if(dx12Buffer.ImmediateMode == CommandBufferExecutionMode.Deferred)
-      {
-        dx12Buffer.Execute();
-      }
-
-      dx12Buffers[i] = (ID3D12CommandList*)dx12Buffer.GetNativeCommandList();
-    }
-
-    var queue = GetQueueForCommandBuffer(_commandBuffers[0] as DX12CommandBuffer);
-
-    fixed(ID3D12CommandList** ppCommandLists = dx12Buffers)
-    {
-      queue->ExecuteCommandLists((uint)dx12Buffers.Length, ppCommandLists);
-    }
-
-    if(p_immediateSync)
-    {
-      WaitForGPU();
-    }
-  }
-
-  public void BeginEvent(string _name)
-  {
-    Console.WriteLine($"[DEBUG] Begin Event: {_name}");
-  }
-
-  public void EndEvent()
-  {
-    Console.WriteLine($"[DEBUG] End Event");
-  }
-
-  public void SetMarker(string _name)
-  {
-    Console.WriteLine($"[DEBUG] Marker: {_name}");
-  }
-
-  /// <summary>
-  /// Установить режим немедленной синхронизации (для отладки)
-  /// </summary>
-  public void SetImmediateSync(bool _enable)
-  {
-    p_immediateSync = _enable;
-  }
-
-  void IGraphicsDevice.WaitForFenceValue(IFence _fence, ulong _value)
-  {
-    WaitForFenceValue(_fence, _value);
   }
 
   /// <summary>

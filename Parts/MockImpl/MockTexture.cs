@@ -101,12 +101,12 @@ public class MockTexture: ITexture
     return _defaultViews[TextureViewType.UnorderedAccess];
   }
 
-  public void SetData<T>(T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : struct
+  public void SetData<T>(T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : unmanaged
   {
     Console.WriteLine($"    [Resource] Setting data for texture {Name} (mip: {_mipLevel}, slice: {_arraySlice}, {_data.Length} elements)");
   }
 
-  public T[] GetData<T>(uint _mipLevel = 0, uint _arraySlice = 0) where T : struct
+  public T[] GetData<T>(uint _mipLevel = 0, uint _arraySlice = 0) where T : unmanaged
   {
     Console.WriteLine($"    [Resource] Getting data from texture {Name} (mip: {_mipLevel}, slice: {_arraySlice})");
     return new T[Width * Height];

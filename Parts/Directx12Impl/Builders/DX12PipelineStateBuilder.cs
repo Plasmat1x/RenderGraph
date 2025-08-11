@@ -6,6 +6,7 @@ using GraphicsAPI.Reflections.Enums;
 using GraphicsAPI.Utils;
 
 using Resources.Enums;
+using Resources.Extensions;
 
 using Silk.NET.Direct3D12;
 
@@ -92,7 +93,7 @@ public class DX12PipelineStateBuilder
         InstanceDataStepRate = 0
       };
       inputLayout.Elements.Add(element);
-      offset += Toolbox.GetFormatSize(element.Format);
+      offset += element.Format.GetFormatSize();
     }
 
     p_pipelineDesc.InputLayout = inputLayout;
