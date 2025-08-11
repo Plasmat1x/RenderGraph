@@ -23,8 +23,8 @@ public interface ITexture: IResource
   ITextureView GetDefaultRenderTargetView();
   ITextureView GetDefaultDepthStencilView();
   ITextureView GetDefaultUnorderedAccessView();
-  void SetData<T>(T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : struct;
-  T[] GetData<T>(uint _mipLevel = 0, uint _arraySlice = 0) where T : struct;
+  void SetData<T>(T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : unmanaged;
+  T[] GetData<T>(uint _mipLevel = 0, uint _arraySlice = 0) where T : unmanaged;
   uint GetSubresourceIndex(uint _mipLevel, uint _arraySlice);
   void GenerateMips();
 }

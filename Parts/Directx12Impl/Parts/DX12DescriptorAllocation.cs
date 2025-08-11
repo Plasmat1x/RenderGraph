@@ -1,3 +1,5 @@
+using Directx12Impl.Parts.Structures;
+
 using Silk.NET.Direct3D12;
 
 using System.Runtime.InteropServices;

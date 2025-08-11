@@ -24,6 +24,6 @@ public interface IBuffer: IResource
   void Unmap();
   void SetData<T>(T[] _data, ulong _offset = 0) where T : unmanaged;
   void SetData<T>(T _data, ulong _offset = 0) where T: unmanaged;
-  T[] GetData<T>(ulong _offset = 0, ulong _count = 0) where T: unmanaged;
+  T[] GetData<T>(ulong _offset = 0, int _count = 0) where T: unmanaged;
   T GetData<T>(ulong _offset = 0) where T: unmanaged;
 }

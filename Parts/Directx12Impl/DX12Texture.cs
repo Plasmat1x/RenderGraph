@@ -1,6 +1,6 @@
 using Directx12Impl.Extensions;
-using Directx12Impl.Parts;
-using Directx12Impl.Tools;
+using Directx12Impl.Parts.Managers;
+using Directx12Impl.Parts.Utils;
 
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
@@ -13,6 +13,8 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
 namespace Directx12Impl;
 
 /// <summary>
@@ -23,28 +25,28 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   private readonly D3D12 p_d3d12;
   private readonly TextureDescription p_description;
   private readonly DX12DescriptorHeapManager p_descriptorManager;
-  private readonly DX12UploadHeapManager p_uploadManager;
+  private readonly DX12GraphicsDevice p_parentDevice;
   private readonly Dictionary<TextureViewKey, DX12TextureView> p_views = new();
 
-  public DX12Texture(ID3D12Device* _device, D3D12 _d3d12, TextureDescription _description, DX12DescriptorHeapManager _descriptorManager, DX12UploadHeapManager _uploadManager)
+  public DX12Texture(ID3D12Device* _device, D3D12 _d3d12, TextureDescription _description, DX12DescriptorHeapManager _descriptorManager, DX12GraphicsDevice _parentDevice)
     : base(_device, _description.Name)
   {
     p_d3d12 = _d3d12;
     p_description = _description;
     p_descriptorManager = _descriptorManager;
-    p_uploadManager = _uploadManager;
+    p_parentDevice = _parentDevice;
 
     CreateTextureResource();
 
   }
 
-  public DX12Texture(ID3D12Device* _device, D3D12 _d3d12, ComPtr<ID3D12Resource> _resource, TextureDescription _description, DX12DescriptorHeapManager _descriptorManager, DX12UploadHeapManager _uploadManager)
+  public DX12Texture(ID3D12Device* _device, D3D12 _d3d12, ComPtr<ID3D12Resource> _resource, TextureDescription _description, DX12DescriptorHeapManager _descriptorManager, DX12GraphicsDevice _parentDevice)
   : base(_device, _description.Name)
   {
     p_d3d12 = _d3d12;
     p_description = _description;
     p_descriptorManager = _descriptorManager;
-    p_uploadManager = _uploadManager;
+    p_parentDevice = _parentDevice;
     p_resource = _resource;
   }
 
@@ -124,13 +126,16 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     });
   }
 
-  public void SetData<T>(T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : struct
+  public void SetData<T>(T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : unmanaged
   {
-    // Реализация загрузки данных в текстуру
-    throw new NotImplementedException("Texture data upload not implemented yet");
+    if(_data == null || _data.Length == 0)
+      throw new ArgumentException("Data cannot be null or empty");
+
+    // Используем device для загрузки
+    p_parentDevice.UploadTextureData(this, _data, _mipLevel, _arraySlice);
   }
 
-  public T[] GetData<T>(uint _mipLevel = 0, uint _arraySlice = 0) where T : struct
+  public T[] GetData<T>(uint _mipLevel = 0, uint _arraySlice = 0) where T : unmanaged
   {
     // Реализация чтения данных из текстуры
     throw new NotImplementedException("Texture data readback not implemented yet");
@@ -293,6 +298,69 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     }
 
     base.Dispose();
+  }
+
+  /// <summary>
+  /// Внутренний метод для загрузки данных через command list
+  /// </summary>
+  internal void SetDataInternal(
+      ID3D12GraphicsCommandList* _commandList,
+      void* _data,
+      int _dataSize,
+      uint _mipLevel,
+      uint _arraySlice)
+  {
+    var uploadManager = p_parentDevice.GetUploadManager();
+
+    // Получаем layout информацию для subresource
+    var subresource = GetSubresourceIndex(_mipLevel, _arraySlice);
+
+    PlacedSubresourceFootprint* layouts = stackalloc PlacedSubresourceFootprint[1];
+    ulong* rowSizes = stackalloc ulong[1];
+    ulong totalSize;
+
+    var desc = p_resource->GetDesc();
+    p_device->GetCopyableFootprints(
+        &desc,
+        subresource,
+        1,
+        0,
+        layouts,
+        null,
+        rowSizes,
+        &totalSize);
+
+    if((ulong)_dataSize < totalSize)
+      throw new ArgumentException($"Data size ({_dataSize}) is less than required ({totalSize})");
+
+    // Переводим текстуру в состояние копирования
+    var barrier = new ResourceBarrier
+    {
+      Type = ResourceBarrierType.Transition,
+      Transition = new ResourceTransitionBarrier
+      {
+        PResource = p_resource,
+        StateBefore = p_currentState,
+        StateAfter = ResourceStates.CopyDest,
+        Subresource = subresource
+      }
+    };
+    _commandList->ResourceBarrier(1, &barrier);
+
+    // Загружаем данные через upload heap
+    uploadManager.UploadTextureData(
+        _commandList,
+        p_resource,
+        subresource,
+        _data,
+        (ulong)_dataSize,
+        layouts[0].Footprint.RowPitch,
+        0);
+
+    // Возвращаем в исходное состояние
+    barrier.Transition.StateBefore = ResourceStates.CopyDest;
+    barrier.Transition.StateAfter = p_currentState;
+    _commandList->ResourceBarrier(1, &barrier);
   }
 
   private struct TextureViewKey: IEquatable<TextureViewKey>

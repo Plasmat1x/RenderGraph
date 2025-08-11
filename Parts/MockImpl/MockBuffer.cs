@@ -88,7 +88,7 @@ public class MockBuffer: IBuffer
 
   public void SetData<T>(T _data, ulong _offset = 0) where T : unmanaged => Console.WriteLine($"    [Resource] Setting single data element for buffer {Name} (offset: {_offset})");
 
-  public T[] GetData<T>(ulong _offset = 0, ulong _count = 0) where T : unmanaged
+  public T[] GetData<T>(ulong _offset = 0, int _count = -1) where T : unmanaged
   {
     var elementCount = _count > 0 ? (int)_count : (int)(Size / (ulong)System.Runtime.InteropServices.Marshal.SizeOf<T>());
     Console.WriteLine($"    [Resource] Getting data from buffer {Name} (offset: {_offset}, count: {elementCount})");

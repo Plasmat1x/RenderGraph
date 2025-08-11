@@ -1,4 +1,4 @@
-using Directx12Impl.Tools;
+using Directx12Impl.Parts.Utils;
 
 using Silk.NET.Direct3D12;
 

@@ -1,10 +1,12 @@
 using GraphicsAPI.Enums;
+using GraphicsAPI.Extensions;
 using GraphicsAPI.Interfaces;
 using GraphicsAPI.Reflections;
 using GraphicsAPI.Reflections.Enums;
 using GraphicsAPI.Utils;
 
 using Resources.Enums;
+using Resources.Extensions;
 
 namespace GraphicsAPI.Descriptions;
 
@@ -277,5 +279,5 @@ public class InputLayoutDescription
     };
   }
 
-  private static uint GetFormatSizeInBytes(TextureFormat _format) => Toolbox.GetFormatSize(_format);
+  private static uint GetFormatSizeInBytes(TextureFormat _format) => _format.GetFormatSize();
 }
