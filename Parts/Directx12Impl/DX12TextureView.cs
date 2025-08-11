@@ -1,3 +1,7 @@
+using Directx12Impl.Extensions;
+using Directx12Impl.Parts;
+using Directx12Impl.Tools;
+
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Interfaces;
 
@@ -26,17 +30,15 @@ public unsafe class DX12TextureView: ITextureView
     p_description = _description;
     p_viewType = _description.ViewType;
 
-    // Создаем дескриптор в зависимости от типа представления
     p_descriptorHandle = CreateDescriptor(_descriptorManager);
   }
 
-  public DX12TextureView(DX12Texture _texture, TextureViewType _viewType, TextureViewDescription _description, DescriptorAllocation _allocation)
+  public DX12TextureView(DX12Texture _texture, TextureViewType _viewType, TextureViewDescription _description, DX12DescriptorAllocation _allocation)
   {
     p_texture = _texture ?? throw new ArgumentNullException(nameof(_texture));
     p_description = _description;
     p_viewType = _viewType;
 
-    // Создаем дескриптор в зависимости от типа представления
     p_descriptorHandle = new(_allocation.CpuHandle, _allocation.GpuHandle);
   }
 
@@ -79,7 +81,7 @@ public unsafe class DX12TextureView: ITextureView
 
     var srvDesc = new ShaderResourceViewDesc
     {
-      Format = DX12Helpers.ConvertFormat(p_description.Format),
+      Format = p_description.Format.Convert(),
       ViewDimension = GetSRVDimension(),
       Shader4ComponentMapping = DX12Helpers.D3D12DefaultShader4ComponentMapping
     };
@@ -98,7 +100,7 @@ public unsafe class DX12TextureView: ITextureView
 
     var rtvDesc = new RenderTargetViewDesc
     {
-      Format = DX12Helpers.ConvertFormat(p_description.Format),
+      Format = p_description.Format.Convert(),
       ViewDimension = GetRTVDimension()
     };
 
@@ -116,7 +118,7 @@ public unsafe class DX12TextureView: ITextureView
 
     var dsvDesc = new DepthStencilViewDesc
     {
-      Format = DX12Helpers.GetDepthSRVFormat(DX12Helpers.ConvertFormat(p_description.Format)),
+      Format = p_description.Format.Convert().GetDepthSRVFormat(),
       ViewDimension = GetDSVDimension(),
       Flags = DsvFlags.None
     };
@@ -135,7 +137,7 @@ public unsafe class DX12TextureView: ITextureView
 
     var uavDesc = new UnorderedAccessViewDesc
     {
-      Format = DX12Helpers.ConvertFormat(p_description.Format),
+      Format = p_description.Format.Convert(),
       ViewDimension = GetUAVDimension()
     };
 

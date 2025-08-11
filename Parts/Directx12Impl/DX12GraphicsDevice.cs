@@ -1,4 +1,6 @@
-using Directx12Impl.Managers;
+using Directx12Impl.Extensions;
+using Directx12Impl.Parts;
+using Directx12Impl.Tools;
 
 using GraphicsAPI;
 using GraphicsAPI.Descriptions;
@@ -40,7 +42,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   private DX12DescriptorHeapManager p_descriptorManager;
   private DX12UploadHeapManager p_uploadHeapManager;
 
-  private FrameFenceManager p_frameManager;
+  private DX12FrameFenceManager p_frameManager;
   private const int p_frameCount = 3;
 
   private DX12PipelineStateCache p_pipelineStateCache;
@@ -112,7 +114,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     lock(p_commandBuffers)
     {
-      p_commandBuffers.Add(commandBuffer);
+      p_commandBuffers.Add(commandBuffer); 
     }
 
     return commandBuffer;
@@ -180,7 +182,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     throw new NotImplementedException();
   }
 
-  public uint GetFormatBytesPerPixel(TextureFormat _format) => DX12Helpers.GetFormatSize(DX12Helpers.ConvertFormat(_format));
+  public uint GetFormatBytesPerPixel(TextureFormat _format) => _format.Convert().GetFormatSize();
 
   public SampleCountFlags GetSupportedSampleCounts(TextureFormat _textureFormat)
   {
@@ -452,7 +454,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   private void CreateFence()
   {
-    p_frameManager = new FrameFenceManager(p_device, p_frameCount);
+    p_frameManager = new DX12FrameFenceManager(p_device, p_frameCount);
   }
 
   private void WaitForFenceValue(IFence _fence, ulong _value)

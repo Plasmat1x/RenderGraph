@@ -1,3 +1,7 @@
+using Directx12Impl.Extensions;
+using Directx12Impl.Parts;
+using Directx12Impl.Tools;
+
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
@@ -180,7 +184,7 @@ public unsafe class DX12Texture: DX12Resource, ITexture
       Height = p_description.Height,
       DepthOrArraySize = (ushort)(p_description.Depth > 1 ? p_description.Depth : p_description.ArraySize),
       MipLevels = (ushort)p_description.MipLevels,
-      Format = DX12Helpers.ConvertFormat(p_description.Format),
+      Format = p_description.Format.Convert(),
       SampleDesc = new SampleDesc((uint)p_description.SampleCount, 0),
       Layout = TextureLayout.LayoutUnknown,
       Flags = GetResourceFlags()

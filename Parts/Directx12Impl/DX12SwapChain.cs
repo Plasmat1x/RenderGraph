@@ -1,3 +1,5 @@
+using Directx12Impl.Parts;
+
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
@@ -28,7 +30,7 @@ public unsafe class DX12SwapChain: ISwapChain
 
   private IDXGISwapChain3* p_swapChain;
   private DX12Texture[] p_backBuffers;
-  private DescriptorAllocation[] p_rtvAllocations;
+  private DX12DescriptorAllocation[] p_rtvAllocations;
   private uint p_currentBackBufferIndex;
   private bool p_disposed;
 
@@ -227,7 +229,7 @@ public unsafe class DX12SwapChain: ISwapChain
   private void CreateBackBufferResources()
   {
     p_backBuffers = new DX12Texture[p_description.BufferCount];
-    p_rtvAllocations = new DescriptorAllocation[p_description.BufferCount];
+    p_rtvAllocations = new DX12DescriptorAllocation[p_description.BufferCount];
 
     for(uint i = 0; i < p_description.BufferCount; i++)
     {

@@ -1,3 +1,6 @@
+using Directx12Impl.Parts;
+using Directx12Impl.Tools;
+
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;

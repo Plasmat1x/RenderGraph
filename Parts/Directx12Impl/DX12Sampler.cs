@@ -1,3 +1,7 @@
+using Directx12Impl.Extensions;
+using Directx12Impl.Parts;
+using Directx12Impl.Tools;
+
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
@@ -20,12 +24,12 @@ public class DX12Sampler: ISampler
   private readonly ComPtr<ID3D12Device> p_device;
   private readonly SamplerDescription p_description;
   private readonly SamplerDesc p_samplerDesc;
-  private readonly DescriptorAllocation p_allocation;
+  private readonly DX12DescriptorAllocation p_allocation;
   private bool p_disposed;
 
   public DX12Sampler(ComPtr<ID3D12Device>? _device,
     SamplerDescription _description, 
-    DescriptorAllocation _allocation)
+    DX12DescriptorAllocation _allocation)
   {
     p_device = _device ?? throw new ArgumentNullException(nameof(_device));
     p_description = _description ?? throw new ArgumentNullException(nameof(_description));
@@ -81,13 +85,13 @@ public class DX12Sampler: ISampler
         _desc.MipFilter,
         _desc.ComparisonFunction != ComparisonFunction.Never),
 
-      AddressU = DX12Helpers.ConvertAddressMode(_desc.AddressModeU),
-      AddressV = DX12Helpers.ConvertAddressMode(_desc.AddressModeV),
-      AddressW = DX12Helpers.ConvertAddressMode(_desc.AddressModeW),
+      AddressU = _desc.AddressModeU.Convert(),
+      AddressV = _desc.AddressModeV.Convert(),
+      AddressW = _desc.AddressModeW.Convert(),
 
       MipLODBias = _desc.LODBias,
       MaxAnisotropy = _desc.MaxAnisotropy,
-      ComparisonFunc = DX12Helpers.ConvertComparisonFunc(_desc.ComparisonFunction),
+      ComparisonFunc = _desc.ComparisonFunction.Convert(),
       MinLOD = _desc.MinLOD,
       MaxLOD = _desc.MaxLOD,
     };

@@ -5,6 +5,7 @@ using GraphicsAPI.Enums;
 using Resources.Enums;
 using Directx12Impl;
 using Resources;
+using Directx12Impl.Builders;
 
 namespace DX12RenderingExample;
 
@@ -25,8 +26,14 @@ public class RenderingExample
 
   public void Initialize(IntPtr windowHandle, uint width, uint height)
   {
+    bool debug = false;
+
+#if DEBUG
+    debug = true;
+#endif
+
     // 1. Создаем устройство
-    device = new DX12GraphicsDevice(true);
+    device = new DX12GraphicsDevice(debug);
 
     // 2. Создаем SwapChain
     var swapChainDesc = new SwapChainDescription
@@ -39,7 +46,7 @@ public class RenderingExample
       SwapEffect = SwapEffect.FlipDiscard
     };
 
-    //swapChain = device.CreateSwapChain(swapChainDesc, windowHandle) as DX12SwapChain;
+    swapChain = device.CreateSwapChain(swapChainDesc, windowHandle) as DX12SwapChain;
 
     // 3. Создаем Pipeline State используя builder
     simpleRenderState = new DX12PipelineStateBuilder(device, "SimplePipeline")
