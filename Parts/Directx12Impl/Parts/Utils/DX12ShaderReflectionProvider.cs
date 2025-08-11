@@ -49,17 +49,19 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
         Version = shaderDesc.Version,
         Creator = Marshal.PtrToStringAnsi((nint)shaderDesc.Creator),
         InstructionCount = shaderDesc.InstructionCount,
-        ShaderModel = GetShaderModelString(shaderDesc.Version)
+        ShaderModel = GetShaderModelString(shaderDesc.Version),
+        Stage = _stage
       };
 
       ParseConstantBuffers(reflector, shaderDesc.ConstantBuffers, reflection);
       ParseBoundResources(reflector, shaderDesc.BoundResources, reflection);
 
-      if(_stage == ShaderStage.Vertex)
-      {
-        ParseInputParameters(reflector, shaderDesc.InputParameters, reflection);
-      }
+      //if(_stage == ShaderStage.Vertex)
+      //{
+      //  ParseInputParameters(reflector, shaderDesc.InputParameters, reflection);
+      //}
 
+      ParseInputParameters(reflector, shaderDesc.InputParameters, reflection);
       ParseOutputParameters(reflector, shaderDesc.OutputParameters, reflection);
 
       if(_stage == ShaderStage.Compute)

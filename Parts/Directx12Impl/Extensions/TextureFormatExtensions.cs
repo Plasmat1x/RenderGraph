@@ -13,6 +13,7 @@ public static class TextureFormatExtensions
     TextureFormat.R32G32B32A32_FLOAT => Format.FormatR32G32B32A32Float,
     TextureFormat.R32G32B32A32_UINT => Format.FormatR32G32B32A32Uint,
     TextureFormat.R32G32B32A32_SINT => Format.FormatR32G32B32A32Sint,
+    TextureFormat.R32G32B32_FLOAT => Format.FormatR32G32B32Float,
     TextureFormat.R8G8B8A8_TYPELESS => Format.FormatR8G8B8A8Typeless,
     TextureFormat.R8G8B8A8_UNORM => Format.FormatR8G8B8A8Unorm,
     TextureFormat.R8G8B8A8_UNORM_SRGB => Format.FormatR8G8B8A8UnormSrgb,

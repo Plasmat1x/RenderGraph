@@ -9,6 +9,8 @@ using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
+using Microsoft.Extensions.Logging;
+
 using Resources;
 using Resources.Enums;
 
@@ -16,8 +18,10 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
+
+using Ultz.Extensions.Logging;
 
 namespace Directx12Impl;
 public unsafe class DX12GraphicsDevice: IGraphicsDevice
@@ -50,6 +54,10 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   private DX12PipelineStateCache p_pipelineStateCache;
   private DX12RootSignatureCache p_rootSignatureCache;
+
+  private ComPtr<ID3D12InfoQueue> p_infoQueue = default;
+  private Task p_infoPump;
+  private CancellationTokenSource p_infoPumpCancellationToken = new();
 
   private DeviceCapabilities p_capabilities;
   private bool p_immediateSync;
@@ -409,6 +417,9 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     WaitForGPU();
 
+    p_infoPumpCancellationToken.Cancel();
+    p_infoQueue.Dispose();
+
     p_frameManager?.Dispose();
     p_pipelineStateCache?.Dispose();
     p_rootSignatureCache?.Dispose();
@@ -463,6 +474,11 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     CreateDXGIFactory();
     CreateDevice();
+
+    var loggerProvider = new UltzLoggerProvider();
+
+    StartInfoPump(_enableDebugLayer, loggerProvider.CreateLogger("Directx12"));
+
     CreateCommandQueues();
 
     p_descriptorManager = new(p_device);
@@ -707,5 +723,83 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
       CommandBufferType.Copy => p_copyQueue,
       _ => p_directQueue
     };
+  }
+
+  /// <summary>
+  /// включение логера
+  /// </summary>
+  /// <exception cref="ArgumentOutOfRangeException"></exception>
+  private void StartInfoPump(bool _debug, ILogger _logger)
+  {
+    if(!_debug)
+    {
+      _logger.Log(LogLevel.Information, $"[{GetType().Name}]: Skipped creation of info pump due to the debug layer not being enabled.");
+      return;
+    }
+
+    HResult hr = p_device.QueryInterface(out p_infoQueue);
+    SilkMarshal.ThrowHResult(hr);
+
+    p_infoPump = Task.Factory.StartNew(() => {
+      _logger.Log(LogLevel.Information, $"[{GetType().Name}]: Info queue pump started");
+      while(!p_infoPumpCancellationToken.Token.IsCancellationRequested)
+      {
+        var numMessages = p_infoQueue.GetNumStoredMessages();
+        if(numMessages == 0)
+        {
+          continue;
+        }
+
+        for(var i = 0ul; i < numMessages; i++)
+        {
+          nuint msgByteLength;
+          SilkMarshal.ThrowHResult(p_infoQueue.Get().GetMessageA(i, null, &msgByteLength));
+          using var memory = GlobalMemory.Allocate((int)msgByteLength);
+          SilkMarshal.ThrowHResult(p_infoQueue.Get().GetMessageA(i, memory.AsPtr<Message>(), &msgByteLength));
+
+          ref var msg = ref memory.AsRef<Message>();
+          var descBytes = new Span<byte>(msg.PDescription, (int)msg.DescriptionByteLength);
+          var desc = Encoding.UTF8.GetString(descBytes[..^1]);
+          var eid = new EventId((int)msg.ID, msg.ID.ToString()["MessageID".Length..]);
+          var str = $"{msg.Category.ToString()} (From D3D12): {desc}";
+
+          switch(msg.Severity)
+          {
+            case MessageSeverity.Corruption:
+            {
+              _logger.LogCritical(eid, str);
+              break;
+            }
+            case MessageSeverity.Error:
+            {
+              _logger.LogError(eid, str);
+              break;
+            }
+            case MessageSeverity.Warning:
+            {
+              _logger.LogWarning(eid, str);
+              break;
+            }
+            case MessageSeverity.Info:
+            {
+              _logger.LogInformation(eid, str);
+              break;
+            }
+            case MessageSeverity.Message:
+            {
+              _logger.LogTrace(eid, str);
+              break;
+            }
+            default:
+              throw new ArgumentOutOfRangeException();
+          }
+        }
+
+        p_infoQueue.ClearStoredMessages();
+        p_infoQueue.Dispose();
+      }
+
+      _logger.Log(LogLevel.Information, "Info queue pump stopped");
+    }, p_infoPumpCancellationToken.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
   }
 }
