@@ -11,7 +11,7 @@ public static class DX12RootSignatureLayouts
   /// </summary>
   public static RootSignatureDesc1 CreateBasicGraphics0()
   {
-    using var builder = new _DX12RootSignatureDescBuilderEx()
+    using var builder = new DX12RootSignatureDescBuilderEx()
         .AllowInputAssemblerInputLayout()
         // b0 - View/Projection constants
         .AddRootCBV(0, 0, ShaderVisibility.Vertex)
@@ -26,7 +26,7 @@ public static class DX12RootSignatureLayouts
   /// </summary>
   public static RootSignatureDesc1 CreateBasicGraphics()
   {
-    using var builder = new _DX12RootSignatureDescBuilderEx()
+    using var builder = new DX12RootSignatureDescBuilderEx()
         .AllowInputAssemblerInputLayout()
         // b0 - View/Projection constants
         .AddRootCBV(0, 0, ShaderVisibility.Vertex)
@@ -45,7 +45,7 @@ public static class DX12RootSignatureLayouts
   /// </summary>
   public static RootSignatureDesc1 CreateBasicCompute()
   {
-    using var builder = new _DX12RootSignatureDescBuilderEx()
+    using var builder = new DX12RootSignatureDescBuilderEx()
         // b0 - Compute constants
         .AddRootCBV(0, 0)
         // t0-t7 - Input textures/buffers
@@ -61,7 +61,7 @@ public static class DX12RootSignatureLayouts
   /// </summary>
   public static RootSignatureDesc1 CreatePostProcess()
   {
-    using var builder = new _DX12RootSignatureDescBuilderEx()
+    using var builder = new DX12RootSignatureDescBuilderEx()
         // 16 32-bit constants directly in root signature
         .AddRoot32BitConstants(16, 0, 0, ShaderVisibility.Pixel)
         // t0 - Input texture

@@ -93,7 +93,7 @@ public unsafe class DX12RenderState: IRenderState
     if(p_pipelineDescription.ComputeShader != null)
     {
       var cs = p_pipelineDescription.ComputeShader as DX12Shader;
-      p_rootSignature = p_rootSignatureCache.GetOrCreateFromShaders(cs);
+      p_rootSignature = p_rootSignatureCache.GetDefaultComputeRootSignature();
       CreateComputePipelineState();
     }
     else
@@ -103,7 +103,7 @@ public unsafe class DX12RenderState: IRenderState
       var hs = p_pipelineDescription.HullShader as DX12Shader;
       var gs = p_pipelineDescription.GeometryShader as DX12Shader;
       var ds = p_pipelineDescription.DomainShader as DX12Shader;
-      p_rootSignature = p_rootSignatureCache.GetOrCreateFromShaders(vs, ps, hs, gs, ds);
+      p_rootSignature = p_rootSignatureCache.GetOrCreateFromShaderReflection(vs, ps, hs, gs, ds);
       CreateGraphicsPipelineState();
     }
   }
