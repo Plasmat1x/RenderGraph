@@ -60,78 +60,129 @@ public unsafe class DX12PipelineStateCache: IDisposable
     if(_key.VertexShader == null)
       throw new ArgumentException("Vertex shader is required");
 
-    DX12ShaderValidator.ValidatePipelineShaders(
-        _key.VertexShader,
-        _key.PixelShader,
-        _key.GeometryShader,
-        _key.HullShader,
-        _key.DomainShader);
-
-    var vsReflection = _key.VertexShader.GetReflection();
-    var inputLayout = InputLayoutDescription.FromReflection(vsReflection);
-
     var vs = _key.VertexShader;
     var ps = _key.PixelShader;
     var ds = _key.DomainShader;
     var hs = _key.HullShader;
     var gs = _key.GeometryShader;
 
-    if(vs == null)
-      throw new ArgumentException("Vertex shader is required for graphics pipeline");
+    DX12ShaderValidator.ValidatePipelineShaders(vs, ps, gs, hs, ds);
 
-    var inputElements = _key.PipelineStateDescription.InputLayout.Convert();
+    List<IntPtr> stringPointers = null;
+    InputElementDesc[] inputElements = null;
 
-    var psoDesc = new GraphicsPipelineStateDesc
+    try
     {
-      PRootSignature = _key.RootSignature,
-      VS = vs.GetD3D12Bytecode(),
-      PS = ps?.GetD3D12Bytecode() ?? default,
-      DS = ds?.GetD3D12Bytecode() ?? default,
-      HS = hs?.GetD3D12Bytecode() ?? default,
-      GS = gs?.GetD3D12Bytecode() ?? default,
-      StreamOutput = default, // TODO: Stream output support
-      BlendState = _key.RenderStateDescription.BlendState.Convert(),
-      SampleMask = _key.PipelineStateDescription.SampleMask,
-      RasterizerState = _key.RenderStateDescription.RasterizerState.Convert(),
-      DepthStencilState = _key.RenderStateDescription.DepthStencilState.Convert(),
-      InputLayout = new InputLayoutDesc
+      if(_key.PipelineStateDescription.InputLayout != null)
       {
-        PInputElementDescs = inputElements.Length > 0 ? (InputElementDesc*)SilkMarshal.Allocate(inputElements.Length) : null,
-        NumElements = (uint)inputElements.Length
-      },
-      IBStripCutValue = IndexBufferStripCutValue.ValueDisabled,
-      PrimitiveTopologyType = _key.PipelineStateDescription.PrimitiveTopology.Convert(),
-      NumRenderTargets = _key.PipelineStateDescription.RenderTargetCount,
-      DSVFormat = _key.PipelineStateDescription.DepthStencilFormat.Convert(),
-      SampleDesc = new SampleDesc
-      {
-        Count = _key.PipelineStateDescription.SampleCount,
-        Quality = _key.PipelineStateDescription.SampleQuality
-      },
-      NodeMask = 0,
-      Flags = PipelineStateFlags.None
-    };
-
-    for(var i = 0; i < 8; i++)
-    {
-      if(_key.PipelineStateDescription.RenderTargetFormats != null && i < _key.PipelineStateDescription.RenderTargetFormats.Length)
-      {
-        psoDesc.RTVFormats[i] = _key.PipelineStateDescription.RenderTargetFormats[i].Convert();
+        (inputElements, stringPointers) = _key.PipelineStateDescription.InputLayout.ConvertWithMemory();
       }
       else
       {
-        psoDesc.RTVFormats[i] = Format.FormatUnknown;
+        // Автоматическое создание из рефлексии
+        var vsReflection = vs.GetReflection();
+        var autoLayout = InputLayoutDescription.FromReflection(vsReflection);
+        (inputElements, stringPointers) = autoLayout.ConvertWithMemory();
+      }
+
+      // Создание PSO описания
+      var psoDesc = new GraphicsPipelineStateDesc
+      {
+        PRootSignature = _key.RootSignature.Handle,
+        VS = vs.GetD3D12Bytecode(),
+        PS = ps?.GetD3D12Bytecode() ?? default,
+        DS = ds?.GetD3D12Bytecode() ?? default,
+        HS = hs?.GetD3D12Bytecode() ?? default,
+        GS = gs?.GetD3D12Bytecode() ?? default,
+        StreamOutput = default,
+        BlendState = _key.RenderStateDescription.BlendState.Convert(),
+        SampleMask = _key.PipelineStateDescription.SampleMask,
+        RasterizerState = _key.RenderStateDescription.RasterizerState.Convert(),
+        DepthStencilState = _key.RenderStateDescription.DepthStencilState.Convert(),
+        InputLayout = default,
+        IBStripCutValue = IndexBufferStripCutValue.ValueDisabled,
+        PrimitiveTopologyType = _key.PipelineStateDescription.PrimitiveTopology.Convert(),
+        NumRenderTargets = _key.PipelineStateDescription.RenderTargetCount,
+        DSVFormat = _key.PipelineStateDescription.DepthStencilFormat.Convert(),
+        SampleDesc = new SampleDesc
+        {
+          Count = _key.PipelineStateDescription.SampleCount,
+          Quality = _key.PipelineStateDescription.SampleQuality
+        },
+        NodeMask = 0,
+        Flags = PipelineStateFlags.None
+      };
+
+      // Установка форматов render targets
+      for(var i = 0; i < 8; i++)
+      {
+        if(_key.PipelineStateDescription.RenderTargetFormats != null &&
+            i < _key.PipelineStateDescription.RenderTargetFormats.Length)
+        {
+          psoDesc.RTVFormats[i] = _key.PipelineStateDescription.RenderTargetFormats[i].Convert();
+        }
+        else
+        {
+          psoDesc.RTVFormats[i] = Format.FormatUnknown;
+        }
+      }
+
+      // Установка Input Layout
+      if(inputElements != null && inputElements.Length > 0)
+      {
+        fixed(InputElementDesc* pElements = inputElements)
+        {
+          psoDesc.InputLayout = new InputLayoutDesc
+          {
+            PInputElementDescs = pElements,
+            NumElements = (uint)inputElements.Length
+          };
+
+          // Создание PSO
+          ID3D12PipelineState* pipelineState;
+          fixed(Guid* pGuid = &ID3D12PipelineState.Guid)
+          {
+            HResult hr = p_device.CreateGraphicsPipelineState(&psoDesc, pGuid, (void**)&pipelineState);
+
+            if(hr.IsFailure)
+            {
+              // Попытка получить подробную информацию об ошибке
+              string errorDetails = GetPSOCreationErrorDetails(hr);
+              throw new InvalidOperationException(
+                  $"Failed to create graphics pipeline state: 0x{hr.Value:X8}\n{errorDetails}");
+            }
+          }
+
+          return pipelineState;
+        }
+      }
+      else
+      {
+        // Без Input Layout (редкий случай)
+        psoDesc.InputLayout = new InputLayoutDesc
+        {
+          PInputElementDescs = null,
+          NumElements = 0
+        };
+
+        ID3D12PipelineState* pipelineState;
+        fixed(Guid* pGuid = &ID3D12PipelineState.Guid)
+        {
+          var hr = p_device.CreateGraphicsPipelineState(&psoDesc, pGuid, (void**)&pipelineState);
+          DX12Helpers.ThrowIfFailed(hr, "Failed to create graphics pipeline state");
+        }
+
+        return pipelineState;
       }
     }
-
-    ID3D12PipelineState* pipelineState;
-    fixed(Guid* pGuid = &ID3D12PipelineState.Guid)
+    finally
     {
-      var hr = p_device.CreateGraphicsPipelineState(&psoDesc, pGuid, (void**)&pipelineState);
-      DX12Helpers.ThrowIfFailed(hr, "Failed to create graphics pipeline state");
+      // ВАЖНО: Освобождаем память выделенную для строк
+      if(stringPointers != null)
+      {
+        InputLayoutDescriptionExtensions.FreeStringPointers(stringPointers);
+      }
     }
-
-    return pipelineState;
   }
 
   private unsafe ID3D12PipelineState* CreateComputePSO(ComputePSOCacheKey _key)
@@ -185,5 +236,38 @@ public unsafe class DX12PipelineStateCache: IDisposable
     Clear();
 
     p_disposed = true;
+  }
+
+  private string GetPSOCreationErrorDetails(HResult _hr)
+  {
+    // Попытка получить более детальную информацию об ошибке
+    var errorMessage = new System.Text.StringBuilder();
+    errorMessage.AppendLine($"HRESULT: 0x{_hr.Value:X8}");
+
+    // Общие ошибки создания PSO
+    switch((uint)_hr.Value)
+    {
+      case 0x80070057: // E_INVALIDARG
+        errorMessage.AppendLine("Invalid argument. Check:");
+        errorMessage.AppendLine("- All shader stages are compatible");
+        errorMessage.AppendLine("- Input layout matches vertex shader");
+        errorMessage.AppendLine("- Render target formats are valid");
+        errorMessage.AppendLine("- Root signature matches shaders");
+        break;
+
+      case 0x887A0005: // DXGI_ERROR_DEVICE_REMOVED
+        errorMessage.AppendLine("Device was removed. GPU crash or TDR.");
+        break;
+
+      case 0x887A0001: // DXGI_ERROR_INVALID_CALL
+        errorMessage.AppendLine("Invalid call. Check PSO description parameters.");
+        break;
+
+      default:
+        errorMessage.AppendLine("Unknown error. Enable D3D12 debug layer for more info.");
+        break;
+    }
+
+    return errorMessage.ToString();
   }
 }

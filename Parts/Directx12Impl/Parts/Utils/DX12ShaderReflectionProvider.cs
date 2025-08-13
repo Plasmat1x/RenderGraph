@@ -55,12 +55,6 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
 
       ParseConstantBuffers(reflector, shaderDesc.ConstantBuffers, reflection);
       ParseBoundResources(reflector, shaderDesc.BoundResources, reflection);
-
-      //if(_stage == ShaderStage.Vertex)
-      //{
-      //  ParseInputParameters(reflector, shaderDesc.InputParameters, reflection);
-      //}
-
       ParseInputParameters(reflector, shaderDesc.InputParameters, reflection);
       ParseOutputParameters(reflector, shaderDesc.OutputParameters, reflection);
 
@@ -90,7 +84,7 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
 
       var cbInfo = new ConstantBufferInfo
       {
-        Name = Marshal.PtrToStringAnsi((nint)bufferDesc.Name),
+        Name = Marshal.PtrToStringAnsi((IntPtr)bufferDesc.Name),
         Size = bufferDesc.Size,
         BindPoint = i,
         BindCount = 1,
@@ -98,6 +92,7 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
         Variables = new List<ShaderVariableInfo>()
       };
 
+      // Парсинг переменных в константном буфере
       for(uint j = 0; j < bufferDesc.Variables; j++)
       {
         var varReflection = cbReflection->GetVariableByIndex(j);
@@ -105,12 +100,17 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
         ShaderVariableDesc varDesc;
         varReflection->GetDesc(&varDesc);
 
+        // Получаем тип переменной
+        var typeReflection = varReflection->GetType();
+        ShaderTypeDesc typeDesc;
+        typeReflection->GetDesc(&typeDesc);
+
         var varInfo = new ShaderVariableInfo
         {
-          Name = Marshal.PtrToStringAnsi((nint)varDesc.Name),
+          Name = Marshal.PtrToStringAnsi((IntPtr)varDesc.Name),
           Offset = varDesc.StartOffset,
           Size = varDesc.Size,
-          Type = ParseVariableType(Marshal.PtrToStringAnsi((nint)varDesc.DefaultValue))
+          Type = ConvertShaderVariableType(typeDesc.Type, typeDesc.Class)
         };
 
         cbInfo.Variables.Add(varInfo);
@@ -129,7 +129,7 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
 
       var resourceInfo = new ResourceBindingInfo
       {
-        Name = Marshal.PtrToStringAnsi((nint)bindDesc.Name),
+        Name = Marshal.PtrToStringAnsi((IntPtr)bindDesc.Name),
         Type = ConvertResourceType(bindDesc.Type),
         BindPoint = bindDesc.BindPoint,
         BindCount = bindDesc.BindCount,
@@ -137,6 +137,7 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
         ReturnType = ConvertReturnType(bindDesc.ReturnType)
       };
 
+      // Распределение по категориям
       switch(bindDesc.Type)
       {
         case D3DShaderInputType.D3DSitSampler:
@@ -162,6 +163,10 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
         case D3DShaderInputType.D3DSitUavRwstructuredWithCounter:
           _reflection.UnorderedAccessViews.Add(resourceInfo);
           break;
+
+        case D3DShaderInputType.D3DSitCbuffer:
+          // Константные буферы уже обработаны отдельно
+          break;
       }
     }
   }
@@ -175,7 +180,7 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
 
       var inputParam = new InputParameterInfo
       {
-        SemanticName = Marshal.PtrToStringAnsi((nint)paramDesc.SemanticName),
+        SemanticName = Marshal.PtrToStringAnsi((IntPtr)paramDesc.SemanticName),
         SemanticIndex = paramDesc.SemanticIndex,
         Register = paramDesc.Register,
         SystemValueType = ConvertSystemValue(paramDesc.SystemValueType),
@@ -197,7 +202,7 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
 
       var outputParam = new OutputParameterInfo
       {
-        SemanticName = Marshal.PtrToStringAnsi((nint)paramDesc.SemanticName),
+        SemanticName = Marshal.PtrToStringAnsi((IntPtr)paramDesc.SemanticName),
         SemanticIndex = paramDesc.SemanticIndex,
         Register = paramDesc.Register,
         SystemValueType = ConvertSystemValue(paramDesc.SystemValueType),
@@ -349,5 +354,37 @@ public class DX12ShaderReflectionProvider: ShaderReflectionProviderBase
       D3DRegisterComponentType.D3DRegisterComponentFloat32 => RegisterComponentType.Float32,
       _ => RegisterComponentType.Unknown
     };
+  }
+
+  private ShaderVariableType ConvertShaderVariableType(D3DShaderVariableType _type, D3DShaderVariableClass _class)
+  {
+    if(_class == D3DShaderVariableClass.D3DSvcScalar)
+    {
+      return _type switch
+      {
+        D3DShaderVariableType.D3DSvtBool => ShaderVariableType.Bool,
+        D3DShaderVariableType.D3DSvtInt => ShaderVariableType.Int,
+        D3DShaderVariableType.D3DSvtFloat => ShaderVariableType.Float,
+        D3DShaderVariableType.D3DSvtUint => ShaderVariableType.UInt,
+        _ => ShaderVariableType.Void
+      };
+    }
+    else if(_class == D3DShaderVariableClass.D3DSvcVector)
+    {
+      return _type switch
+      {
+        D3DShaderVariableType.D3DSvtFloat => ShaderVariableType.Float4, // Упрощение
+        D3DShaderVariableType.D3DSvtInt => ShaderVariableType.Int4,
+        D3DShaderVariableType.D3DSvtUint => ShaderVariableType.UInt4,
+        _ => ShaderVariableType.Float4
+      };
+    }
+    else if(_class == D3DShaderVariableClass.D3DSvcMatrixRows ||
+             _class == D3DShaderVariableClass.D3DSvcMatrixColumns)
+    {
+      return ShaderVariableType.Float4x4; // Упрощение для матриц
+    }
+
+    return ShaderVariableType.Void;
   }
 }
