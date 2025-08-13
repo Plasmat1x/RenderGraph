@@ -70,7 +70,7 @@ public partial class DX12RootSignatureCache: IDisposable
   public ComPtr<ID3D12RootSignature> GetOrCreateFromShaderReflection(
     params DX12Shader[] _shaders)
   {
-    var builder = new DX12RootSignatureDescBuilderEx();
+    var builder = new DX12RootSignatureDescBuilder();
 
     var cbSlots = new HashSet<uint>();
     var srvSlots = new HashSet<uint>();
