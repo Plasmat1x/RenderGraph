@@ -58,6 +58,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockShaderReflection", "Exa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DX12RenderingExample", "Examples\DX12RenderingExample\DX12RenderingExample.csproj", "{13415754-52AB-4527-9AAB-9A96743003BB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DX12ShaderCompilation", "Examples\DX12ShaderCompilation\DX12ShaderCompilation.csproj", "{F86666F9-717B-4177-A0C3-AC52DE355913}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -116,6 +118,10 @@ Global
 		{13415754-52AB-4527-9AAB-9A96743003BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{13415754-52AB-4527-9AAB-9A96743003BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{13415754-52AB-4527-9AAB-9A96743003BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F86666F9-717B-4177-A0C3-AC52DE355913}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F86666F9-717B-4177-A0C3-AC52DE355913}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F86666F9-717B-4177-A0C3-AC52DE355913}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F86666F9-717B-4177-A0C3-AC52DE355913}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -137,6 +143,7 @@ Global
 		{04F7940D-1FB5-4385-B746-CE4D6822B011} = {FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE}
 		{A5F1CC99-355D-75DF-44B1-D2644298ED93} = {FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE}
 		{13415754-52AB-4527-9AAB-9A96743003BB} = {FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE}
+		{F86666F9-717B-4177-A0C3-AC52DE355913} = {FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {376DA86B-0E5C-4A57-9198-A072E5FD6F04}

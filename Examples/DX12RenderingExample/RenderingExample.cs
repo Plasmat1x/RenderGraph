@@ -47,7 +47,7 @@ public class RenderingExample
     simpleRenderState = new DX12PipelineStateBuilder(device, "SimplePipeline")
         .WithVertexShader("Shaders/Simple.vs.hlsl")
         .WithPixelShader("Shaders/Simple.ps.hlsl")
-        .WithAutoInputLayout()
+        .WithInputLayout(CreateSimpleInputLayout())
         .WithDefaultStates()
         .WithRenderTargets(TextureFormat.R8G8B8A8_UNORM)
         .WithDepthStencilFormat(TextureFormat.D32_FLOAT)
@@ -234,4 +234,35 @@ public class RenderingExample
     swapChain?.Dispose();
     device?.Dispose();
   }
+
+  private static InputLayoutDescription CreateSimpleInputLayout()
+  {
+    return new InputLayoutDescription
+    {
+      Elements = new List<InputElementDescription>
+        {
+            new InputElementDescription
+            {
+                SemanticName = "POSITION",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32B32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 0,
+                InputSlotClass = InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            },
+            new InputElementDescription
+            {
+                SemanticName = "COLOR",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32B32A32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 12, // sizeof(float3)
+                InputSlotClass = InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            }
+        }
+    };
+  }
+
 }

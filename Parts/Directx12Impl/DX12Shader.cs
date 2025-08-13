@@ -48,8 +48,17 @@ public unsafe class DX12Shader: IShader
       if(_desc.FilePath.EndsWith(".hlsl", StringComparison.OrdinalIgnoreCase))
       {
         var sourceCode = File.ReadAllText(_desc.FilePath);
-        var tempDesc = _desc.Clone() as ShaderDescription;
-        tempDesc.SourceCode = sourceCode;
+        var tempDesc = new ShaderDescription
+        {
+          Name = _desc.Name,
+          Stage = _desc.Stage,
+          SourceCode = sourceCode,
+          EntryPoint = _desc.EntryPoint,
+          ShaderModel = _desc.ShaderModel,
+          CompileFlags = _desc.CompileFlags,
+          Defines = _desc.Defines,
+          IncludePaths = _desc.IncludePaths
+        };
         p_bytecode = CompileFromSource(tempDesc);
         p_description = tempDesc;
       }
@@ -211,13 +220,19 @@ public unsafe class DX12Shader: IShader
     try
     {
       D3DShaderMacro* macros = null;
+      List<IntPtr> macroPointers = new();
+
       if(_desc.Defines != null && _desc.Defines.Count > 0)
       {
-        var macroArray = stackalloc D3DShaderMacro[_desc.Defines.Count + 1];
+        var macroArray = (D3DShaderMacro*)Marshal.AllocHGlobal(sizeof(D3DShaderMacro) * (_desc.Defines.Count + 1));
+
         for(int i = 0; i < _desc.Defines.Count; i++)
         {
           var namePtr = Marshal.StringToHGlobalAnsi(_desc.Defines[i].Name);
           var defPtr = Marshal.StringToHGlobalAnsi(_desc.Defines[i].Definition);
+
+          macroPointers.Add(namePtr);
+          macroPointers.Add(defPtr);
 
           macroArray[i] = new D3DShaderMacro
           {
@@ -225,15 +240,21 @@ public unsafe class DX12Shader: IShader
             Definition = (byte*)defPtr
           };
         }
-        macroArray[_desc.Defines.Count] = new D3DShaderMacro { Name = null, Definition = null };
+
+        macroArray[_desc.Defines.Count] = new D3DShaderMacro
+        {
+          Name = null,
+          Definition = null
+        };
+
         macros = macroArray;
       }
 
       var sourceBytes = Encoding.UTF8.GetBytes(_desc.SourceCode);
       fixed(byte* pSource = sourceBytes)
-      fixed(byte* pEntryPoint = Encoding.UTF8.GetBytes(entryPoint))
-      fixed(byte* pTarget = Encoding.UTF8.GetBytes(target))
-      fixed(byte* pSourceName = Encoding.UTF8.GetBytes(_desc.Name ?? "shader"))
+      fixed(byte* pEntryPoint = Encoding.UTF8.GetBytes(entryPoint + "\0"))
+      fixed(byte* pTarget = Encoding.UTF8.GetBytes(target + "\0"))
+      fixed(byte* pSourceName = Encoding.UTF8.GetBytes((_desc.Name ?? "shader") + "\0"))
       {
         HResult hr = s_compiler.Compile( 
             pSource,
@@ -266,6 +287,16 @@ public unsafe class DX12Shader: IShader
       var bytecode = new byte[codeSize];
       Marshal.Copy((IntPtr)codePtr, bytecode, 0, (int)codeSize);
 
+      foreach(var ptr in macroPointers)
+      {
+        Marshal.FreeHGlobal(ptr);
+      }
+
+      if(macros != null)
+      {
+        Marshal.FreeHGlobal((IntPtr)macros);
+      }
+
       return bytecode;
     }
     finally
@@ -293,7 +324,14 @@ public unsafe class DX12Shader: IShader
     catch(Exception ex)
     {
       Console.WriteLine($"Warning: Failed to create reflection for shader '{Name}': {ex.Message}");
-      p_reflection = new ShaderReflection();
+      p_reflection = new ShaderReflection
+      {
+        Info = new ShaderInfo
+        {
+          Stage = p_stage,
+          ShaderModel = "Unknown"
+        }
+      };
     }
   }
 

@@ -92,12 +92,18 @@ public unsafe class DX12RenderState: IRenderState
   {
     if(p_pipelineDescription.ComputeShader != null)
     {
+      var cs = p_pipelineDescription.ComputeShader as DX12Shader;
       p_rootSignature = p_rootSignatureCache.GetDefaultComputeRootSignature();
       CreateComputePipelineState();
     }
     else
     {
-      p_rootSignature = p_rootSignatureCache.GetOrCreateFromShaderReflection();
+      var vs = p_pipelineDescription.VertexShader as DX12Shader;
+      var ps = p_pipelineDescription.PixelShader as DX12Shader;
+      var hs = p_pipelineDescription.HullShader as DX12Shader;
+      var gs = p_pipelineDescription.GeometryShader as DX12Shader;
+      var ds = p_pipelineDescription.DomainShader as DX12Shader;
+      p_rootSignature = p_rootSignatureCache.GetOrCreateFromShaderReflection(vs, ps, hs, gs, ds);
       CreateGraphicsPipelineState();
     }
   }

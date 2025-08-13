@@ -1,3 +1,5 @@
+using Directx12Impl.Parts.Utils;
+
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Extensions;
@@ -76,6 +78,15 @@ public class DX12PipelineStateBuilder
       throw new InvalidOperationException("Vertex shader must be set before auto input layout");
 
     var reflection = p_pipelineDesc.VertexShader.GetReflection();
+
+    if(reflection?.InputParameters == null || reflection.InputParameters.Count == 0)
+    {
+      Console.WriteLine("Warning: No input parameters found in shader reflection, using fallback layout");
+      // Используем предопределенный layout
+      p_pipelineDesc.InputLayout = CreateSimpleInputLayout();
+      return this;
+    }
+
     var inputLayout = new InputLayoutDescription();
 
     uint offset = 0;
@@ -280,6 +291,37 @@ public class DX12PipelineStateBuilder
   }
 
   // === Helper methods ===
+
+  private static InputLayoutDescription CreateSimpleInputLayout()
+  {
+    return new InputLayoutDescription
+    {
+      Elements = new List<InputElementDescription>
+        {
+            new InputElementDescription
+            {
+                SemanticName = "POSITION",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32B32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 0,
+                InputSlotClass = GraphicsAPI.Enums.InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            },
+            new InputElementDescription
+            {
+                SemanticName = "COLOR",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32B32A32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 12, // sizeof(float3)
+                InputSlotClass = GraphicsAPI.Enums.InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            }
+        }
+    };
+  }
+
   private TextureFormat GetFormatFromMask(byte _mask, RegisterComponentType _componentType)
   {
     var componentCount = 0;
