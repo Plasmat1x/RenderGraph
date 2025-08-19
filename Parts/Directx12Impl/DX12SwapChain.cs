@@ -323,4 +323,9 @@ public unsafe class DX12SwapChain: ISwapChain
     p_swapChain = swapChain3;
     p_currentBackBufferIndex = p_swapChain->GetCurrentBackBufferIndex();
   }
+
+  public DX12Texture GetCurrentBackBuffer()
+  {
+    throw new NotImplementedException();
+  }
 }

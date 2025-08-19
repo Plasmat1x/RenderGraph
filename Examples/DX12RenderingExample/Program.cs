@@ -16,28 +16,37 @@ public static class Program
 {
   public static void Main(string[] args)
   {
-    var opts = new WindowOptions
+    Console.WriteLine("🚀 Starting DX12 Rendering Example...");
+
+    var example = new RenderingExample();
+
+    try
     {
-      API = Silk.NET.Windowing.GraphicsAPI.Default,
-      Size = new Vector2D<int>(800, 600),
-      Position = new Vector2D<int>(200, 200),
-      IsVisible = true,
-      TopMost = false,
-      WindowBorder = WindowBorder.Resizable,
-      WindowState = WindowState.Normal,
-      Title = "Hello"
-    };
+      // Для демонстрации используем заглушку окна
+      var mockWindowHandle = IntPtr.Zero; // В реальной реализации здесь был бы HWND
 
-    var window = Window.Create(opts);
+      example.Initialize(mockWindowHandle, 1920, 1080);
 
-    var example = new DX12RenderingExample.RenderingExample();
+      // Демонстрируем возможности
+      example.DemonstrateBatchUpload();
+      example.DemonstrateReadback();
 
-    window.Load += () => example.Initialize(window.Native.DXHandle.GetValueOrDefault(), 800, 600);
-    window.Render += (dt) => example.Render();
-    window.Closing += () => example.Cleanup();
-    window.Resize += (sz) => { };
-    window.Update += (dt) => { };
+      // В реальном приложении здесь был бы render loop
+      Console.WriteLine("\n🎮 Render loop would start here...");
+      Console.WriteLine("Press any key to cleanup and exit...");
+      Console.ReadKey();
 
-    window.Run();
+    }
+    catch(Exception ex)
+    {
+      Console.WriteLine($"❌ Error: {ex.Message}");
+      Console.WriteLine($"Stack trace: {ex.StackTrace}");
+    }
+    finally
+    {
+      example.Cleanup();
+    }
+
+    Console.WriteLine("👋 Example completed!");
   }
 }

@@ -1,4 +1,5 @@
 // <summary>
+using Directx12Impl.Parts;
 using Directx12Impl.Parts.Utils;
 
 using Silk.NET.Core.Native;
@@ -97,6 +98,8 @@ public unsafe class DX12UploadHeapManager: IDisposable
     }
   }
 
+
+
   /// <summary>
   /// Загрузить данные текстуры
   /// </summary>
@@ -190,6 +193,231 @@ public unsafe class DX12UploadHeapManager: IDisposable
     return buffer;
   }
 
+  /// <summary>
+  /// Загрузить данные в регион текстуры
+  /// </summary>
+  public void UploadTextureDataRegion(
+      ID3D12GraphicsCommandList* _commandList,
+      ID3D12Resource* _destinationTexture,
+      uint _subresource,
+      void* _data,
+      ulong _dataSize,
+      uint _x, uint _y, uint _z,
+      uint _rowPitch)
+  {
+    var uploadBuffer = AcquireBuffer(_dataSize);
+
+    try
+    {
+      uploadBuffer.WriteData(_data, _dataSize, 0);
+
+      var destLocation = new TextureCopyLocation
+      {
+        PResource = _destinationTexture,
+        Type = TextureCopyType.SubresourceIndex,
+        SubresourceIndex = _subresource
+      };
+
+      var srcLocation = new TextureCopyLocation
+      {
+        PResource = uploadBuffer.Resource,
+        Type = TextureCopyType.PlacedFootprint,
+        PlacedFootprint = new PlacedSubresourceFootprint
+        {
+          Offset = 0,
+          Footprint = new SubresourceFootprint
+          {
+            Format = GetTextureFormat(_destinationTexture),
+            Width = GetTextureWidth(_destinationTexture),
+            Height = GetTextureHeight(_destinationTexture),
+            Depth = 1,
+            RowPitch = _rowPitch
+          }
+        }
+      };
+
+      var srcBox = new Box
+      {
+        Left = 0,
+        Top = 0,
+        Front = 0,
+        Right = srcLocation.PlacedFootprint.Footprint.Width,
+        Bottom = srcLocation.PlacedFootprint.Footprint.Height,
+        Back = 1
+      };
+
+      _commandList->CopyTextureRegion(&destLocation, _x, _y, _z, &srcLocation, &srcBox);
+    }
+    finally
+    {
+      ReleaseBuffer(uploadBuffer);
+    }
+  }
+
+  /// <summary>
+  /// Пакетная загрузка множественных регионов
+  /// </summary>
+  public void UploadMultipleTextureRegions(
+      ID3D12GraphicsCommandList* _commandList,
+      TextureUploadBatch[] _uploads)
+  {
+    if(_uploads == null || _uploads.Length == 0)
+      return;
+
+    // Вычисляем общий размер всех данных
+    ulong totalSize = 0;
+    foreach(var upload in _uploads)
+    {
+      totalSize += upload.DataSize;
+    }
+
+    var uploadBuffer = AcquireBuffer(totalSize);
+
+    try
+    {
+      ulong currentOffset = 0;
+
+      foreach(var upload in _uploads)
+      {
+        uploadBuffer.WriteData(upload.Data, upload.DataSize, currentOffset);
+
+        var destLocation = new TextureCopyLocation
+        {
+          PResource = upload.DestinationTexture,
+          Type = TextureCopyType.SubresourceIndex,
+          SubresourceIndex = upload.Subresource
+        };
+
+        var srcLocation = new TextureCopyLocation
+        {
+          PResource = uploadBuffer.Resource,
+          Type = TextureCopyType.PlacedFootprint,
+          PlacedFootprint = new PlacedSubresourceFootprint
+          {
+            Offset = currentOffset,
+            Footprint = upload.Footprint
+          }
+        };
+
+        var srcBox = new Box
+        {
+          Left = 0,
+          Top = 0,
+          Front = 0,
+          Right = upload.Width,
+          Bottom = upload.Height,
+          Back = upload.Depth
+        };
+
+        _commandList->CopyTextureRegion(&destLocation,
+            upload.X, upload.Y, upload.Z, &srcLocation, &srcBox);
+
+        currentOffset += upload.DataSize;
+      }
+    }
+    finally
+    {
+      ReleaseBuffer(uploadBuffer);
+    }
+  }
+
+  /// <summary>
+  /// Оптимизированная загрузка для мип-цепей
+  /// </summary>
+  public void UploadMipChain(
+      ID3D12GraphicsCommandList* _commandList,
+      ID3D12Resource* _destinationTexture,
+      MipLevelData[] _mipData)
+  {
+    if(_mipData == null || _mipData.Length == 0)
+      return;
+
+    // Вычисляем общий размер всех мип-уровней
+    ulong totalSize = 0;
+    foreach(var mip in _mipData)
+    {
+      totalSize += mip.DataSize;
+    }
+
+    var uploadBuffer = AcquireBuffer(totalSize);
+
+    try
+    {
+      ulong currentOffset = 0;
+
+      for(uint mipLevel = 0; mipLevel < _mipData.Length; mipLevel++)
+      {
+        var mip = _mipData[mipLevel];
+
+        // Записываем данные мип-уровня
+        uploadBuffer.WriteData(mip.Data, mip.DataSize, currentOffset);
+
+        // Для каждого array slice
+        for(uint arraySlice = 0; arraySlice < mip.ArraySize; arraySlice++)
+        {
+          var subresource = CalculateSubresourceIndex(mipLevel, arraySlice, (uint)_mipData.Length);
+
+          var destLocation = new TextureCopyLocation
+          {
+            PResource = _destinationTexture,
+            Type = TextureCopyType.SubresourceIndex,
+            SubresourceIndex = subresource
+          };
+
+          var srcLocation = new TextureCopyLocation
+          {
+            PResource = uploadBuffer.Resource,
+            Type = TextureCopyType.PlacedFootprint,
+            PlacedFootprint = new PlacedSubresourceFootprint
+            {
+              Offset = currentOffset + arraySlice * mip.SlicePitch,
+              Footprint = new SubresourceFootprint
+              {
+                Format = mip.Format,
+                Width = mip.Width,
+                Height = mip.Height,
+                Depth = mip.Depth,
+                RowPitch = mip.RowPitch
+              }
+            }
+          };
+
+          _commandList->CopyTextureRegion(&destLocation, 0, 0, 0, &srcLocation, null);
+        }
+
+        currentOffset += mip.DataSize;
+      }
+    }
+    finally
+    {
+      ReleaseBuffer(uploadBuffer);
+    }
+  }
+
+  /// <summary>
+  /// Создать оптимальный upload buffer для конкретной операции
+  /// </summary>
+  public DX12UploadBuffer AcquireOptimalBuffer(ulong _requiredSize, UploadBufferType _type)
+  {
+    lock(p_lock)
+    {
+      var suitableBuffers = p_availableBuffers.Where(b =>
+          b.Size >= _requiredSize &&
+          b.Type == _type).OrderBy(b => b.Size);
+
+      var buffer = suitableBuffers.FirstOrDefault();
+      if(buffer != null)
+      {
+        p_availableBuffers.Remove(buffer);
+        buffer.Reset();
+        return buffer;
+      }
+
+      var optimalSize = GetOptimalBufferSize(_requiredSize, _type);
+      return CreateUploadBuffer(optimalSize, _type);
+    }
+  }
+
   private ulong GetOptimalBufferSize(ulong _requiredSize)
   {
     if(_requiredSize <= SMALL_BUFFER_SIZE)
@@ -236,5 +464,45 @@ public unsafe class DX12UploadHeapManager: IDisposable
     }
 
     p_disposed = true;
+  }
+
+
+  // === Вспомогательные методы ===
+
+  private ulong GetOptimalBufferSize(ulong _requiredSize, UploadBufferType _type)
+  {
+    return _type switch
+    {
+      UploadBufferType.Small => Math.Max(_requiredSize, SMALL_BUFFER_SIZE),
+      UploadBufferType.Medium => Math.Max(_requiredSize, MEDIUM_BUFFER_SIZE),
+      UploadBufferType.Large => Math.Max(_requiredSize, LARGE_BUFFER_SIZE),
+      UploadBufferType.Texture => AlignToTextureRequirements(_requiredSize),
+      UploadBufferType.Buffer => AlignToBufferRequirements(_requiredSize),
+      _ => Math.Max(_requiredSize, MEDIUM_BUFFER_SIZE)
+    };
+  }
+
+  private ulong AlignToTextureRequirements(ulong _size)
+  {
+    const ulong TEXTURE_ALIGNMENT = 512;
+    return (_size + TEXTURE_ALIGNMENT - 1) & ~(TEXTURE_ALIGNMENT - 1);
+  }
+
+  private ulong AlignToBufferRequirements(ulong _size)
+  {
+    const ulong BUFFER_ALIGNMENT = 256;
+    return (_size + BUFFER_ALIGNMENT - 1) & ~(BUFFER_ALIGNMENT - 1);
+  }
+
+  private uint CalculateSubresourceIndex(uint _mipLevel, uint _arraySlice, uint _mipLevels)
+  {
+    return _mipLevel + _arraySlice * _mipLevels;
+  }
+
+  private DX12UploadBuffer CreateUploadBuffer(ulong _size, UploadBufferType _type)
+  {
+    var buffer = CreateUploadBuffer(_size);
+    buffer.Type = _type;
+    return buffer;
   }
 }
