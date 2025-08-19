@@ -39,6 +39,14 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   private ComPtr<ID3D12CommandQueue> p_computeQueue;
   private ComPtr<ID3D12CommandQueue> p_copyQueue;
 
+  private ComPtr<ID3D12CommandAllocator> p_uploadCommandAllocator;
+  private ComPtr<ID3D12GraphicsCommandList> p_uploadCommandList;
+  private ComPtr<ID3D12Fence> p_uploadFence;
+  private ulong p_uploadFenceValue = 0;
+  private readonly object p_uploadLock = new();
+  private bool p_uploadInProgress = false;
+  private AutoResetEvent p_waitEvent;
+
   private uint p_rtvDescriptorSize;
   private uint p_dsvDescriptorSize;
   private uint p_cbvSrvUavDescriptorSize;
@@ -130,8 +138,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     return commandBuffer;
   }
-
-  // === Публичные методы для загрузки данных(скрывают command list) ===
 
   /// <summary>
   /// Загрузить данные в буфер (внутренний метод для DX12Buffer)
@@ -410,6 +416,44 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     WaitForFenceValue(_fence, _value);
   }
 
+
+  /// <summary>
+  /// Map буфер для записи CPU данных
+  /// </summary>
+  public IntPtr MapBuffer(DX12Buffer _buffer, MapMode _mode = MapMode.Write)
+  {
+    if(_buffer == null)
+      throw new ArgumentNullException(nameof(_buffer));
+
+    if(_buffer.Description.Usage != ResourceUsage.Dynamic &&
+       _buffer.Description.Usage != ResourceUsage.Staging)
+    {
+      throw new InvalidOperationException(
+          "Only Dynamic and Staging buffers can be mapped");
+    }
+
+    void* mappedData;
+    var range = new Silk.NET.Direct3D12.Range { Begin = 0, End = 0 }; // Весь буфер
+
+    var hr = _buffer.GetResource()->Map(0, &range, &mappedData);
+    DX12Helpers.ThrowIfFailed(hr, "Failed to map buffer");
+
+    return new IntPtr(mappedData);
+  }
+
+  /// <summary>
+  /// Unmap буфер
+  /// </summary>
+  public void UnmapBuffer(DX12Buffer _buffer)
+  {
+    if(_buffer == null)
+      throw new ArgumentNullException(nameof(_buffer));
+
+    var range = new Silk.NET.Direct3D12.Range { Begin = 0, End = 0 };
+    _buffer.GetResource()->Unmap(0, &range);
+  }
+
+
   public unsafe void Dispose()
   {
     if(p_disposed)
@@ -439,14 +483,54 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     p_disposed = true;
   }
 
-  private void EndResourceUpload(bool v)
+  private void EndResourceUpload(bool _waitForCompletion)
   {
-    throw new NotImplementedException();
+    lock(p_uploadLock)
+    {
+      if(!p_uploadInProgress)
+        throw new InvalidOperationException("No upload in progress");
+
+      try
+      {
+        var hr = p_uploadCommandList.Close();
+        DX12Helpers.ThrowIfFailed(hr, "Failed to close upload command list");
+
+        ID3D12CommandList* commandLists = (ID3D12CommandList*)p_uploadCommandList.GetAddressOf();
+        p_directQueue.ExecuteCommandLists(1, &commandLists);
+
+        p_uploadFenceValue++;
+        hr = p_directQueue.Signal(p_uploadFence, p_uploadFenceValue);
+        DX12Helpers.ThrowIfFailed(hr, "Failed to signal upload fence");
+
+        if(_waitForCompletion)
+        {
+          WaitForUploadCompletion();
+        }
+      }
+      finally
+      {
+        p_uploadInProgress = false;
+      }
+    }
   }
 
   private ID3D12GraphicsCommandList* BeginResourceUpload()
   {
-    throw new NotImplementedException();
+    lock(p_uploadLock)
+    {
+      if(p_uploadInProgress)
+        throw new InvalidOperationException("Upload already in progress");
+
+      var hr = p_uploadCommandAllocator.Reset();
+      DX12Helpers.ThrowIfFailed(hr, "Failed to reset upload command allocator");
+
+      hr = p_uploadCommandList.Reset(p_uploadCommandAllocator, (ID3D12PipelineState*)null);
+      DX12Helpers.ThrowIfFailed(hr, "Failed to reset upload command list");
+
+      p_uploadInProgress = true;
+
+      return p_uploadCommandList;
+    }
   }
 
   /// <summary>
@@ -801,5 +885,256 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
       _logger.Log(LogLevel.Information, "Info queue pump stopped");
     }, p_infoPumpCancellationToken.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+  }
+
+  private void InitializeUploadSystem()
+  {
+    HResult hr = p_device.CreateCommandAllocator(
+        CommandListType.Direct,
+        out p_uploadCommandAllocator);
+    DX12Helpers.ThrowIfFailed(hr, "Failed to create upload command allocator");
+
+    ComPtr<ID3D12PipelineState> p_pipelineState = default;
+
+    hr = p_device.CreateCommandList(
+        0,
+        CommandListType.Direct,
+        p_uploadCommandAllocator,
+        p_pipelineState,
+        out p_uploadCommandList);
+
+    DX12Helpers.ThrowIfFailed(hr, "Failed to create upload command list");
+
+    p_uploadCommandList.Close();
+
+    hr = p_device.CreateFence(0, FenceFlags.None, out p_uploadFence);
+    DX12Helpers.ThrowIfFailed(hr, "Failed to create upload fence");
+    p_waitEvent = new AutoResetEvent(false);
+  }
+
+  public void DisposeUploadSystem()
+  {
+    if(p_uploadInProgress)
+    {
+      try
+      {
+        WaitForUploadCompletion();
+      }
+      catch
+      {
+
+      }
+    }
+
+    p_uploadFence.Dispose();
+    p_uploadCommandList.Dispose();
+    p_uploadCommandAllocator.Dispose();
+  }
+
+  private void WaitForUploadCompletion()
+  {
+    if(p_uploadFence.GetCompletedValue() < p_uploadFenceValue)
+    {
+      try
+      {
+        var hr = p_uploadFence.SetEventOnCompletion(p_uploadFenceValue, (void*)p_waitEvent.SafeWaitHandle.DangerousGetHandle());
+        DX12Helpers.ThrowIfFailed(hr, "Failed to set fence event");
+
+        p_waitEvent.WaitOne(int.MaxValue);
+      }
+      finally
+      {
+        p_waitEvent.Close();
+      }
+    }
+  }
+
+  /// <summary>
+  /// Копировать данные из основного буфера в staging buffer для readback
+  /// </summary>
+  internal void CopyBufferToStaging(DX12Buffer _source, DX12Buffer _staging,
+      ulong _sourceOffset, ulong _stagingOffset, ulong _size)
+  {
+    var commandList = BeginResourceUpload();
+
+    try
+    {
+      var sourceBarrier = new ResourceBarrier
+      {
+        Type = ResourceBarrierType.Transition,
+        Transition = new ResourceTransitionBarrier
+        {
+          PResource = _source.GetResource(),
+          StateBefore = _source.GetCurrentState(),
+          StateAfter = ResourceStates.CopySource,
+          Subresource = D3D12.ResourceBarrierAllSubresources
+        }
+      };
+
+      var stagingBarrier = new ResourceBarrier
+      {
+        Type = ResourceBarrierType.Transition,
+        Transition = new ResourceTransitionBarrier
+        {
+          PResource = _staging.GetResource(),
+          StateBefore = _staging.GetCurrentState(),
+          StateAfter = ResourceStates.CopyDest,
+          Subresource = D3D12.ResourceBarrierAllSubresources
+        }
+      };
+
+      var barriers = stackalloc ResourceBarrier[2];
+      barriers[0] = sourceBarrier;
+      barriers[1] = stagingBarrier;
+
+      commandList->ResourceBarrier(2, barriers);
+
+      commandList->CopyBufferRegion(
+          _staging.GetResource(),
+          _stagingOffset,
+          _source.GetResource(),
+          _sourceOffset,
+          _size);
+
+      sourceBarrier.Transition.StateBefore = ResourceStates.CopySource;
+      sourceBarrier.Transition.StateAfter = _source.GetCurrentState();
+      stagingBarrier.Transition.StateBefore = ResourceStates.CopyDest;
+      stagingBarrier.Transition.StateAfter = _staging.GetCurrentState();
+
+      commandList->ResourceBarrier(2, barriers);
+    }
+    finally
+    {
+      EndResourceUpload(true);
+    }
+  }
+
+  /// <summary>
+  /// Загрузить данные в регион текстуры
+  /// </summary>
+  internal void UploadTextureDataRegion<T>(DX12Texture texture, T[] data,
+      uint mipLevel, uint arraySlice, uint x, uint y, uint z,
+      uint width, uint height, uint depth) where T : unmanaged
+  {
+    var commandList = BeginResourceUpload();
+
+    try
+    {
+      fixed(T* pData = data)
+      {
+        texture.SetDataRegionInternal(commandList, pData, data.Length * sizeof(T),
+            mipLevel, arraySlice, x, y, z, width, height, depth);
+      }
+
+      EndResourceUpload(true);
+    }
+    catch
+    {
+      EndResourceUpload(false);
+      throw;
+    }
+  }
+
+  /// <summary>
+  /// Читать данные из текстуры
+  /// </summary>
+  internal void ReadbackTextureData<T>(DX12Texture _texture, T[] _result,
+      uint _mipLevel, uint _arraySlice) where T : unmanaged
+  {
+    // Создаем staging текстуру
+    var stagingDesc = _texture.Description.Clone() as TextureDescription;
+    stagingDesc.Name = $"{_texture.Name}_ReadbackStaging";
+    stagingDesc.Usage = ResourceUsage.Staging;
+    stagingDesc.CPUAccessFlags = CPUAccessFlags.Read;
+    stagingDesc.BindFlags = BindFlags.None;
+    stagingDesc.MipLevels = 1; // Только один мип для staging
+
+    using var stagingTexture = (DX12Texture)CreateTexture(stagingDesc);
+
+    // Копируем из основной текстуры в staging
+    CopyTextureToStaging(_texture, stagingTexture, _mipLevel, _arraySlice);
+
+    // Читаем из staging текстуры
+    stagingTexture.ReadDataFromStaging(_result, 0, 0);
+  }
+
+  /// <summary>
+  /// Генерировать мип-мапы для текстуры
+  /// </summary>
+  internal void GenerateTextureMips(DX12Texture _texture)
+  {
+    // Реализация через compute shader или встроенные функции DX12
+    // Это более сложная операция, требующая специального shader'а
+    throw new NotImplementedException("Mip generation will be implemented in next phase");
+  }
+
+  private void CopyTextureToStaging(DX12Texture _source, DX12Texture _staging,
+      uint _mipLevel, uint _arraySlice)
+  {
+    var commandList = BeginResourceUpload();
+
+    try
+    {
+      // Resource transitions
+      var sourceBarrier = new ResourceBarrier
+      {
+        Type = ResourceBarrierType.Transition,
+        Transition = new ResourceTransitionBarrier
+        {
+          PResource = _source.GetResource(),
+          StateBefore = _source.GetCurrentState(),
+          StateAfter = ResourceStates.CopySource,
+          Subresource = _source.GetSubresourceIndex(_mipLevel, _arraySlice)
+        }
+      };
+
+      var stagingBarrier = new ResourceBarrier
+      {
+        Type = ResourceBarrierType.Transition,
+        Transition = new ResourceTransitionBarrier
+        {
+          PResource = _staging.GetResource(),
+          StateBefore = _staging.GetCurrentState(),
+          StateAfter = ResourceStates.CopyDest,
+          Subresource = 0 // staging has only one subresource
+        }
+      };
+
+      var barriers = stackalloc ResourceBarrier[2];
+      barriers[0] = sourceBarrier;
+      barriers[1] = stagingBarrier;
+
+      commandList->ResourceBarrier(2, barriers);
+
+      // Setup copy locations
+      var srcLocation = new TextureCopyLocation
+      {
+        PResource = _source.GetResource(),
+        Type = TextureCopyType.SubresourceIndex,
+        SubresourceIndex = _source.GetSubresourceIndex(_mipLevel, _arraySlice)
+      };
+
+      var dstLocation = new TextureCopyLocation
+      {
+        PResource = _staging.GetResource(),
+        Type = TextureCopyType.SubresourceIndex,
+        SubresourceIndex = 0
+      };
+
+      // Copy texture region
+      commandList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, null);
+
+      // Restore original states
+      sourceBarrier.Transition.StateBefore = ResourceStates.CopySource;
+      sourceBarrier.Transition.StateAfter = _source.GetCurrentState();
+      stagingBarrier.Transition.StateBefore = ResourceStates.CopyDest;
+      stagingBarrier.Transition.StateAfter = _staging.GetCurrentState();
+
+      commandList->ResourceBarrier(2, barriers);
+    }
+    finally
+    {
+      EndResourceUpload(true); // Wait for completion for readback
+    }
   }
 }

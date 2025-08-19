@@ -14,6 +14,8 @@ using Silk.NET.DXGI;
 
 using System;
 
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
 namespace Directx12Impl;
 
 /// <summary>
@@ -128,28 +130,20 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
     if(_offset + dataSize > Size)
       throw new ArgumentException("Data size exceeds buffer size");
 
-    if(p_description.Usage == ResourceUsage.Dynamic && p_isMappable)
+    // Для Dynamic буферов используем Map/Unmap
+    if(p_description.Usage == ResourceUsage.Dynamic)
     {
-      // Для dynamic буферов используем Map/Unmap напрямую
-      var dataPtr = Map(MapMode.WriteDiscard);
-      try
-      {
-        var destPtr = new IntPtr(dataPtr.ToInt64() + (long)_offset);
-        fixed(T* srcPtr = _data)
-        {
-          Buffer.MemoryCopy(srcPtr, destPtr.ToPointer(), dataSize, dataSize);
-        }
-      }
-      finally
-      {
-        Unmap();
-      }
+      SetDataViaMappedMemory(_data, _offset);
+    }
+    // Для Default буферов используем upload через command list
+    else if(p_description.Usage == ResourceUsage.Default)
+    {
+      SetDataViaUpload(_data, _offset);
     }
     else
     {
-      // Для default буферов используем upload через device
-      // Device управляет upload command list'ом
-      p_parentDevice.UploadBufferData(this, _data, _offset);
+      throw new InvalidOperationException(
+          $"SetData not supported for {p_description.Usage} buffers");
     }
   }
 
@@ -161,43 +155,28 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
   /// <summary>
   /// Получить данные из буфера (соответствует интерфейсу IBuffer)
   /// </summary>
-  public T[] GetData<T>(ulong _offset = 0, int _count = -1) where T : unmanaged
+  public T[] GetData<T>(ulong _offset, int _count = -1) where T : unmanaged
   {
-    if(p_description.Usage != ResourceUsage.Staging &&
-        (p_description.CPUAccessFlags & CPUAccessFlags.Read) == 0)
+    var elementSize = (ulong)sizeof(T);
+    var maxElements = (p_description.Size - _offset) / elementSize;
+    var elementsToRead = _count < 0 ? maxElements : (ulong)_count;
+
+    if(elementsToRead > maxElements)
+      throw new ArgumentException("Requested count exceeds buffer capacity");
+
+    var result = new T[elementsToRead];
+
+    if(p_description.Usage == ResourceUsage.Staging)
     {
-      throw new InvalidOperationException("Buffer must be created with staging usage or read access to read data");
+      GetDataViaMappedMemory(result, _offset);
     }
-
-    if(_count < 0)
-      _count = (int)((Size - _offset) / (ulong)sizeof(T));
-
-    var data = new T[_count];
-
-    if(p_isMappable && (p_description.CPUAccessFlags & CPUAccessFlags.Read) != 0)
-    {
-      var dataPtr = Map(MapMode.Read);
-      try
-      {
-        var srcPtr = new IntPtr(dataPtr.ToInt64() + (long)_offset);
-        fixed(T* destPtr = data)
-        {
-          Buffer.MemoryCopy(srcPtr.ToPointer(), destPtr, _count * sizeof(T), _count * sizeof(T));
-        }
-      }
-      finally
-      {
-        Unmap();
-      }
-    }
+    // Для остальных нужен readback
     else
     {
-      // Для non-mappable буферов нужен staging buffer и readback
-      // TODO: Implement через device
-      throw new NotImplementedException("Readback for non-mappable buffers not yet implemented");
+      GetDataViaReadback(result, _offset);
     }
 
-    return data;
+    return result;
   }
 
   public T GetData<T>(ulong _offset = 0) where T : unmanaged
@@ -345,6 +324,32 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
     };
   }
 
+  /// <summary>
+  /// Очистить буфер нулями
+  /// </summary>
+  public void Clear()
+  {
+    var zeroData = new byte[p_description.Size];
+    SetData(zeroData);
+  }
+
+  /// <summary>
+  /// Проверить, можно ли мапить буфер
+  /// </summary>
+  public bool CanMap()
+  {
+    return p_description.Usage == ResourceUsage.Dynamic ||
+           p_description.Usage == ResourceUsage.Staging;
+  }
+
+  /// <summary>
+  /// Проверить, поддерживает ли буфер upload операции
+  /// </summary>
+  public bool SupportsUpload()
+  {
+    return p_description.Usage != ResourceUsage.Staging;
+  }
+
   public override void Dispose()
   {
     if(!p_disposed)
@@ -364,6 +369,89 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
     }
 
     base.Dispose();
+  }
+
+  /// <summary>
+  /// Установить данные через mapped memory (для Dynamic буферов)
+  /// </summary>
+  private void SetDataViaMappedMemory<T>(T[] _data, ulong _offset) where T : unmanaged
+  {
+    var mappedPtr = p_parentDevice.MapBuffer(this, MapMode.WriteDiscard);
+
+    try
+    {
+      fixed(T* dataPtr = _data)
+      {
+        var destPtr = (byte*)mappedPtr.ToPointer() + _offset;
+        var sourcePtr = (byte*)dataPtr;
+        var copySize = _data.Length * sizeof(T);
+
+        Buffer.MemoryCopy(sourcePtr, destPtr, copySize, copySize);
+      }
+    }
+    finally
+    {
+      p_parentDevice.UnmapBuffer(this);
+    }
+  }
+
+
+  /// <summary>
+  /// Получить данные через mapped memory
+  /// </summary>
+  private void GetDataViaMappedMemory<T>(T[] _result, ulong _offset) where T : unmanaged
+  {
+    var mappedPtr = p_parentDevice.MapBuffer(this, MapMode.Read);
+
+    try
+    {
+      fixed(T* resultPtr = _result)
+      {
+        var sourcePtr = (byte*)mappedPtr.ToPointer() + _offset;
+        var destPtr = (byte*)resultPtr;
+        var copySize = _result.Length * sizeof(T);
+
+        Buffer.MemoryCopy(sourcePtr, destPtr, copySize, copySize);
+      }
+    }
+    finally
+    {
+      p_parentDevice.UnmapBuffer(this);
+    }
+  }
+
+  /// <summary>
+  /// Получить данные через readback staging buffer
+  /// </summary>
+  private void GetDataViaReadback<T>(T[] _result, ulong _offset) where T : unmanaged
+  {
+    var readbackSize = (ulong)(_result.Length * sizeof(T));
+
+    // Создаем временный staging buffer
+    var stagingDesc = new BufferDescription
+    {
+      Name = $"{Name}_ReadbackStaging",
+      Size = readbackSize,
+      Usage = ResourceUsage.Staging,
+      CPUAccessFlags = CPUAccessFlags.Read,
+      BufferUsage = BufferUsage.Staging
+    };
+
+    using var stagingBuffer = (DX12Buffer)p_parentDevice.CreateBuffer(stagingDesc);
+
+    // Копируем данные в staging buffer через command list
+    p_parentDevice.CopyBufferToStaging(this, stagingBuffer, _offset, 0, readbackSize);
+
+    // Читаем из staging buffer
+    stagingBuffer.GetDataViaMappedMemory(_result, 0);
+  }
+
+  /// <summary>
+  /// Установить данные через upload (для Default буферов)
+  /// </summary>
+  private void SetDataViaUpload<T>(T[] _data, ulong _offset) where T : unmanaged
+  {
+    p_parentDevice.UploadBufferData(this, _data, _offset);
   }
 
   private struct BufferViewKey: IEquatable<BufferViewKey>

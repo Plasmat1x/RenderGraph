@@ -210,6 +210,114 @@ public class InputLayoutDescription
     return maxOffset;
   }
 
+  /// <summary>
+  /// Пустой input layout (для vertex shader'ов без входных данных)
+  /// </summary>
+  public static InputLayoutDescription Empty => new()
+  {
+    Elements = new List<InputElementDescription>()
+  };
+
+  /// <summary>
+  /// Стандартный layout: Position + Normal + TexCoord
+  /// </summary>
+  public static InputLayoutDescription Standard => new()
+  {
+    Elements = new List<InputElementDescription>
+        {
+            new InputElementDescription
+            {
+                SemanticName = "POSITION",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32B32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 0,
+                InputSlotClass = InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            },
+            new InputElementDescription
+            {
+                SemanticName = "NORMAL",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32B32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 12,
+                InputSlotClass = InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            },
+            new InputElementDescription
+            {
+                SemanticName = "TEXCOORD",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 24,
+                InputSlotClass = InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            }
+        }
+  };
+
+  /// <summary>
+  /// Position + Color layout для простых объектов
+  /// </summary>
+  public static InputLayoutDescription PositionColor => new()
+  {
+    Elements = new List<InputElementDescription>
+        {
+            new InputElementDescription
+            {
+                SemanticName = "POSITION",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32B32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 0,
+                InputSlotClass = InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            },
+            new InputElementDescription
+            {
+                SemanticName = "COLOR",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32B32A32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 12,
+                InputSlotClass = InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            }
+        }
+  };
+
+  /// <summary>
+  /// Position + TexCoord layout для UI элементов
+  /// </summary>
+  public static InputLayoutDescription PositionTexture => new()
+  {
+    Elements = new List<InputElementDescription>
+        {
+            new InputElementDescription
+            {
+                SemanticName = "POSITION",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32B32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 0,
+                InputSlotClass = InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            },
+            new InputElementDescription
+            {
+                SemanticName = "TEXCOORD",
+                SemanticIndex = 0,
+                Format = TextureFormat.R32G32_FLOAT,
+                InputSlot = 0,
+                AlignedByteOffset = 12,
+                InputSlotClass = InputClassification.PerVertexData,
+                InstanceDataStepRate = 0
+            }
+        }
+  };
+
   private static TextureFormat GetFormatFromInputParameter(InputParameterInfo _param)
   {
     int componentCount = _param.GetComponentCount();

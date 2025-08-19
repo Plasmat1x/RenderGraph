@@ -6,5 +6,6 @@ namespace Resources.Enums;
 public enum IndexFormat
 {
   UInt16,
-  UInt32
+  UInt32,
+  R16_UINT
 }
