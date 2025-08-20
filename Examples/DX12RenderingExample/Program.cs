@@ -24,7 +24,6 @@ public static class Program
 
     try
     {
-
       var window = Window.Create(new WindowOptions
       {
         API = Silk.NET.Windowing.GraphicsAPI.Default,

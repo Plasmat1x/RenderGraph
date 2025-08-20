@@ -1,5 +1,7 @@
 using Directx12Impl;
 
+using Examples;
+
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 
@@ -73,7 +75,7 @@ public unsafe class RenderingExample
     {
       Name = "SimpleVertexShader",
       Stage = ShaderStage.Vertex,
-      ByteCode = CreateMockVertexShaderBytecode(),
+      SourceCode = ShaderSources.SimpleVertexShader,
       ShaderModel = "5_0",
       EntryPoint = "VSMain"
     };
@@ -82,7 +84,7 @@ public unsafe class RenderingExample
     {
       Name = "SimplePixelShader",
       Stage = ShaderStage.Pixel,
-      ByteCode = CreateMockPixelShaderBytecode(),
+      SourceCode = ShaderSources.SimplePixelShader,
       ShaderModel = "5_0",
       EntryPoint = "PSMain"
     };

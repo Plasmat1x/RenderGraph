@@ -240,8 +240,7 @@ public unsafe class DX12DataTransferTests: IDisposable
 
     // Assert
     Assert.Equal(originalData.Length, readbackData.Length);
-    // Note: Точное сравнение может отличаться из-за компрессии/форматирования
-    // Проверяем хотя бы размер и несколько ключевых значений
+
     Assert.Equal(originalData[0], readbackData[0]);
     Assert.Equal(originalData[originalData.Length - 1], readbackData[readbackData.Length - 1]);
 
