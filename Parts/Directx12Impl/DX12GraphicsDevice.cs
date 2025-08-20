@@ -575,6 +575,8 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     QueryDeviceCapabilities();
 
+    InitializeUploadSystem();
+
     Name = GetAdapterDescription();
   }
 

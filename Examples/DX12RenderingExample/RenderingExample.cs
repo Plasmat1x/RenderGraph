@@ -1,5 +1,7 @@
 using Directx12Impl;
 
+using Examples;
+
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 
@@ -23,7 +25,6 @@ public unsafe class RenderingExample
   private DX12Texture depthTexture;
   private DX12TextureView depthStencilView;
 
-  // Vertex структура для нашего треугольника
   private struct Vertex
   {
     public Vector3 Position;
@@ -38,10 +39,8 @@ public unsafe class RenderingExample
 
   public void Initialize(IntPtr windowHandle, uint width, uint height)
   {
-    // 1. Создаем устройство с debug layer
     device = new DX12GraphicsDevice(true);
 
-    // 2. Создаем SwapChain
     var swapChainDesc = new SwapChainDescription
     {
       Width = width,
@@ -54,15 +53,12 @@ public unsafe class RenderingExample
 
     swapChain = device.CreateSwapChain(swapChainDesc, windowHandle) as DX12SwapChain;
 
-    // 3. Создаем Pipeline State
     CreatePipelineState();
 
-    // 4. Создаем Command Buffer
     commandBuffer = device.CreateCommandBuffer(
         CommandBufferType.Direct,
         CommandBufferExecutionMode.Immediate) as DX12CommandBuffer;
 
-    // 5. Создаем ресурсы и загружаем данные
     CreateAndUploadResources();
 
     Console.WriteLine("✅ DX12 Rendering Example initialized successfully!");
@@ -75,12 +71,11 @@ public unsafe class RenderingExample
 
   private void CreatePipelineState()
   {
-    // Создаем простые шейдеры (заглушки для примера)
     var vsDesc = new ShaderDescription
     {
       Name = "SimpleVertexShader",
       Stage = ShaderStage.Vertex,
-      ByteCode = CreateMockVertexShaderBytecode(),
+      SourceCode = ShaderSources.SimpleVertexShader,
       ShaderModel = "5_0",
       EntryPoint = "VSMain"
     };
@@ -89,7 +84,7 @@ public unsafe class RenderingExample
     {
       Name = "SimplePixelShader",
       Stage = ShaderStage.Pixel,
-      ByteCode = CreateMockPixelShaderBytecode(),
+      SourceCode = ShaderSources.SimplePixelShader,
       ShaderModel = "5_0",
       EntryPoint = "PSMain"
     };
@@ -97,7 +92,6 @@ public unsafe class RenderingExample
     var vertexShader = device.CreateShader(vsDesc);
     var pixelShader = device.CreateShader(psDesc);
 
-    // Создаем render state с pipeline state
     var renderStateDesc = new RenderStateDescription
     {
       Name = "SimpleRenderState",
@@ -124,7 +118,6 @@ public unsafe class RenderingExample
 
   private void CreateAndUploadResources()
   {
-    // === Создаем Vertex Buffer ===
     var vertices = new Vertex[]
     {
             new Vertex(new Vector3( 0.0f,  0.5f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f)), // Top (red)
@@ -144,11 +137,9 @@ public unsafe class RenderingExample
 
     vertexBuffer = device.CreateBuffer(vbDesc) as DX12Buffer;
 
-    // ✅ ТЕПЕРЬ РАБОТАЕТ! Загружаем данные вершин
     vertexBuffer.SetData(vertices);
     Console.WriteLine($"✅ Uploaded {vertices.Length} vertices to vertex buffer");
 
-    // === Создаем Index Buffer ===
     var indices = new ushort[] { 0, 1, 2 };
 
     var ibDesc = new BufferDescription
@@ -163,29 +154,25 @@ public unsafe class RenderingExample
 
     indexBuffer = device.CreateBuffer(ibDesc) as DX12Buffer;
 
-    // ✅ ТЕПЕРЬ РАБОТАЕТ! Загружаем индексы
     indexBuffer.SetData(indices);
     Console.WriteLine($"✅ Uploaded {indices.Length} indices to index buffer");
 
-    // === Создаем Constant Buffer ===
     var cbDesc = new BufferDescription
     {
       Name = "ConstantBuffer",
-      Size = 256, // Выравнено по 256 байт (требование DX12)
+      Size = 256,
       BufferUsage = BufferUsage.Constant,
       BindFlags = BindFlags.ConstantBuffer,
-      Usage = ResourceUsage.Dynamic, // Для частых обновлений
+      Usage = ResourceUsage.Dynamic,
       CPUAccessFlags = CPUAccessFlags.Write
     };
 
     constantBuffer = device.CreateBuffer(cbDesc) as DX12Buffer;
 
-    // ✅ ТЕПЕРЬ РАБОТАЕТ! Инициализируем constant buffer
     var mvpMatrix = Matrix4x4.Identity;
     UpdateConstantBuffer(mvpMatrix);
     Console.WriteLine("✅ Initialized constant buffer with identity matrix");
 
-    // === Создаем Depth Buffer ===
     var depthDesc = new TextureDescription
     {
       Name = "DepthBuffer",
@@ -210,15 +197,12 @@ public unsafe class RenderingExample
 
   public void Render()
   {
-    // Обновляем матрицы
     var time = (float)(DateTime.Now.TimeOfDay.TotalSeconds);
     var rotationMatrix = Matrix4x4.CreateRotationZ(time * 0.5f);
     UpdateConstantBuffer(rotationMatrix);
 
-    // Начинаем кадр
     device.BeginFrame();
 
-    // Получаем текущий back buffer
     var backBuffer = swapChain.GetCurrentBackBuffer();
     var renderTargetView = backBuffer.GetDefaultRenderTargetView();
 
@@ -228,10 +212,8 @@ public unsafe class RenderingExample
     {
       using var debugScope = commandBuffer.BeginDebugScope("Triangle Render Pass");
 
-      // Устанавливаем render targets
       commandBuffer.SetRenderTarget(renderTargetView, depthStencilView);
 
-      // Устанавливаем viewport
       var viewport = new Resources.Viewport
       {
         X = 0,
@@ -243,14 +225,11 @@ public unsafe class RenderingExample
       };
       commandBuffer.SetViewport(viewport);
 
-      // Очищаем буферы
       commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
       commandBuffer.ClearDepthStencil(depthStencilView, ClearFlags.Depth, 1.0f, 0);
 
-      // Устанавливаем render state
       commandBuffer.SetRenderState(simpleRenderState);
 
-      // Устанавливаем буферы
       var vertexView = vertexBuffer.GetDefaultShaderResourceView();
       var indexView = indexBuffer.GetDefaultShaderResourceView();
       var constantView = constantBuffer.GetDefaultShaderResourceView();
@@ -259,7 +238,6 @@ public unsafe class RenderingExample
       commandBuffer.SetIndexBuffer(indexView, IndexFormat.R16_UINT);
       commandBuffer.SetConstantBuffer(ShaderStage.Vertex, 0, constantView);
 
-      // Рисуем треугольник
       commandBuffer.DrawIndexed(3, 1, 0, 0, 0);
 
       Console.WriteLine("🎨 Drew triangle with 3 indices");
@@ -269,19 +247,15 @@ public unsafe class RenderingExample
       commandBuffer.End();
     }
 
-    // Выполняем команды
     device.Submit(commandBuffer);
 
-    // Презентуем кадр
     swapChain.Present();
 
-    // Завершаем кадр
     device.EndFrame();
   }
 
   private void UpdateConstantBuffer(Matrix4x4 worldViewProj)
   {
-    // ✅ ТЕПЕРЬ РАБОТАЕТ! Map/Unmap для dynamic constant buffer
     var mappedPtr = device.MapBuffer(constantBuffer, MapMode.WriteDiscard);
 
     try
@@ -300,10 +274,8 @@ public unsafe class RenderingExample
 
   public void Cleanup()
   {
-    // Ждем завершения GPU операций
     device.WaitForGPU();
 
-    // Освобождаем ресурсы
     depthStencilView?.Dispose();
     depthTexture?.Dispose();
     constantBuffer?.Dispose();
@@ -316,8 +288,6 @@ public unsafe class RenderingExample
 
     Console.WriteLine("🧹 Cleanup completed successfully!");
   }
-
-  // === Вспомогательные методы ===
 
   private InputLayoutDescription CreateInputLayout()
   {
@@ -341,7 +311,7 @@ public unsafe class RenderingExample
                     SemanticIndex = 0,
                     Format = TextureFormat.R32G32B32A32_FLOAT,
                     InputSlot = 0,
-                    AlignedByteOffset = 12, // sizeof(Vector3)
+                    AlignedByteOffset = 12,
                     InputSlotClass = InputClassification.PerVertexData,
                     InstanceDataStepRate = 0
                 }
@@ -351,8 +321,6 @@ public unsafe class RenderingExample
 
   private byte[] CreateMockVertexShaderBytecode()
   {
-    // В реальной реализации здесь был бы скомпилированный HLSL
-    // Для примера используем заглушку
     return new byte[]
     {
             0x44, 0x58, 0x42, 0x43, // DXBC signature
@@ -366,7 +334,6 @@ public unsafe class RenderingExample
 
   private byte[] CreateMockPixelShaderBytecode()
   {
-    // В реальной реализации здесь был бы скомпилированный HLSL
     return new byte[]
     {
             0x44, 0x58, 0x42, 0x43, // DXBC signature
@@ -377,8 +344,6 @@ public unsafe class RenderingExample
     };
   }
 
-  // === Дополнительные demo методы ===
-
   /// <summary>
   /// Демонстрация пакетной загрузки данных
   /// </summary>
@@ -386,7 +351,6 @@ public unsafe class RenderingExample
   {
     Console.WriteLine("\n🚀 Demonstrating batch upload capabilities...");
 
-    // Создаем несколько текстур для демонстрации
     var textureDescs = new[]
     {
             new TextureDescription
@@ -413,11 +377,9 @@ public unsafe class RenderingExample
 
     var textures = textureDescs.Select(desc => device.CreateTexture(desc) as DX12Texture).ToArray();
 
-    // Создаем тестовые данные
     var texture1Data = CreateCheckerboardPattern(256, 256);
     var texture2Data = CreateGradientPattern(512, 512);
 
-    // Демонстрируем пакетную загрузку
     device.BatchUploadResources(uploader =>
     {
       uploader.UploadTexture(textures[0], texture1Data, 0, 0);
@@ -426,7 +388,6 @@ public unsafe class RenderingExample
       Console.WriteLine("  ✅ Uploaded textures in batch operation");
     });
 
-    // Cleanup
     foreach(var texture in textures)
     {
       texture.Dispose();
@@ -442,7 +403,6 @@ public unsafe class RenderingExample
   {
     Console.WriteLine("\n📥 Demonstrating readback capabilities...");
 
-    // Создаем небольшой буфер с тестовыми данными
     var testData = new float[] { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
 
     var bufferDesc = new BufferDescription
@@ -457,15 +417,12 @@ public unsafe class RenderingExample
 
     var buffer = device.CreateBuffer(bufferDesc) as DX12Buffer;
 
-    // Загружаем данные
     buffer.SetData(testData);
     Console.WriteLine($"  📤 Uploaded data: [{string.Join(", ", testData)}]");
 
-    // Читаем данные обратно
     var readbackData = buffer.GetData<float>(0, -1);
     Console.WriteLine($"  📥 Readback data: [{string.Join(", ", readbackData)}]");
 
-    // Проверяем корректность
     bool dataMatches = testData.SequenceEqual(readbackData);
     Console.WriteLine($"  ✅ Data integrity: {(dataMatches ? "PASSED" : "FAILED")}");
 
@@ -473,11 +430,9 @@ public unsafe class RenderingExample
     Console.WriteLine("✅ Readback demonstration completed!");
   }
 
-  // === Вспомогательные методы для создания тестовых данных ===
-
   private byte[] CreateCheckerboardPattern(uint width, uint height)
   {
-    var data = new byte[width * height * 4]; // RGBA
+    var data = new byte[width * height * 4];
     var index = 0;
 
     for(uint y = 0; y < height; y++)
@@ -487,10 +442,10 @@ public unsafe class RenderingExample
         bool isWhite = ((x / 32) + (y / 32)) % 2 == 0;
         byte color = (byte)(isWhite ? 255 : 0);
 
-        data[index++] = color; // R
-        data[index++] = color; // G
-        data[index++] = color; // B
-        data[index++] = 255;   // A
+        data[index++] = color;
+        data[index++] = color;
+        data[index++] = color;
+        data[index++] = 255;
       }
     }
 
@@ -499,17 +454,17 @@ public unsafe class RenderingExample
 
   private byte[] CreateGradientPattern(uint width, uint height)
   {
-    var data = new byte[width * height * 4]; // RGBA
+    var data = new byte[width * height * 4];
     var index = 0;
 
     for(uint y = 0; y < height; y++)
     {
       for(uint x = 0; x < width; x++)
       {
-        data[index++] = (byte)(x * 255 / width);    // R gradient
-        data[index++] = (byte)(y * 255 / height);   // G gradient
-        data[index++] = 128;                        // B constant
-        data[index++] = 255;                        // A opaque
+        data[index++] = (byte)(x * 255 / width);
+        data[index++] = (byte)(y * 255 / height);
+        data[index++] = 128;
+        data[index++] = 255;
       }
     }
 

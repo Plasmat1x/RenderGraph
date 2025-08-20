@@ -16,22 +16,37 @@ public static class Program
 {
   public static void Main(string[] args)
   {
+    Console.OutputEncoding = Encoding.UTF8;
+
     Console.WriteLine("🚀 Starting DX12 Rendering Example...");
 
     var example = new RenderingExample();
 
     try
     {
-      // Для демонстрации используем заглушку окна
-      var mockWindowHandle = IntPtr.Zero; // В реальной реализации здесь был бы HWND
+      var window = Window.Create(new WindowOptions
+      {
+        API = Silk.NET.Windowing.GraphicsAPI.Default,
+        Size = new Vector2D<int>(800, 600),
+        Position = new Vector2D<int>(200, 200),
+        IsVisible = true,
+        TopMost = false,
+        WindowBorder = WindowBorder.Resizable,
+        WindowState = WindowState.Normal,
+        Title = "Hello"
+      });
 
-      example.Initialize(mockWindowHandle, 1920, 1080);
 
-      // Демонстрируем возможности
-      example.DemonstrateBatchUpload();
-      example.DemonstrateReadback();
+      window.Load += () => {
+        var mockWindowHandle = window.Native.DXHandle.GetValueOrDefault();
+        example.Initialize(mockWindowHandle, 1920, 1080);
+        example.DemonstrateBatchUpload();
+        example.DemonstrateReadback();
+      };
 
-      // В реальном приложении здесь был бы render loop
+      window.Run();
+
+
       Console.WriteLine("\n🎮 Render loop would start here...");
       Console.WriteLine("Press any key to cleanup and exit...");
       Console.ReadKey();
