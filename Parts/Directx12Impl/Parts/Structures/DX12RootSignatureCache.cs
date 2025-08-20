@@ -68,7 +68,7 @@ public partial class DX12RootSignatureCache: IDisposable
   }
 
   public ComPtr<ID3D12RootSignature> GetOrCreateFromShaderReflection(
-    params DX12Shader[] _shaders)
+    params DX12Shader?[] _shaders)
   {
     var builder = new DX12RootSignatureDescBuilder();
 
@@ -76,6 +76,8 @@ public partial class DX12RootSignatureCache: IDisposable
     var srvSlots = new HashSet<uint>();
     var uavSlots = new HashSet<uint>();
     var samplerSlots = new HashSet<uint>();
+
+    builder.AllowInputAssemblerInputLayout();
 
     foreach(var shader in _shaders.Where(s => s != null))
     {
