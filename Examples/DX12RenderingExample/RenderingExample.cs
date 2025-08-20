@@ -1,4 +1,5 @@
 using Directx12Impl;
+using Directx12Impl.Builders;
 
 using Examples;
 
@@ -316,31 +317,6 @@ public unsafe class RenderingExample
                     InstanceDataStepRate = 0
                 }
             }
-    };
-  }
-
-  private byte[] CreateMockVertexShaderBytecode()
-  {
-    return new byte[]
-    {
-            0x44, 0x58, 0x42, 0x43, // DXBC signature
-            0x00, 0x00, 0x00, 0x00, // Checksum
-            0x01, 0x00, 0x00, 0x00, // Version
-            0x08, 0x00, 0x00, 0x00, // Size
-                                    // Minimal valid shader bytecode would go here
-                                    // For demo purposes, this is just a placeholder
-    };
-  }
-
-  private byte[] CreateMockPixelShaderBytecode()
-  {
-    return new byte[]
-    {
-            0x44, 0x58, 0x42, 0x43, // DXBC signature
-            0x00, 0x00, 0x00, 0x00, // Checksum
-            0x01, 0x00, 0x00, 0x00, // Version
-            0x08, 0x00, 0x00, 0x00, // Size
-                                    // Minimal valid shader bytecode would go here
     };
   }
 
