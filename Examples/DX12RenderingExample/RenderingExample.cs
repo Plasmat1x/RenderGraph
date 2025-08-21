@@ -237,6 +237,9 @@ public unsafe class RenderingExample
 
       commandBuffer.SetVertexBuffer(vertexView, 0);
       commandBuffer.SetIndexBuffer(indexView, IndexFormat.R16_UINT);
+
+      commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
+
       commandBuffer.SetConstantBuffer(ShaderStage.Vertex, 0, constantView);
 
       commandBuffer.DrawIndexed(3, 1, 0, 0, 0);
@@ -295,28 +298,28 @@ public unsafe class RenderingExample
     return new InputLayoutDescription
     {
       Elements = new List<InputElementDescription>
-            {
-                new InputElementDescription
-                {
-                    SemanticName = "POSITION",
-                    SemanticIndex = 0,
-                    Format = TextureFormat.R32G32B32_FLOAT,
-                    InputSlot = 0,
-                    AlignedByteOffset = 0,
-                    InputSlotClass = InputClassification.PerVertexData,
-                    InstanceDataStepRate = 0
-                },
-                new InputElementDescription
-                {
-                    SemanticName = "COLOR",
-                    SemanticIndex = 0,
-                    Format = TextureFormat.R32G32B32A32_FLOAT,
-                    InputSlot = 0,
-                    AlignedByteOffset = 12,
-                    InputSlotClass = InputClassification.PerVertexData,
-                    InstanceDataStepRate = 0
-                }
-            }
+      {
+        new InputElementDescription
+        {
+          SemanticName = "POSITION",
+          SemanticIndex = 0,
+          Format = TextureFormat.R32G32B32_FLOAT,
+          InputSlot = 0,
+          AlignedByteOffset = 0,
+          InputSlotClass = InputClassification.PerVertexData,
+          InstanceDataStepRate = 0
+        },
+        new InputElementDescription
+        {
+          SemanticName = "COLOR",
+          SemanticIndex = 0,
+          Format = TextureFormat.R32G32B32A32_FLOAT,
+          InputSlot = 0,
+          AlignedByteOffset = 12,
+          InputSlotClass = InputClassification.PerVertexData,
+          InstanceDataStepRate = 0
+        }
+      }
     };
   }
 
@@ -329,27 +332,27 @@ public unsafe class RenderingExample
 
     var textureDescs = new[]
     {
-            new TextureDescription
-            {
-                Name = "DemoTexture1",
-                Width = 256, Height = 256, Depth = 1,
-                MipLevels = 1, ArraySize = 1,
-                Format = TextureFormat.R8G8B8A8_UNORM,
-                TextureUsage = TextureUsage.ShaderResource,
-                BindFlags = BindFlags.ShaderResource,
-                Usage = ResourceUsage.Default
-            },
-            new TextureDescription
-            {
-                Name = "DemoTexture2",
-                Width = 512, Height = 512, Depth = 1,
-                MipLevels = 1, ArraySize = 1,
-                Format = TextureFormat.R8G8B8A8_UNORM,
-                TextureUsage = TextureUsage.ShaderResource,
-                BindFlags = BindFlags.ShaderResource,
-                Usage = ResourceUsage.Default
-            }
-        };
+      new TextureDescription
+      {
+        Name = "DemoTexture1",
+        Width = 256, Height = 256, Depth = 1,
+        MipLevels = 1, ArraySize = 1,
+        Format = TextureFormat.R8G8B8A8_UNORM,
+        TextureUsage = TextureUsage.ShaderResource,
+        BindFlags = BindFlags.ShaderResource,
+        Usage = ResourceUsage.Default
+      },
+      new TextureDescription
+      {
+        Name = "DemoTexture2",
+        Width = 512, Height = 512, Depth = 1,
+        MipLevels = 1, ArraySize = 1,
+        Format = TextureFormat.R8G8B8A8_UNORM,
+        TextureUsage = TextureUsage.ShaderResource,
+        BindFlags = BindFlags.ShaderResource,
+        Usage = ResourceUsage.Default
+      }
+    };
 
     var textures = textureDescs.Select(desc => device.CreateTexture(desc) as DX12Texture).ToArray();
 

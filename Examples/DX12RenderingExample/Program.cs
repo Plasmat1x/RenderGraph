@@ -43,6 +43,7 @@ public static class Program
     };
 
     window.Closing += example.Cleanup;
+    window.Render += _ => example.Render();
 
     window.Run();
 
