@@ -433,7 +433,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     }
 
     void* mappedData;
-    var range = new Silk.NET.Direct3D12.Range { Begin = 0, End = 0 }; // Весь буфер
+    var range = new Silk.NET.Direct3D12.Range { Begin = 0, End = 0 };
 
     var hr = _buffer.GetResource()->Map(0, &range, &mappedData);
     DX12Helpers.ThrowIfFailed(hr, "Failed to map buffer");
@@ -495,8 +495,11 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
         var hr = p_uploadCommandList.Close();
         DX12Helpers.ThrowIfFailed(hr, "Failed to close upload command list");
 
-        ID3D12CommandList* commandLists = (ID3D12CommandList*)p_uploadCommandList.GetAddressOf();
-        p_directQueue.ExecuteCommandLists(1, &commandLists);
+        //var commandListPtr = p_uploadCommandList.GetAddressOf();
+        //ID3D12CommandList** ppCommandLists = stackalloc ID3D12CommandList*[1];
+        //ppCommandLists[0] = (ID3D12CommandList*)commandListPtr;
+        //p_directQueue.ExecuteCommandLists(1, ppCommandLists);
+        p_directQueue.ExecuteCommandLists(1, (ID3D12CommandList**)p_uploadCommandList.GetAddressOf());
 
         p_uploadFenceValue++;
         hr = p_directQueue.Signal(p_uploadFence, p_uploadFenceValue);
@@ -520,6 +523,11 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     {
       if(p_uploadInProgress)
         throw new InvalidOperationException("Upload already in progress");
+
+      if(p_uploadCommandAllocator.Handle == null || p_uploadCommandList.Handle == null)
+      {
+        InitializeUploadSystem();
+      }
 
       var hr = p_uploadCommandAllocator.Reset();
       DX12Helpers.ThrowIfFailed(hr, "Failed to reset upload command allocator");
@@ -568,14 +576,14 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     p_descriptorManager = new(p_device);
     p_uploadManager = new(p_device);
 
+    InitializeUploadSystem();
+
     CreateFence();
 
     p_pipelineStateCache = new(p_device);
     p_rootSignatureCache = new(p_device, p_d3d12);
 
     QueryDeviceCapabilities();
-
-    InitializeUploadSystem();
 
     Name = GetAdapterDescription();
   }
@@ -973,7 +981,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
         }
       };
 
-      var stagingBarrier = new ResourceBarrier
+      var stagingBarrier = new ResourceBarrier 
       {
         Type = ResourceBarrierType.Transition,
         Transition = new ResourceTransitionBarrier
@@ -1043,20 +1051,17 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   internal void ReadbackTextureData<T>(DX12Texture _texture, T[] _result,
       uint _mipLevel, uint _arraySlice) where T : unmanaged
   {
-    // Создаем staging текстуру
     var stagingDesc = _texture.Description.Clone() as TextureDescription;
     stagingDesc.Name = $"{_texture.Name}_ReadbackStaging";
     stagingDesc.Usage = ResourceUsage.Staging;
     stagingDesc.CPUAccessFlags = CPUAccessFlags.Read;
     stagingDesc.BindFlags = BindFlags.None;
-    stagingDesc.MipLevels = 1; // Только один мип для staging
+    stagingDesc.MipLevels = 1;
 
     using var stagingTexture = (DX12Texture)CreateTexture(stagingDesc);
 
-    // Копируем из основной текстуры в staging
     CopyTextureToStaging(_texture, stagingTexture, _mipLevel, _arraySlice);
 
-    // Читаем из staging текстуры
     stagingTexture.ReadDataFromStaging(_result, 0, 0);
   }
 
@@ -1077,7 +1082,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     try
     {
-      // Resource transitions
       var sourceBarrier = new ResourceBarrier
       {
         Type = ResourceBarrierType.Transition,
@@ -1098,7 +1102,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
           PResource = _staging.GetResource(),
           StateBefore = _staging.GetCurrentState(),
           StateAfter = ResourceStates.CopyDest,
-          Subresource = 0 // staging has only one subresource
+          Subresource = 0
         }
       };
 
@@ -1108,7 +1112,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
       commandList->ResourceBarrier(2, barriers);
 
-      // Setup copy locations
       var srcLocation = new TextureCopyLocation
       {
         PResource = _source.GetResource(),
@@ -1123,10 +1126,8 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
         SubresourceIndex = 0
       };
 
-      // Copy texture region
       commandList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, null);
 
-      // Restore original states
       sourceBarrier.Transition.StateBefore = ResourceStates.CopySource;
       sourceBarrier.Transition.StateAfter = _source.GetCurrentState();
       stagingBarrier.Transition.StateBefore = ResourceStates.CopyDest;
@@ -1136,7 +1137,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     }
     finally
     {
-      EndResourceUpload(true); // Wait for completion for readback
+      EndResourceUpload(true);
     }
   }
 }

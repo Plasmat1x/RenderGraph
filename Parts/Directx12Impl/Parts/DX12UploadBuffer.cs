@@ -72,7 +72,7 @@ public unsafe class DX12UploadBuffer: IDisposable
 
   public void Reset()
   {
-    // Можно очистить буфер если нужно
+
   }
 
   public void Dispose()
