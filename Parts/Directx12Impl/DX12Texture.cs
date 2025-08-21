@@ -196,7 +196,7 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   public uint GetSubresourceIndex(uint _mipLevel, uint _arraySlice)
   {
-    throw new NotImplementedException();
+    return GetSubresourceIndex(_mipLevel, _arraySlice, 0);
   }
 
   public void GenerateMips()
@@ -341,12 +341,12 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   /// <summary>
   /// Очистить текстуру определенным цветом
   /// </summary>
-  public void Clear(Vector4 clearColor, uint mipLevel = 0, uint arraySlice = 0)
+  public void Clear(Vector4 _clearColor, uint _mipLevel = 0, uint _arraySlice = 0)
   {
-    var pixelData = CreateClearPixelData(clearColor);
-    var width = Math.Max(1u, p_description.Width >> (int)mipLevel);
-    var height = Math.Max(1u, p_description.Height >> (int)mipLevel);
-    var depth = Math.Max(1u, p_description.Depth >> (int)mipLevel);
+    var pixelData = CreateClearPixelData(_clearColor);
+    var width = Math.Max(1u, p_description.Width >> (int)_mipLevel);
+    var height = Math.Max(1u, p_description.Height >> (int)_mipLevel);
+    var depth = Math.Max(1u, p_description.Depth >> (int)_mipLevel);
 
     var totalPixels = width * height * depth;
     var clearData = new byte[totalPixels * (ulong)pixelData.Length];
@@ -356,7 +356,7 @@ public unsafe class DX12Texture: DX12Resource, ITexture
       Array.Copy(pixelData, 0, clearData, (long)(i * (ulong)pixelData.Length), pixelData.Length);
     }
 
-    SetData(clearData, mipLevel, arraySlice);
+    SetData(clearData, _mipLevel, _arraySlice);
   }
 
   public override void Dispose()

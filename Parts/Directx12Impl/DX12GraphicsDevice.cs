@@ -495,10 +495,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
         var hr = p_uploadCommandList.Close();
         DX12Helpers.ThrowIfFailed(hr, "Failed to close upload command list");
 
-        //var commandListPtr = p_uploadCommandList.GetAddressOf();
-        //ID3D12CommandList** ppCommandLists = stackalloc ID3D12CommandList*[1];
-        //ppCommandLists[0] = (ID3D12CommandList*)commandListPtr;
-        //p_directQueue.ExecuteCommandLists(1, ppCommandLists);
         p_directQueue.ExecuteCommandLists(1, (ID3D12CommandList**)p_uploadCommandList.GetAddressOf());
 
         p_uploadFenceValue++;
@@ -969,49 +965,154 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     try
     {
-      var sourceBarrier = new ResourceBarrier
+      //var sourceBarrier = new ResourceBarrier
+      //{
+      //  Type = ResourceBarrierType.Transition,
+      //  Transition = new ResourceTransitionBarrier
+      //  {
+      //    PResource = _source.GetResource(),
+      //    StateBefore = _source.GetCurrentState(),
+      //    StateAfter = ResourceStates.CopySource,
+      //    Subresource = D3D12.ResourceBarrierAllSubresources
+      //  }
+      //};
+
+      //var stagingBarrier = new ResourceBarrier 
+      //{
+      //  Type = ResourceBarrierType.Transition,
+      //  Transition = new ResourceTransitionBarrier
+      //  {
+      //    PResource = _staging.GetResource(),
+      //    StateBefore = _staging.GetCurrentState(),
+      //    StateAfter = ResourceStates.CopyDest,
+      //    Subresource = D3D12.ResourceBarrierAllSubresources
+      //  }
+      //};
+
+
+
+      //var barriers = stackalloc ResourceBarrier[2];
+      //barriers[0] = sourceBarrier;
+      //barriers[1] = stagingBarrier;
+
+      //commandList->ResourceBarrier(2, barriers);
+
+      //commandList->CopyBufferRegion(
+      //    _staging.GetResource(),
+      //    _stagingOffset,
+      //    _source.GetResource(),
+      //    _sourceOffset,
+      //    _size);
+
+      //sourceBarrier.Transition.StateBefore = ResourceStates.CopySource;
+      //sourceBarrier.Transition.StateAfter = _source.GetCurrentState();
+      //stagingBarrier.Transition.StateBefore = ResourceStates.CopyDest;
+      //stagingBarrier.Transition.StateAfter = _staging.GetCurrentState();
+
+      //commandList->ResourceBarrier(2, barriers);
+
+      var sourceCurrentState = _source.GetCurrentState();
+      var stagingCurrentState = _staging.GetCurrentState();
+
+      var barriers = new List<ResourceBarrier>();
+
+      if(sourceCurrentState != ResourceStates.CopySource)
       {
-        Type = ResourceBarrierType.Transition,
-        Transition = new ResourceTransitionBarrier
+        barriers.Add(new ResourceBarrier
         {
-          PResource = _source.GetResource(),
-          StateBefore = _source.GetCurrentState(),
-          StateAfter = ResourceStates.CopySource,
-          Subresource = D3D12.ResourceBarrierAllSubresources
-        }
-      };
+          Type = ResourceBarrierType.Transition,
+          Transition = new ResourceTransitionBarrier
+          {
+            PResource = _source.GetResource(),
+            StateBefore = sourceCurrentState,
+            StateAfter = ResourceStates.CopySource,
+            Subresource = D3D12.ResourceBarrierAllSubresources
+          }
+        });
+      }
 
-      var stagingBarrier = new ResourceBarrier 
+      if(stagingCurrentState != ResourceStates.CopyDest)
       {
-        Type = ResourceBarrierType.Transition,
-        Transition = new ResourceTransitionBarrier
+        barriers.Add(new ResourceBarrier
         {
-          PResource = _staging.GetResource(),
-          StateBefore = _staging.GetCurrentState(),
-          StateAfter = ResourceStates.CopyDest,
-          Subresource = D3D12.ResourceBarrierAllSubresources
+          Type = ResourceBarrierType.Transition,
+          Transition = new ResourceTransitionBarrier
+          {
+            PResource = _staging.GetResource(),
+            StateBefore = stagingCurrentState,
+            StateAfter = ResourceStates.CopyDest,
+            Subresource = D3D12.ResourceBarrierAllSubresources
+          }
+        });
+      }
+
+      if(barriers.Count > 0)
+      {
+        var barriersArray = stackalloc ResourceBarrier[barriers.Count];
+        for(int i = 0; i < barriers.Count; i++)
+        {
+          barriersArray[i] = barriers[i];
         }
-      };
-
-      var barriers = stackalloc ResourceBarrier[2];
-      barriers[0] = sourceBarrier;
-      barriers[1] = stagingBarrier;
-
-      commandList->ResourceBarrier(2, barriers);
+        commandList->ResourceBarrier((uint)barriers.Count, barriersArray);
+ 
+        if(sourceCurrentState != ResourceStates.CopySource)
+          _source.SetCurrentState(ResourceStates.CopySource);
+        if(stagingCurrentState != ResourceStates.CopyDest)
+          _staging.SetCurrentState(ResourceStates.CopyDest);
+      }
 
       commandList->CopyBufferRegion(
-          _staging.GetResource(),
-          _stagingOffset,
-          _source.GetResource(),
-          _sourceOffset,
-          _size);
+        _staging.GetResource(),
+        _stagingOffset,
+        _source.GetResource(),
+        _sourceOffset,
+        _size);
 
-      sourceBarrier.Transition.StateBefore = ResourceStates.CopySource;
-      sourceBarrier.Transition.StateAfter = _source.GetCurrentState();
-      stagingBarrier.Transition.StateBefore = ResourceStates.CopyDest;
-      stagingBarrier.Transition.StateAfter = _staging.GetCurrentState();
+      barriers.Clear();
 
-      commandList->ResourceBarrier(2, barriers);
+      if(_source.GetCurrentState() != sourceCurrentState)
+      {
+        barriers.Add(new ResourceBarrier
+        {
+          Type = ResourceBarrierType.Transition,
+          Transition = new ResourceTransitionBarrier
+          {
+            PResource = _source.GetResource(),
+            StateBefore = ResourceStates.CopySource,
+            StateAfter = sourceCurrentState,
+            Subresource = D3D12.ResourceBarrierAllSubresources
+          }
+        });
+      }
+
+      if(_staging.GetCurrentState() != stagingCurrentState)
+      {
+        barriers.Add(new ResourceBarrier
+        {
+          Type = ResourceBarrierType.Transition,
+          Transition = new ResourceTransitionBarrier
+          {
+            PResource = _staging.GetResource(),
+            StateBefore = ResourceStates.CopyDest,
+            StateAfter = stagingCurrentState,
+            Subresource = D3D12.ResourceBarrierAllSubresources
+          }
+        });
+      }
+
+      if(barriers.Count > 0)
+      {
+        var barriersArray = stackalloc ResourceBarrier[barriers.Count];
+        for(int i = 0; i < barriers.Count; i++)
+        {
+          barriersArray[i] = barriers[i];
+        }
+        commandList->ResourceBarrier((uint)barriers.Count, barriersArray);
+
+        // ВАЖНО: Восстанавливаем исходные состояния
+        _source.SetCurrentState(sourceCurrentState);
+        _staging.SetCurrentState(stagingCurrentState);
+      }
     }
     finally
     {

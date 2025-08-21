@@ -148,14 +148,15 @@ public static class FormatExtensions
 
   public static Format GetDepthSRVFormat(this Format _format) => _format switch
   {
-    Format.FormatD32FloatS8X24Uint or
-    Format.FormatR32G8X24Typeless => Format.FormatR32FloatX8X24Typeless,
-    Format.FormatD32Float or
-    Format.FormatR32Typeless => Format.FormatR32Float,
-    Format.FormatD24UnormS8Uint or
-    Format.FormatR24G8Typeless => Format.FormatR24UnormX8Typeless,
-    Format.FormatD16Unorm or
-    Format.FormatR16Typeless => Format.FormatR16Unorm,
+    Format.FormatD32FloatS8X24Uint => Format.FormatD32FloatS8X24Uint,
+    Format.FormatD32Float => Format.FormatD32Float,
+    Format.FormatD24UnormS8Uint => Format.FormatD24UnormS8Uint,
+    Format.FormatD16Unorm => Format.FormatD16Unorm,
+
+    Format.FormatR32G8X24Typeless => Format.FormatD32FloatS8X24Uint,
+    Format.FormatR32Typeless => Format.FormatD32Float,
+    Format.FormatR24G8Typeless => Format.FormatD24UnormS8Uint,
+    Format.FormatR16Typeless => Format.FormatD16Unorm,
     _ => _format
   };
 }

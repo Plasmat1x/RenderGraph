@@ -40,6 +40,8 @@ public static class Program
       example.Initialize(mockWindowHandle, 1920, 1080);
       example.DemonstrateBatchUpload();
       example.DemonstrateReadback();
+
+      window.Close();
     };
 
     window.Closing += example.Cleanup;
