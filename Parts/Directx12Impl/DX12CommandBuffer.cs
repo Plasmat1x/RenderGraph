@@ -642,6 +642,52 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     };
   }
 
+  public override void SetPrimitiveTopology(PrimitiveTopology _topology)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      SetPrimitiveTopologyDirectly(_topology);
+    }
+    else
+    {
+      base.SetPrimitiveTopology(_topology);
+    }
+  }
+
+  public override void SetIndexBuffer(IBufferView _buffer, IndexFormat _format)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      SetIndexBufferDirectly(_buffer, _format);
+    }
+    else
+    {
+      base.SetIndexBuffer(_buffer, _format);
+    }
+  }
+
+  public override void SetVertexBuffer(IBufferView _buffer, uint _slot)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      SetVertexBufferDirectly(_buffer, _slot);
+    }
+    else
+    {
+      base.SetVertexBuffer(_buffer, _slot);
+    }
+  }
+
+  // Добавить private implementation методы:
+  private void SetPrimitiveTopologyDirectly(PrimitiveTopology _topology)
+  {
+    var d3d12Topology = _topology.ConvertToCmd();
+    p_commandList->IASetPrimitiveTopology(d3d12Topology);
+  }
+
   public override void Dispose()
   {
     p_stateTracker?.Dispose();
@@ -658,6 +704,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
     base.Dispose();
   }
+
 
 
   #region Event/Marker Methods
