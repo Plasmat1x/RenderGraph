@@ -126,16 +126,17 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
     if(_data == null || _data.Length == 0)
       throw new ArgumentException("Data cannot be null or empty");
 
+    if(p_resource == null)
+      throw new InvalidOperationException($"Buffer '{Name}' resource is null - cannot set data");
+
     var dataSize = (ulong)(_data.Length * sizeof(T));
     if(_offset + dataSize > Size)
       throw new ArgumentException("Data size exceeds buffer size");
 
-    // Для Dynamic буферов используем Map/Unmap
     if(p_description.Usage == ResourceUsage.Dynamic)
     {
       SetDataViaMappedMemory(_data, _offset);
     }
-    // Для Default буферов используем upload через command list
     else if(p_description.Usage == ResourceUsage.Default)
     {
       SetDataViaUpload(_data, _offset);
@@ -170,7 +171,6 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
     {
       GetDataViaMappedMemory(result, _offset);
     }
-    // Для остальных нужен readback
     else
     {
       GetDataViaReadback(result, _offset);
@@ -217,25 +217,41 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
   /// </summary>
   internal void SetDataInternal(ID3D12GraphicsCommandList* _commandList, void* _data, ulong _dataSize, ulong _offset)
   {
-    // Переводим буфер в состояние копирования
+    if(p_resource == null)
+      throw new InvalidOperationException($"Buffer '{Name}' resource is null - buffer was not created properly");
+
+    if(_commandList == null)
+      throw new ArgumentNullException(nameof(_commandList), "Command list cannot be null");
+
+    if(_data == null)
+      throw new ArgumentNullException(nameof(_data), "Data pointer cannot be null");
+
+    if(_dataSize == 0)
+      throw new ArgumentException("Data size cannot be zero");
+
+    if(_offset + _dataSize > p_description.Size)
+      throw new ArgumentException($"Data size ({_dataSize}) + offset ({_offset}) exceeds buffer size ({p_description.Size})");
+
+    var uploadManager = p_parentDevice.GetUploadManager();
+    if(uploadManager == null)
+      throw new InvalidOperationException("Upload manager is null");
+
     var barrier = new ResourceBarrier
     {
       Type = ResourceBarrierType.Transition,
-      Transition = new ResourceTransitionBarrier
-      {
-        PResource = p_resource,
-        StateBefore = p_currentState,
-        StateAfter = ResourceStates.CopyDest,
-        Subresource = D3D12.ResourceBarrierAllSubresources
-      }
+      Flags = ResourceBarrierFlags.None
     };
+
+    barrier.Anonymous.Transition.PResource = p_resource;
+    barrier.Anonymous.Transition.StateBefore = p_currentState;
+    barrier.Anonymous.Transition.StateAfter = ResourceStates.CopyDest;
+    barrier.Anonymous.Transition.Subresource = D3D12.ResourceBarrierAllSubresources;
+
+
     _commandList->ResourceBarrier(1, &barrier);
 
-    // Используем upload manager из device
-    var uploadManager = p_parentDevice.GetUploadManager();
     uploadManager.UploadBufferData(_commandList, p_resource, _offset, _data, _dataSize);
 
-    // Возвращаем в исходное состояние
     barrier.Transition.StateBefore = ResourceStates.CopyDest;
     barrier.Transition.StateAfter = p_currentState;
     _commandList->ResourceBarrier(1, &barrier);
@@ -249,6 +265,9 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
 
   private void CreateBufferResource()
   {
+    if(p_description.Size == 0)
+      throw new ArgumentException("Buffer size cannot be zero");
+
     var resourceDesc = new ResourceDesc
     {
       Dimension = Silk.NET.Direct3D12.ResourceDimension.Buffer,
@@ -280,27 +299,58 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
 
     var initialState = GetInitialResourceState();
 
-    fixed(ID3D12Resource** ppResource = &p_resource)
-    fixed(Guid* pGuid = &ID3D12Resource.Guid)
-    {
-      HResult hr = p_device->CreateCommittedResource(
+    //fixed(ID3D12Resource** ppResource = &p_resource)
+    //fixed(Guid* pGuid = &ID3D12Resource.Guid)
+    //{
+    //  HResult hr = p_device->CreateCommittedResource(
+    //    &heapProperties,
+    //    HeapFlags.None,
+    //    &resourceDesc,
+    //    initialState,
+    //    null,
+    //    pGuid,
+    //    (void**)&ppResource);
+
+    //  DX12Helpers.ThrowIfFailed(hr, "Failed to create buffer resource");
+    //}
+
+    ID3D12Resource* resource = null;
+    var riid = ID3D12Resource.Guid;
+
+    HResult hr = p_device->CreateCommittedResource(
         &heapProperties,
         HeapFlags.None,
         &resourceDesc,
         initialState,
         null,
-        pGuid,
-        (void**)&ppResource);
+        &riid,
+        (void**)&resource);
 
-      DX12Helpers.ThrowIfFailed(hr, "Failed to create buffer resource");
-    }
+    DX12Helpers.ThrowIfFailed(hr, $"Failed to create buffer resource '{Name}'");
 
+    p_resource = resource;
     p_currentState = initialState;
 
-    // Установим имя ресурса для отладки
     if(!string.IsNullOrEmpty(p_name))
     {
       DX12Helpers.SetResourceName(p_resource, p_name);
+    }
+
+    if(heapType == HeapType.Upload || heapType == HeapType.Readback)
+    {
+      p_isMappable = true;
+
+      void* testPtr;
+      var range = new Silk.NET.Direct3D12.Range { Begin = 0, End = 0 };
+      hr = p_resource->Map(0, &range, &testPtr);
+      if(hr.IsSuccess)
+      {
+        p_resource->Unmap(0, &range);
+      }
+      else
+      {
+        throw new InvalidOperationException($"Buffer '{Name}' should be mappable but Map() failed: {hr}");
+      }
     }
   }
 
@@ -318,6 +368,7 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
   {
     return p_description.Usage switch
     {
+      ResourceUsage.Default => ResourceStates.Common,
       ResourceUsage.Dynamic => ResourceStates.GenericRead,
       ResourceUsage.Staging => ResourceStates.CopyDest,
       _ => ResourceStates.Common
@@ -376,7 +427,13 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
   /// </summary>
   private void SetDataViaMappedMemory<T>(T[] _data, ulong _offset) where T : unmanaged
   {
+    if(!p_isMappable)
+      throw new InvalidOperationException($"Buffer '{Name}' is not mappable");
+
     var mappedPtr = p_parentDevice.MapBuffer(this, MapMode.WriteDiscard);
+
+    if(mappedPtr == IntPtr.Zero)
+      throw new InvalidOperationException($"Failed to map buffer '{Name}'");
 
     try
     {
@@ -385,6 +442,9 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
         var destPtr = (byte*)mappedPtr.ToPointer() + _offset;
         var sourcePtr = (byte*)dataPtr;
         var copySize = _data.Length * sizeof(T);
+
+        if(_offset + (ulong)copySize > p_description.Size)
+          throw new ArgumentException("Copy would exceed buffer bounds");
 
         Buffer.MemoryCopy(sourcePtr, destPtr, copySize, copySize);
       }
@@ -451,7 +511,17 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
   /// </summary>
   private void SetDataViaUpload<T>(T[] _data, ulong _offset) where T : unmanaged
   {
-    p_parentDevice.UploadBufferData(this, _data, _offset);
+    if(p_parentDevice == null)
+      throw new InvalidOperationException("Parent device is null");
+
+    try
+    {
+      p_parentDevice.UploadBufferData(this, _data, _offset);
+    }
+    catch(Exception ex)
+    {
+      throw new InvalidOperationException($"Failed to upload data to buffer '{Name}': {ex.Message}", ex);
+    }
   }
 
   private struct BufferViewKey: IEquatable<BufferViewKey>

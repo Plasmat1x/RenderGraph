@@ -19,6 +19,7 @@ public unsafe class DX12UploadHeapManager: IDisposable
   private const ulong SMALL_BUFFER_SIZE = 64 * 1024;      // 64 KB
   private const ulong MEDIUM_BUFFER_SIZE = 1024 * 1024;   // 1 MB  
   private const ulong LARGE_BUFFER_SIZE = 16 * 1024 * 1024; // 16 MB
+  private const int MAX_POOLED_BUFFERS = 32;
 
   public DX12UploadHeapManager(ID3D12Device* _device)
   {
@@ -37,6 +38,9 @@ public unsafe class DX12UploadHeapManager: IDisposable
   /// </summary>
   public DX12UploadBuffer AcquireBuffer(ulong _requiredSize)
   {
+    if(_requiredSize == 0)
+      throw new ArgumentException("Required size cannot be zero");
+
     lock(p_lock)
     {
       foreach(var buffer in p_availableBuffers)
@@ -64,8 +68,15 @@ public unsafe class DX12UploadHeapManager: IDisposable
 
     lock(p_lock)
     {
-      _buffer.Reset();
-      p_availableBuffers.Add(_buffer);
+      if(p_availableBuffers.Count < MAX_POOLED_BUFFERS)
+      {
+        p_availableBuffers.Add(_buffer);
+      }
+      else
+      {
+        _buffer.Dispose();
+        p_uploadBuffers.Remove(_buffer);
+      }
     }
   }
 
@@ -79,7 +90,21 @@ public unsafe class DX12UploadHeapManager: IDisposable
       void* _data,
       ulong _dataSize)
   {
+    if(_commandList == null)
+      throw new ArgumentNullException(nameof(_commandList), "Command list cannot be null");
+
+    if(_destinationBuffer == null)
+      throw new ArgumentNullException(nameof(_destinationBuffer), "Destination buffer cannot be null");
+
+    if(_data == null)
+      throw new ArgumentNullException(nameof(_data), "Data pointer cannot be null");
+
+    if(_dataSize == 0)
+      throw new ArgumentException("Data size cannot be zero");
+
     var uploadBuffer = AcquireBuffer(_dataSize);
+    if(uploadBuffer == null)
+      throw new InvalidOperationException("Failed to acquire upload buffer");
 
     try
     {
@@ -91,6 +116,10 @@ public unsafe class DX12UploadHeapManager: IDisposable
           uploadBuffer.Resource,
           0,
           _dataSize);
+    }
+    catch(Exception ex)
+    {
+      throw new InvalidOperationException($"Failed to upload buffer data: {ex.Message}", ex);
     }
     finally
     {
@@ -158,8 +187,6 @@ public unsafe class DX12UploadHeapManager: IDisposable
       Type = HeapType.Upload,
       CPUPageProperty = CpuPageProperty.Unknown,
       MemoryPoolPreference = MemoryPool.Unknown,
-      CreationNodeMask = 0,
-      VisibleNodeMask = 0
     };
 
     var bufferDesc = new ResourceDesc
@@ -177,19 +204,23 @@ public unsafe class DX12UploadHeapManager: IDisposable
     };
 
     ID3D12Resource* resource;
+    var riid = ID3D12Resource.Guid;
     var hr = p_device->CreateCommittedResource(
         &heapProps,
         HeapFlags.None,
         &bufferDesc,
         ResourceStates.GenericRead,
         null,
-        SilkMarshal.GuidPtrOf<ID3D12Resource>(),
+        &riid,
         (void**)&resource);
 
     DX12Helpers.ThrowIfFailed(hr, "Failed to create upload buffer");
 
     var buffer = new DX12UploadBuffer(resource, _size);
-    p_uploadBuffers.Add(buffer);
+    lock(p_lock)
+    {
+      p_uploadBuffers.Add(buffer);
+    }
     return buffer;
   }
 

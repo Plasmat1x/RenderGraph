@@ -96,11 +96,29 @@ public static class DX12Helpers
     return totalSize;
   }
 
+  /// <summary>
+  /// Проверить результат операции и выбросить исключение если ошибка
+  /// </summary>
   public static void ThrowIfFailed(HResult _hr, string _message)
   {
     if(_hr.IsFailure)
     {
-      throw new Exception($"{_message} (HRESULT: 0x{_hr.Value:X8})");
+      var errorCode = _hr.Value;
+      var errorMessage = $"{_message} (HRESULT: 0x{errorCode:X8})";
+
+      // Расширенная информация об ошибках
+      var detailedMessage = (uint)errorCode switch
+      {
+        0x80070057 => "E_INVALIDARG - Invalid argument",
+        0x8007000E => "E_OUTOFMEMORY - Out of memory",
+        0x80004005 => "E_FAIL - Unspecified failure",
+        0x887A0005 => "DXGI_ERROR_DEVICE_REMOVED - Device removed",
+        0x887A0006 => "DXGI_ERROR_DEVICE_HUNG - Device hung",
+        0x887A0007 => "DXGI_ERROR_DEVICE_RESET - Device reset",
+        _ => "Unknown error"
+      };
+
+      throw new Exception($"{errorMessage} - {detailedMessage}");
     }
   }
 
@@ -119,4 +137,19 @@ public static class DX12Helpers
       }
     }
   }
+
+  /// <summary>
+  /// Конвертировать MapMode в D3D12 range
+  /// </summary>
+  public static Silk.NET.Direct3D12.Range GetMapRange(MapMode _mode, ulong _offset = 0, ulong _size = 0)
+  {
+    return _mode switch
+    {
+      MapMode.Read => new Silk.NET.Direct3D12.Range { Begin = (nuint)_offset, End = (nuint)(_size > 0 ? _offset + _size : 0) },
+      MapMode.Write or MapMode.ReadWrite => new Silk.NET.Direct3D12.Range { Begin = 0, End = 0 },
+      MapMode.WriteDiscard or MapMode.WriteNoOverwrite => new Silk.NET.Direct3D12.Range { Begin = 0, End = 0 },
+      _ => new Silk.NET.Direct3D12.Range { Begin = 0, End = 0 }
+    };
+  }
+
 }

@@ -2,6 +2,7 @@ using Directx12Impl.Extensions;
 using Directx12Impl.Parts.Managers;
 using Directx12Impl.Parts.Utils;
 
+using GraphicsAPI;
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
@@ -14,6 +15,7 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
+using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -258,25 +260,24 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
     var initialState = GetInitialResourceState();
 
-    fixed(ID3D12Resource** ppResource = &p_resource)
-    fixed(Guid* pGuid = &ID3D12Resource.Guid)
-    {
-      HResult hr = p_device->CreateCommittedResource(
-        &heapProperties,
-        HeapFlags.None,
-        &resourceDesc,
-        initialState,
-        null,
-        pGuid,
-        (void**)ppResource);
+    ID3D12Resource* pResource = null;
+    var riid = ID3D12Resource.Guid;
+
+    HResult hr = p_device->CreateCommittedResource(
+      &heapProperties,
+      HeapFlags.None,
+      &resourceDesc,
+      initialState,
+      null,
+      &riid,
+      (void**)&pResource);
 
 
-      DX12Helpers.ThrowIfFailed(hr, "Failed to create texture resource");
-    }
+    DX12Helpers.ThrowIfFailed(hr, "Failed to create texture resource");
 
+    p_resource = pResource;
     p_currentState = initialState;
 
-    // Установим имя ресурса для отладки
     if(!string.IsNullOrEmpty(p_name))
     {
       DX12Helpers.SetResourceName(p_resource, p_name);
@@ -306,7 +307,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     if((p_description.BindFlags & BindFlags.UnorderedAccess) != 0)
       flags |= ResourceFlags.AllowUnorderedAccess;
 
-    // Если нет shader resource binding, можно запретить shader resource
     if((p_description.BindFlags & BindFlags.ShaderResource) == 0)
       flags |= ResourceFlags.DenyShaderResource;
 
@@ -315,7 +315,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   private ResourceStates GetInitialResourceState()
   {
-    // Выбираем начальное состояние на основе usage
     if((p_description.BindFlags & BindFlags.DepthStencil) != 0)
       return ResourceStates.DepthWrite;
     else if((p_description.BindFlags & BindFlags.RenderTarget) != 0)
@@ -344,7 +343,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   /// </summary>
   public void Clear(Vector4 clearColor, uint mipLevel = 0, uint arraySlice = 0)
   {
-    // Создаем данные для заполнения текстуры
     var pixelData = CreateClearPixelData(clearColor);
     var width = Math.Max(1u, p_description.Width >> (int)mipLevel);
     var height = Math.Max(1u, p_description.Height >> (int)mipLevel);
@@ -353,7 +351,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     var totalPixels = width * height * depth;
     var clearData = new byte[totalPixels * (ulong)pixelData.Length];
 
-    // Заполняем массив одинаковыми пикселями
     for(ulong i = 0; i < totalPixels; i++)
     {
       Array.Copy(pixelData, 0, clearData, (long)(i * (ulong)pixelData.Length), pixelData.Length);
@@ -366,7 +363,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   {
     if(!p_disposed)
     {
-      // Освобождаем все представления
       foreach(var view in p_views.Values)
       {
         view.Dispose();
@@ -392,7 +388,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     var uploadManager = p_parentDevice.GetUploadManager();
     var subresource = GetSubresourceIndex(_mipLevel, _arraySlice);
 
-    // Calculate footprint for the region
     var regionDesc = new ResourceDesc
     {
       Dimension = Silk.NET.Direct3D12.ResourceDimension.Texture2D,
@@ -419,7 +414,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
         null,
         &totalSize);
 
-    // Transition texture to copy dest
     var barrier = new ResourceBarrier
     {
       Type = ResourceBarrierType.Transition,
@@ -433,7 +427,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     };
     _commandList->ResourceBarrier(1, &barrier);
 
-    // Upload data to region
     uploadManager.UploadTextureDataRegion(
         _commandList,
         p_resource,
@@ -443,7 +436,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
         _x, _y, _z,
         layouts[0].Footprint.RowPitch);
 
-    // Restore original state
     barrier.Transition.StateBefore = ResourceStates.CopyDest;
     barrier.Transition.StateAfter = p_currentState;
     _commandList->ResourceBarrier(1, &barrier);
@@ -513,7 +505,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   {
     var uploadManager = p_parentDevice.GetUploadManager();
 
-    // Получаем layout информацию для subresource
     var subresource = GetSubresourceIndex(_mipLevel, _arraySlice);
 
     PlacedSubresourceFootprint* layouts = stackalloc PlacedSubresourceFootprint[1];
@@ -534,7 +525,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     if((ulong)_dataSize < totalSize)
       throw new ArgumentException($"Data size ({_dataSize}) is less than required ({totalSize})");
 
-    // Переводим текстуру в состояние копирования
     var barrier = new ResourceBarrier
     {
       Type = ResourceBarrierType.Transition,
@@ -548,7 +538,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     };
     _commandList->ResourceBarrier(1, &barrier);
 
-    // Загружаем данные через upload heap
     uploadManager.UploadTextureData(
         _commandList,
         p_resource,
@@ -558,7 +547,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
         layouts[0].Footprint.RowPitch,
         0);
 
-    // Возвращаем в исходное состояние
     barrier.Transition.StateBefore = ResourceStates.CopyDest;
     barrier.Transition.StateAfter = p_currentState;
     _commandList->ResourceBarrier(1, &barrier);
