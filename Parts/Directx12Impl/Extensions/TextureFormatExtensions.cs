@@ -22,6 +22,7 @@ public static class TextureFormatExtensions
     TextureFormat.R8G8B8A8_SINT => Format.FormatR8G8B8A8Sint,
     TextureFormat.D32_FLOAT => Format.FormatD32Float,
     TextureFormat.D24_UNORM_S8_UINT => Format.FormatD24UnormS8Uint,
+    TextureFormat.D16_UNORM => Format.FormatD16Unorm,
     TextureFormat.BC1_TYPELESS => Format.FormatBC1Typeless,
     TextureFormat.BC1_UNORM => Format.FormatBC1Unorm,
     TextureFormat.BC1_UNORM_SRGB => Format.FormatBC1UnormSrgb,

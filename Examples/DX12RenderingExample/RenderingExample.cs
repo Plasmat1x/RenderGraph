@@ -182,7 +182,7 @@ public unsafe class RenderingExample
       Depth = 1,
       MipLevels = 1,
       ArraySize = 1,
-      Format = TextureFormat.D32_FLOAT,
+      Format = TextureFormat.D24_UNORM_S8_UINT,
       SampleCount = 1,
       TextureUsage = TextureUsage.DepthStencil,
       BindFlags = BindFlags.DepthStencil,
@@ -191,7 +191,7 @@ public unsafe class RenderingExample
 
     depthTexture = device.CreateTexture(depthDesc) as DX12Texture;
     depthStencilView = depthTexture.CreateView(
-        TextureViewDescription.CreateDSV(TextureFormat.D32_FLOAT)) as DX12TextureView;
+        TextureViewDescription.CreateDSV(TextureFormat.D24_UNORM_S8_UINT)) as DX12TextureView;
 
     Console.WriteLine($"✅ Created depth buffer: {depthDesc.Width}x{depthDesc.Height}");
   }
