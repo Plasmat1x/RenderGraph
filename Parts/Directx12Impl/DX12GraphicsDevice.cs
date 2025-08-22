@@ -129,7 +129,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   public CommandBuffer CreateCommandBuffer(CommandBufferType _type, CommandBufferExecutionMode _mode = CommandBufferExecutionMode.Immediate)
   {
-    var commandBuffer = new DX12CommandBuffer(p_device, p_d3d12, _type, _mode);
+    var commandBuffer = new DX12CommandBuffer(this, p_device, p_d3d12, _type, _mode);
 
     lock(p_commandBuffers)
     {
@@ -242,7 +242,14 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   public void WaitForFence(IFence _fence)
   {
-    throw new NotImplementedException();
+    if(_fence is DX12Fence dx12Fence)
+    {
+      dx12Fence.Wait(dx12Fence.Value);
+    }
+    else
+    {
+      throw new ArgumentException("Invalid fence type - expected DX12Fence");
+    }
   }
 
   public void Present()
@@ -258,6 +265,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   public void EndFrame()
   {
+    p_frameManager.SignalEndOfFrame(p_directQueue);
     p_frameManager.MoveToNextFrame();
   }
 
@@ -295,10 +303,17 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     if(_commandBuffer == null)
       throw new ArgumentNullException(nameof(_commandBuffer));
 
-
-    if(_commandBuffer is GenericCommandBuffer genericCmd)
+    if(_commandBuffer is DX12CommandBuffer dx12Buffer)
+    {
+      ExecuteCommandBuffer(dx12Buffer);
+    }
+    else if(_commandBuffer is GenericCommandBuffer genericCmd)
     {
       genericCmd.Execute();
+    }
+    else
+    {
+      throw new ArgumentException("Unsupported command buffer type");
     }
   }
 
@@ -382,10 +397,10 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
       queue->ExecuteCommandLists((uint)dx12Buffers.Length, ppCommandLists);
     }
 
-    if(p_immediateSync)
-    {
-      WaitForGPU();
-    }
+    //if(p_immediateSync)
+    //{
+    //  WaitForGPU();
+    //}
   }
 
   public void BeginEvent(string _name)

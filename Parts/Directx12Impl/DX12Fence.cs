@@ -79,7 +79,7 @@ public class DX12Fence: IFence
 
   }
 
-  public unsafe void Wait(ulong _value, uint _timeoutMs = uint.MaxValue)
+  public unsafe void Wait(ulong _value, uint _timeoutMs = 5000)
   {
     ThrowIfDisposed();
 
@@ -95,7 +95,12 @@ public class DX12Fence: IFence
     bool signaled = p_fenceEvent.WaitOne((int)_timeoutMs);
 
     if(!signaled)
-      throw new TimeoutException($"Fence wait timed out after {_timeoutMs}ms waiting for value {_value}");
+    {
+      var currentValue = p_fence.GetCompletedValue();
+      throw new TimeoutException($"Fence wait timed out after {_timeoutMs}ms. " +
+        $"Waiting for value {_value}, current value is {currentValue}. " +
+        $"GPU may be hung or operation is taking too long.");
+    }
   }
 
   public ulong GetCompletedValue()
@@ -146,8 +151,8 @@ public class DX12Fence: IFence
       throw new ObjectDisposedException(nameof(DX12Fence));
   }
 
-  internal void WaitForValue(ulong value)
+  internal void WaitForValue(ulong _value, uint _timeoutMs = 5000)
   {
-    throw new NotImplementedException();
+    Wait(_value, _timeoutMs);
   }
 }
