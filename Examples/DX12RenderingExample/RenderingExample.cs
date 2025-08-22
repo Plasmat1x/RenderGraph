@@ -109,7 +109,7 @@ public unsafe class RenderingExample
       InputLayout = CreateInputLayout(),
       PrimitiveTopology = PrimitiveTopology.TriangleList,
       RenderTargetFormats = new[] { TextureFormat.R8G8B8A8_UNORM },
-      DepthStencilFormat = TextureFormat.D32_FLOAT,
+      DepthStencilFormat = TextureFormat.D24_UNORM_S8_UINT,
       SampleCount = 1,
       SampleQuality = 0
     };
@@ -198,64 +198,87 @@ public unsafe class RenderingExample
 
   public void Render()
   {
-    var time = (float)(DateTime.Now.TimeOfDay.TotalSeconds);
-    var rotationMatrix = Matrix4x4.CreateRotationZ(time * 0.5f);
-    UpdateConstantBuffer(rotationMatrix);
-
-    device.BeginFrame();
-
-    var backBuffer = swapChain.GetCurrentBackBuffer();
-    var renderTargetView = backBuffer.GetDefaultRenderTargetView();
-
-    commandBuffer.Begin();
-
     try
     {
-      using var debugScope = commandBuffer.BeginDebugScope("Triangle Render Pass");
+      var time = (float)(DateTime.Now.TimeOfDay.TotalSeconds);
+      var rotationMatrix = Matrix4x4.CreateRotationZ(time * 0.5f);
+      UpdateConstantBuffer(rotationMatrix);
 
-      commandBuffer.SetRenderTarget(renderTargetView, depthStencilView);
+      device.BeginFrame();
 
-      var viewport = new Resources.Viewport
+      var backBuffer = swapChain.GetCurrentBackBuffer();
+      var renderTargetView = backBuffer.GetDefaultRenderTargetView();
+
+      commandBuffer.Begin();
+
+      try
       {
-        X = 0,
-        Y = 0,
-        Width = swapChain.Description.Width,
-        Height = swapChain.Description.Height,
-        MinDepth = 0.0f,
-        MaxDepth = 1.0f
-      };
-      commandBuffer.SetViewport(viewport);
+        using var debugScope = commandBuffer.BeginDebugScope("Triangle Render Pass");
 
-      commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
-      commandBuffer.ClearDepthStencil(depthStencilView, ClearFlags.Depth, 1.0f, 0);
+        commandBuffer.SetRenderTarget(renderTargetView, depthStencilView);
 
-      commandBuffer.SetRenderState(simpleRenderState);
+        var viewport = new Resources.Viewport
+        {
+          X = 0,
+          Y = 0,
+          Width = swapChain.Description.Width,
+          Height = swapChain.Description.Height,
+          MinDepth = 0.0f,
+          MaxDepth = 1.0f
+        };
+        commandBuffer.SetViewport(viewport);
 
-      var vertexView = vertexBuffer.GetDefaultShaderResourceView();
-      var indexView = indexBuffer.GetDefaultShaderResourceView();
-      var constantView = constantBuffer.GetDefaultShaderResourceView();
+        commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
+        commandBuffer.ClearDepthStencil(depthStencilView, ClearFlags.Depth, 1.0f, 0);
 
-      commandBuffer.SetVertexBuffer(vertexView, 0);
-      commandBuffer.SetIndexBuffer(indexView, IndexFormat.R16_UINT);
+        commandBuffer.SetRenderState(simpleRenderState);
 
-      commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
+        var vertexView = vertexBuffer.GetDefaultShaderResourceView();
+        var indexView = indexBuffer.GetDefaultShaderResourceView();
+        var constantView = constantBuffer.GetDefaultShaderResourceView();
 
-      commandBuffer.SetConstantBuffer(ShaderStage.Vertex, 0, constantView);
+        commandBuffer.SetVertexBuffer(vertexView, 0);
+        commandBuffer.SetIndexBuffer(indexView, IndexFormat.UInt16);
+        commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
+        commandBuffer.SetConstantBuffer(ShaderStage.Vertex, 0, constantView);
 
-      commandBuffer.DrawIndexed(3, 1, 0, 0, 0);
+        commandBuffer.DrawIndexed(3, 1, 0, 0, 0);
 
-      Console.WriteLine("🎨 Drew triangle with 3 indices");
+        if(commandBuffer is DX12CommandBuffer dx12Buffer && backBuffer is DX12Texture dx12BackBuffer)
+        {
+          dx12Buffer.TransitionBackBufferForPresent(dx12BackBuffer);
+        }
+
+        Console.WriteLine("🎨 Drew triangle with 3 indices");
+      }
+      finally
+      {
+        commandBuffer.End();
+      }
+
+      device.Submit(commandBuffer);
+      swapChain.Present();
+      device.EndFrame();
     }
-    finally
+    catch(TimeoutException ex)
     {
-      commandBuffer.End();
+      Console.WriteLine($"⚠️ GPU Timeout: {ex.Message}");
+      try
+      {
+        device.WaitForGPU();
+      }
+      catch
+      {
+        Console.WriteLine("❌ Failed to recover from GPU timeout");
+        throw;
+      }
     }
-
-    device.Submit(commandBuffer);
-
-    swapChain.Present();
-
-    device.EndFrame();
+    catch(Exception ex)
+    {
+      Console.WriteLine($"❌ Render error: {ex.Message}");
+      Console.WriteLine($"Stack trace: {ex.StackTrace}");
+      throw;
+    }
   }
 
   private void UpdateConstantBuffer(Matrix4x4 worldViewProj)
@@ -278,17 +301,29 @@ public unsafe class RenderingExample
 
   public void Cleanup()
   {
-    device.WaitForGPU();
+    try
+    {
+      Console.WriteLine("🧹 Starting cleanup...");
 
-    depthStencilView?.Dispose();
-    depthTexture?.Dispose();
-    constantBuffer?.Dispose();
-    indexBuffer?.Dispose();
-    vertexBuffer?.Dispose();
-    simpleRenderState?.Dispose();
-    commandBuffer?.Dispose();
-    swapChain?.Dispose();
-    device?.Dispose();
+      device?.WaitForGPU();
+
+      depthStencilView?.Dispose();
+      depthTexture?.Dispose();
+      constantBuffer?.Dispose();
+      indexBuffer?.Dispose();
+      vertexBuffer?.Dispose();
+      simpleRenderState?.Dispose();
+      commandBuffer?.Dispose();
+      swapChain?.Dispose();
+      device?.Dispose();
+
+      Console.WriteLine("✅ Cleanup completed successfully!");
+    }
+    catch(Exception ex)
+    {
+      Console.WriteLine($"⚠️ Error during cleanup: {ex.Message}");
+      // Не re-throw в cleanup
+    }
 
     Console.WriteLine("🧹 Cleanup completed successfully!");
   }

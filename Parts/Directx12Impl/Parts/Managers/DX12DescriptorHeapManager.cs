@@ -108,6 +108,63 @@ public unsafe class DX12DescriptorHeapManager: IDisposable
     p_gpuSrvHeap.Reset();
   }
 
+  /// <summary>
+  /// Получить CBV/SRV/UAV descriptor heap для установки в command list
+  /// </summary>
+  public unsafe ID3D12DescriptorHeap* GetCBVSRVUAVHeap()
+  {
+    return p_srvHeap.GetHeap();
+  }
+
+  /// <summary>
+  /// Получить Sampler descriptor heap для установки в command list
+  /// </summary>
+  public unsafe ID3D12DescriptorHeap* GetSamplerHeap()
+  {
+    return p_samplerHeap.GetHeap();
+  }
+
+  /// <summary>
+  /// Получить RTV descriptor heap (не используется в SetDescriptorHeaps)
+  /// </summary>
+  public unsafe ID3D12DescriptorHeap* GetRTVHeap()
+  {
+    return p_rtvHeap.GetHeap();
+  }
+
+  /// <summary>
+  /// Получить DSV descriptor heap (не используется в SetDescriptorHeaps)
+  /// </summary>
+  public unsafe ID3D12DescriptorHeap* GetDSVHeap()
+  {
+    return p_dsvHeap.GetHeap();
+  }
+
+  public unsafe void SetDescriptorHeaps(ID3D12GraphicsCommandList* _commandList)
+  {
+    var heaps = stackalloc ID3D12DescriptorHeap*[2];
+    heaps[0] = GetGPUCBVSRVUAVHeap();
+    heaps[1] = GetGPUSamplerHeap();
+
+    _commandList->SetDescriptorHeaps(2, heaps);
+  }
+
+  /// <summary>
+  /// Получить GPU CBV/SRV/UAV descriptor heap (shader-visible)
+  /// </summary>
+  public unsafe ID3D12DescriptorHeap* GetGPUCBVSRVUAVHeap()
+  {
+    return p_gpuSrvHeap.GetHeap().Handle;
+  }
+
+  /// <summary>
+  /// Получить GPU Sampler descriptor heap (shader-visible)
+  /// </summary>
+  public unsafe ID3D12DescriptorHeap* GetGPUSamplerHeap()
+  {
+    return p_gpuSamplerHeap.GetHeap().Handle;
+  }
+
   public void Dispose()
   {
     if(p_disposed) 

@@ -31,6 +31,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   private ID3D12GraphicsCommandList* p_commandList;
   private ID3D12CommandAllocator* p_commandAllocator;
   private readonly DX12ResourceStateTracker p_stateTracker = new();
+  private readonly DX12GraphicsDevice p_parentDevice;
 
   private readonly CpuDescriptorHandle[] p_currentRenderTargets = new CpuDescriptorHandle[8];
   private CpuDescriptorHandle? p_currentDepthStencil;
@@ -39,13 +40,14 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private DX12RenderState p_currentRenderState;
 
-  public DX12CommandBuffer(ID3D12Device* _device, D3D12 _d3d12, CommandBufferType _type, CommandBufferExecutionMode _executionMode)
+  public DX12CommandBuffer(DX12GraphicsDevice _parentDevice, ID3D12Device* _device, D3D12 _d3d12, CommandBufferType _type, CommandBufferExecutionMode _executionMode)
     : base(_type)
   {
     p_d3d12 = _d3d12;
     p_device = _device;
     p_stateTracker = new DX12ResourceStateTracker();
     p_executionMode = _executionMode;
+    p_parentDevice = _parentDevice;
 
     CreateCommandListAndAllocator();
   }
@@ -103,6 +105,8 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
     p_stateTracker.Reset();
     ResetDX12State();
+
+
   }
 
   protected override void OnEnd()
@@ -116,6 +120,8 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     }
 
     base.OnEnd();
+
+    SetupDescriptorHeaps();
   }
 
   // === Можем переопределить критичные методы для производительности ===
@@ -188,6 +194,17 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
       base.SetRenderState(_renderState);
     }
   }
+
+  public void TransitionBackBufferForPresent(DX12Texture _backBuffer)
+  {
+    p_stateTracker.TransitionResource(
+      _backBuffer.GetResource(),
+      ResourceStates.Present,
+      0);
+
+    p_stateTracker.FlushResourceBarriers(p_commandList);
+  }
+
 
   // === Методы прямого выполнения ===
 
@@ -309,6 +326,55 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   // === DX12-специфичные методы ===
   #region Immediate
+
+  private void SetRenderTargetDirectly(ITextureView _colorTarget, ITextureView _depthTarget)
+  {
+    p_renderTargetCount = 0;
+
+    if(_colorTarget is DX12TextureView colorView)
+    {
+      var colorTexture = colorView.Texture as DX12Texture;
+
+      // ДОБАВИТЬ: Resource barrier для color target
+      if(colorTexture != null)
+      {
+        p_stateTracker.TransitionResource(
+          colorTexture.GetResource(),
+          ResourceStates.RenderTarget,
+          0);
+      }
+
+      p_currentRenderTargets[0] = colorView.GetRenderTargetView();
+      p_renderTargetCount = 1;
+    }
+
+    if(_depthTarget is DX12TextureView depthView)
+    {
+      var depthTexture = depthView.Texture as DX12Texture;
+
+      // ДОБАВИТЬ: Resource barrier для depth target
+      if(depthTexture != null)
+      {
+        p_stateTracker.TransitionResource(
+          depthTexture.GetResource(),
+          ResourceStates.DepthWrite,
+          0);
+      }
+
+      p_currentDepthStencil = depthView.GetDepthStencilView();
+    }
+    else
+    {
+      p_currentDepthStencil = null;
+    }
+
+    // ВАЖНО: Flush barriers перед установкой render targets
+    p_stateTracker.FlushResourceBarriers(p_commandList);
+
+    // Теперь устанавливаем render targets
+    ApplyRenderTargets();
+  }
+
   private void SetRenderTargetsDirectly(ITextureView[] _colorTargets, ITextureView _depthTarget)
   {
     p_renderTargetCount = 0;
@@ -342,10 +408,21 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     if(_target is not DX12TextureView dx12View)
       throw new ArgumentException("Invalid texture view type");
 
-    var clearColor = stackalloc float[4] { _color.X, _color.Y, _color.Z, _color.W };
-    var rtvHandle = dx12View.GetRenderTargetView();
+    var texture = dx12View.Texture as DX12Texture;
+    if(texture != null)
+    {
+      p_stateTracker.TransitionResource(
+        texture.GetResource(),
+        ResourceStates.RenderTarget,
+        0);
 
-    p_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, null);
+      p_stateTracker.FlushResourceBarriers(p_commandList);
+    }
+
+    var rtvHandle = dx12View.GetRenderTargetView();
+    var colorArray = stackalloc float[4] { _color.X, _color.Y, _color.Z, _color.W };
+
+    p_commandList->ClearRenderTargetView(rtvHandle, colorArray, 0, null);
   }
 
   private void ClearDepthStencilDirectly(ITextureView _target, GraphicsAPI.Enums.ClearFlags _flags, float _depth, byte _stencil)
@@ -705,7 +782,36 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     base.Dispose();
   }
 
+  private DX12DescriptorHeapManager GetDescriptorManager() => p_parentDevice.GetDescriptorManager();
 
+  private unsafe void SetupDescriptorHeaps()
+  {
+    // Получаем descriptor manager из parent device
+    var descriptorManager = GetDescriptorManager();
+    if(descriptorManager == null)
+      return;
+
+    // Устанавливаем descriptor heaps для CBV/SRV/UAV и Samplers
+    var heaps = stackalloc ID3D12DescriptorHeap*[2];
+    uint heapCount = 0;
+
+    var cbvSrvUavHeap = descriptorManager.GetCBVSRVUAVHeap();
+    if(cbvSrvUavHeap != null)
+    {
+      heaps[heapCount++] = cbvSrvUavHeap;
+    }
+
+    var samplerHeap = descriptorManager.GetSamplerHeap();
+    if(samplerHeap != null)
+    {
+      heaps[heapCount++] = samplerHeap;
+    }
+
+    if(heapCount > 0)
+    {
+      p_commandList->SetDescriptorHeaps(heapCount, heaps);
+    }
+  }
 
   #region Event/Marker Methods
 
