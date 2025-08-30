@@ -1,4 +1,3 @@
-using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Reflections.Enums;
 
@@ -13,8 +12,8 @@ public static class ShaderReflectionExtensions
 
     foreach(var output in _stage.OutputParameters)
     {
-      var  matchingInput = _other.InputParameters.FirstOrDefault(
-        _input => _input.SemanticName == output.SemanticName && 
+      var matchingInput = _other.InputParameters.FirstOrDefault(
+        _input => _input.SemanticName == output.SemanticName &&
         _input.SemanticIndex == output.SemanticIndex);
 
       if(matchingInput == null)
@@ -55,9 +54,9 @@ public static class ShaderReflectionExtensions
 
     var resources = _type switch
     {
-      ResourceBindingType.ConstantBuffer => _reflection.ConstantBuffers.Select(cb => new ResourceBindingInfo
+      ResourceBindingType.ConstantBuffer => _reflection.ConstantBuffers.Select(_cb => new ResourceBindingInfo
       {
-        BindPoint = cb.BindPoint,
+        BindPoint = _cb.BindPoint,
         Type = ResourceBindingType.ConstantBuffer
       }),
       ResourceBindingType.ShaderResource => _reflection.BoundResources,

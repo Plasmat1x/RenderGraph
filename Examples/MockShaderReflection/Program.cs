@@ -1,11 +1,10 @@
-using System;
 using System.Text;
 
 namespace Examples.ShaderReflectionDemo;
 
 public static class Programm
 {
-  public static void Main(string[] args)
+  public static void Main(string[] _args)
   {
     Console.OutputEncoding = Encoding.UTF8;
 

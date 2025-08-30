@@ -23,7 +23,7 @@ public interface IBuffer: IResource
   IntPtr Map(MapMode _mode = MapMode.Write);
   void Unmap();
   void SetData<T>(T[] _data, ulong _offset = 0) where T : unmanaged;
-  void SetData<T>(T _data, ulong _offset = 0) where T: unmanaged;
-  T[] GetData<T>(ulong _offset = 0, int _count = 0) where T: unmanaged;
-  T GetData<T>(ulong _offset = 0) where T: unmanaged;
+  void SetData<T>(T _data, ulong _offset = 0) where T : unmanaged;
+  T[] GetData<T>(ulong _offset = 0, int _count = 0) where T : unmanaged;
+  T GetData<T>(ulong _offset = 0) where T : unmanaged;
 }

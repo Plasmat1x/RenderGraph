@@ -1,4 +1,3 @@
-using GraphicsAPI;
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
@@ -6,8 +5,6 @@ using GraphicsAPI.Reflections;
 using GraphicsAPI.Reflections.Extensions;
 
 using Resources.Enums;
-
-using System.Xml.Linq;
 
 namespace MockImpl;
 
@@ -55,7 +52,7 @@ public class MockShader: IShader
 
   public bool HasConstantBuffer(string _name) => p_reflection.ConstantBuffers.Any(_cb => _cb.Name == _name);
 
-  public bool HasTexture(string _name) => p_reflection.BoundResources.Any(_r =>_r.Name == _name && _r.Type == ResourceBindingType.ShaderResource);
+  public bool HasTexture(string _name) => p_reflection.BoundResources.Any(_r => _r.Name == _name && _r.Type == ResourceBindingType.ShaderResource);
 
   public bool HasSampler(string _name) => p_reflection.Samplers.Any(_s => _s.Name == _name);
 

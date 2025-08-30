@@ -2,8 +2,6 @@ using Directx12Impl.Parts.Structures;
 
 using Silk.NET.Direct3D12;
 
-using System.Runtime.InteropServices;
-
 namespace Directx12Impl.Parts;
 
 public class DX12DescriptorAllocation: IDisposable
@@ -63,7 +61,7 @@ public class DX12DescriptorAllocation: IDisposable
 
   public void Dispose()
   {
-    if(p_disposed) 
+    if(p_disposed)
       return;
 
     p_heap.Free(p_baseIndex, p_count);

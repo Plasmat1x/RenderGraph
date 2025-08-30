@@ -1,12 +1,6 @@
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Directx12Impl.Parts.Managers;
 public class DX12ResourceStateTracker: IDisposable
 {
@@ -94,7 +88,7 @@ public class DX12ResourceStateTracker: IDisposable
 
   public unsafe void ResolvePendingResourceBarriers()
   {
-    if(p_pendingResourceBarriers.Count == 0) 
+    if(p_pendingResourceBarriers.Count == 0)
       return;
 
     lock(s_globalMutex)
@@ -182,7 +176,7 @@ public class DX12ResourceStateTracker: IDisposable
     p_pendingResourceBarriers.Clear();
     p_resourceBarriers.Clear();
 
-    p_disposed = true;  
+    p_disposed = true;
   }
 
   internal int GetBarrierFlushCount()

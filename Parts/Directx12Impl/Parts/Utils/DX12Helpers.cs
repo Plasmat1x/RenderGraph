@@ -1,15 +1,10 @@
 using Directx12Impl.Extensions;
 
-using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
-
-using Resources.Enums;
 
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
-
-using System;
 
 namespace Directx12Impl.Parts.Utils;
 public static class DX12Helpers
@@ -53,7 +48,7 @@ public static class DX12Helpers
   }
 
   public static ulong AlignUp(ulong _size, ulong _alignment) => _size + _alignment - 1 & ~(_alignment - 1);
-  
+
   public static ulong CalculateTextureSize(uint _width, uint _height, uint _depth, uint _mipLevels, uint _arraySize, Format _format)
   {
     ulong totalSize = 0;

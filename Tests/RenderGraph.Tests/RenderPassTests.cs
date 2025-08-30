@@ -1,8 +1,3 @@
-using Core;
-using Core.Enums;
-
-using MockImpl;
-
 namespace ResourcesTests;
 
 public class RenderPassTests

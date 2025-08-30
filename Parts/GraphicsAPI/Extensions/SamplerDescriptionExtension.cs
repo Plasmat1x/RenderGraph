@@ -72,5 +72,5 @@ public static class SamplerDescriptionExtension
     AddressModeW = AddressMode.Clamp,
   };
 
-  public static SamplerDescription CreateShadowSampler(string name = "ShadowSampler") => CreateComparisonSampler(ComparisonFunction.LessEqual, name);
+  public static SamplerDescription CreateShadowSampler(string _name = "ShadowSampler") => CreateComparisonSampler(ComparisonFunction.LessEqual, _name);
 }

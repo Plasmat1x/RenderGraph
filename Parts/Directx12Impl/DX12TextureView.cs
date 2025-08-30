@@ -10,7 +10,6 @@ using Resources.Enums;
 
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
-using Silk.NET.DXGI;
 
 namespace Directx12Impl;
 
@@ -58,7 +57,7 @@ public unsafe class DX12TextureView: ITextureView
   /// </summary>
   public ID3D12Resource* GetResource() => p_texture.GetResource();
   public nint GetNativeHandle() => (nint)p_descriptorHandle.CpuHandle.Ptr;
-  
+
   private DX12DescriptorHandle CreateDescriptor(DX12DescriptorHeapManager _descriptorManager)
   {
     switch(p_viewType)

@@ -74,7 +74,7 @@ public abstract class RenderPass: IDisposable
   /// <summary>
   /// Выполняется после компиляции render graph для финальной настройки
   /// </summary>
-  public virtual void OnGraphCompiled(RenderGraph _renderGraph){}
+  public virtual void OnGraphCompiled(RenderGraph _renderGraph) { }
 
   /// <summary>
   /// Выполняется в начале каждого кадра

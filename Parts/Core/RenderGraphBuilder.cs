@@ -6,8 +6,6 @@ using GraphicsAPI.Interfaces;
 using Resources;
 using Resources.Enums;
 
-using System.Reflection.Metadata;
-
 namespace Core;
 
 public class RenderGraphBuilder

@@ -103,7 +103,7 @@ public class RenderGraph: IDisposable
       {
         var pass = p_executionOrder[i];
 
-        if(!pass.Enabled) 
+        if(!pass.Enabled)
         {
           Console.WriteLine($"Skipping disabled pass: {pass.Name}");
           continue;

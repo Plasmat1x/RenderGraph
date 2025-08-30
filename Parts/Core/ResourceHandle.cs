@@ -42,7 +42,7 @@ public struct ResourceHandle
 
   public override bool Equals(object _obj) => _obj is ResourceHandle other && Equals(other);
 
-  public int GetHashCode()
+  public override int GetHashCode()
   {
     unchecked
     {
@@ -55,7 +55,7 @@ public struct ResourceHandle
     }
   }
 
-  public string ToString()
+  public override string ToString()
   {
     if(!IsValid())
       return "ResourceHandle(Invalid)";

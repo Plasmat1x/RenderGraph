@@ -7,8 +7,6 @@ using GraphicsAPI.Interfaces;
 using Resources;
 using Resources.Enums;
 
-using System.Reflection.Metadata;
-
 using Utility;
 
 namespace Core;

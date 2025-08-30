@@ -1,6 +1,5 @@
 using Core;
 
-using GraphicsAPI;
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
 
@@ -8,12 +7,8 @@ using MockImpl;
 
 using Resources.Enums;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
 using System.Text;
-using System.Threading;
 public class Program
 {
   public static void Main()
@@ -69,8 +64,7 @@ public class Program
 
     Console.WriteLine("\n🔧 Setting up resource assignment callbacks...");
 
-    geometryPass.OnPassSetup += (_pass) =>
-    {
+    geometryPass.OnPassSetup += (_pass) => {
       Console.WriteLine("  🔗 Assigning GeometryPass.ColorTarget to BlurPass.InputTexture");
       blurPass.InputTexture = geometryPass.ColorTarget;
     };
@@ -111,14 +105,14 @@ public class Program
       renderGraph.UpdateFrameData(0.016f, 1920, 1080);
 
       var viewMatrix = Matrix4x4.CreateLookAt(
-          new Vector3(0, 0, 10),  
+          new Vector3(0, 0, 10),
           new Vector3(0, 0, 0),
           new Vector3(0, 1, 0)
       );
       var projMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
           MathF.PI / 4.0f,
           1920.0f / 1080.0f,
-          0.1f, 
+          0.1f,
           100.0f
       );
 

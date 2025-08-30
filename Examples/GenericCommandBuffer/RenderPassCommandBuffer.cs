@@ -1,4 +1,3 @@
-using GraphicsAPI;
 using GraphicsAPI.Commands.Extensions;
 using GraphicsAPI.Commands.Interfaces;
 using GraphicsAPI.Enums;

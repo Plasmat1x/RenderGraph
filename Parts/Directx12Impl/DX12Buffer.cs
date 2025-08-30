@@ -12,10 +12,6 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
-using System;
-
-using static System.Runtime.InteropServices.JavaScript.JSType;
-
 namespace Directx12Impl;
 
 /// <summary>

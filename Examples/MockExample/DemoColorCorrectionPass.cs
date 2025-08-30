@@ -3,8 +3,6 @@ using Core.Enums;
 
 using GraphicsAPI.Enums;
 
-using Passes;
-
 using Resources;
 
 namespace MockImpl;

@@ -2,12 +2,6 @@ using GraphicsAPI.Enums;
 using GraphicsAPI.Reflections;
 using GraphicsAPI.Reflections.Enums;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace MockImpl;
 public class MockShaderReflectionProvider: ShaderReflectionProviderBase
 {
@@ -18,37 +12,33 @@ public class MockShaderReflectionProvider: ShaderReflectionProviderBase
         { ShaderStage.Compute, CreateDefaultComputeShaderReflection }
     };
 
-  public override ShaderReflection CreateReflection(byte[] bytecode, ShaderStage stage)
+  public override ShaderReflection CreateReflection(byte[] _bytecode, ShaderStage _stage)
   {
-    Console.WriteLine($"[MockReflection] Creating reflection for {stage} shader");
+    Console.WriteLine($"[MockReflection] Creating reflection for {_stage} shader");
 
-    // Для Mock-реализации возвращаем предопределенные данные рефлексии
-    if(DefaultReflections.TryGetValue(stage, out var creator))
+    if(DefaultReflections.TryGetValue(_stage, out var creator))
     {
       return creator();
     }
 
-    // Для неизвестных стадий возвращаем пустую рефлексию
     return new ShaderReflection
     {
       Info = new ShaderInfo
       {
-        Stage = stage,
+        Stage = _stage,
         ShaderModel = "5_1",
         Creator = "MockShaderCompiler"
       }
     };
   }
 
-  public override bool IsBytecodeSupported(byte[] bytecode)
+  public override bool IsBytecodeSupported(byte[] _bytecode)
   {
-    // Mock всегда поддерживает любой байткод
-    return bytecode != null && bytecode.Length > 0;
+    return _bytecode != null && _bytecode.Length > 0;
   }
 
-  public override string GetShaderModel(byte[] bytecode)
+  public override string GetShaderModel(byte[] _bytecode)
   {
-    // Mock всегда возвращает 5.1
     return "5_1";
   }
 
@@ -67,7 +57,6 @@ public class MockShaderReflectionProvider: ShaderReflectionProviderBase
         InstructionCount = 42
       },
 
-      // Константные буферы
       ConstantBuffers = new List<ConstantBufferInfo>
             {
                 new ConstantBufferInfo
@@ -153,7 +142,6 @@ public class MockShaderReflectionProvider: ShaderReflectionProviderBase
                 }
             },
 
-      // Входные параметры
       InputParameters = new List<InputParameterInfo>
             {
                 new InputParameterInfo
@@ -194,7 +182,6 @@ public class MockShaderReflectionProvider: ShaderReflectionProviderBase
                 }
             },
 
-      // Выходные параметры
       OutputParameters = new List<OutputParameterInfo>
             {
                 new OutputParameterInfo
@@ -252,7 +239,6 @@ public class MockShaderReflectionProvider: ShaderReflectionProviderBase
         InstructionCount = 35
       },
 
-      // Константные буферы
       ConstantBuffers = new List<ConstantBufferInfo>
             {
                 new ConstantBufferInfo
@@ -295,7 +281,6 @@ public class MockShaderReflectionProvider: ShaderReflectionProviderBase
                 }
             },
 
-      // Текстурные ресурсы
       BoundResources = new List<ResourceBindingInfo>
             {
                 new ResourceBindingInfo
@@ -327,7 +312,6 @@ public class MockShaderReflectionProvider: ShaderReflectionProviderBase
                 }
             },
 
-      // Сэмплеры
       Samplers = new List<SamplerBindingInfo>
             {
                 new SamplerBindingInfo
@@ -344,7 +328,6 @@ public class MockShaderReflectionProvider: ShaderReflectionProviderBase
                 }
             },
 
-      // Входные параметры (из вершинного шейдера)
       InputParameters = new List<InputParameterInfo>
             {
                 new InputParameterInfo
@@ -385,7 +368,6 @@ public class MockShaderReflectionProvider: ShaderReflectionProviderBase
                 }
             },
 
-      // Выходные параметры
       OutputParameters = new List<OutputParameterInfo>
             {
                 new OutputParameterInfo

@@ -3,13 +3,6 @@ using Directx12Impl.Parts.Structures;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Directx12Impl.Parts.Managers;
 public unsafe class DX12DescriptorHeapManager: IDisposable
 {
@@ -167,10 +160,10 @@ public unsafe class DX12DescriptorHeapManager: IDisposable
 
   public void Dispose()
   {
-    if(p_disposed) 
+    if(p_disposed)
       return;
 
-    p_rtvHeap?.Dispose(); 
+    p_rtvHeap?.Dispose();
     p_dsvHeap?.Dispose();
     p_srvHeap?.Dispose();
     p_samplerHeap?.Dispose();

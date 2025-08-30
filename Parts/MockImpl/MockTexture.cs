@@ -8,7 +8,7 @@ namespace MockImpl;
 
 public class MockTexture: ITexture
 {
-  private readonly Dictionary<TextureViewType, ITextureView> _defaultViews = new();
+  private readonly Dictionary<TextureViewType, ITextureView> p_defaultViews = new();
 
   public MockTexture(uint _id, TextureDescription _description)
   {
@@ -39,7 +39,7 @@ public class MockTexture: ITexture
 
   public ITextureView GetDefaultShaderResourceView()
   {
-    if(!_defaultViews.ContainsKey(TextureViewType.ShaderResource))
+    if(!p_defaultViews.ContainsKey(TextureViewType.ShaderResource))
     {
       var desc = new TextureViewDescription
       {
@@ -48,14 +48,14 @@ public class MockTexture: ITexture
         MipLevels = MipLevels,
         ArraySize = ArraySize
       };
-      _defaultViews[TextureViewType.ShaderResource] = CreateView(desc);
+      p_defaultViews[TextureViewType.ShaderResource] = CreateView(desc);
     }
-    return _defaultViews[TextureViewType.ShaderResource];
+    return p_defaultViews[TextureViewType.ShaderResource];
   }
 
   public ITextureView GetDefaultRenderTargetView()
   {
-    if(!_defaultViews.ContainsKey(TextureViewType.RenderTarget))
+    if(!p_defaultViews.ContainsKey(TextureViewType.RenderTarget))
     {
       var desc = new TextureViewDescription
       {
@@ -64,14 +64,14 @@ public class MockTexture: ITexture
         MipLevels = 1,
         ArraySize = ArraySize
       };
-      _defaultViews[TextureViewType.RenderTarget] = CreateView(desc);
+      p_defaultViews[TextureViewType.RenderTarget] = CreateView(desc);
     }
-    return _defaultViews[TextureViewType.RenderTarget];
+    return p_defaultViews[TextureViewType.RenderTarget];
   }
 
   public ITextureView GetDefaultDepthStencilView()
   {
-    if(!_defaultViews.ContainsKey(TextureViewType.DepthStencil))
+    if(!p_defaultViews.ContainsKey(TextureViewType.DepthStencil))
     {
       var desc = new TextureViewDescription
       {
@@ -80,14 +80,14 @@ public class MockTexture: ITexture
         MipLevels = 1,
         ArraySize = ArraySize
       };
-      _defaultViews[TextureViewType.DepthStencil] = CreateView(desc);
+      p_defaultViews[TextureViewType.DepthStencil] = CreateView(desc);
     }
-    return _defaultViews[TextureViewType.DepthStencil];
+    return p_defaultViews[TextureViewType.DepthStencil];
   }
 
   public ITextureView GetDefaultUnorderedAccessView()
   {
-    if(!_defaultViews.ContainsKey(TextureViewType.UnorderedAccess))
+    if(!p_defaultViews.ContainsKey(TextureViewType.UnorderedAccess))
     {
       var desc = new TextureViewDescription
       {
@@ -96,9 +96,9 @@ public class MockTexture: ITexture
         MipLevels = 1,
         ArraySize = ArraySize
       };
-      _defaultViews[TextureViewType.UnorderedAccess] = CreateView(desc);
+      p_defaultViews[TextureViewType.UnorderedAccess] = CreateView(desc);
     }
-    return _defaultViews[TextureViewType.UnorderedAccess];
+    return p_defaultViews[TextureViewType.UnorderedAccess];
   }
 
   public void SetData<T>(T[] _data, uint _mipLevel = 0, uint _arraySlice = 0) where T : unmanaged
@@ -138,11 +138,11 @@ public class MockTexture: ITexture
       return;
 
     Console.WriteLine($"    [Resource] Disposed texture {Name} (ID: {Id})");
-    foreach(var view in _defaultViews.Values)
+    foreach(var view in p_defaultViews.Values)
     {
       view?.Dispose();
     }
-    _defaultViews.Clear();
+    p_defaultViews.Clear();
     IsDisposed = true;
   }
 }

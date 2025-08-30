@@ -5,7 +5,6 @@ using Directx12Impl.Parts.Utils;
 using GraphicsAPI.Enums;
 
 using Silk.NET.Core.Native;
-using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D12;
 
 namespace Directx12Impl.Parts.Structures;
@@ -17,8 +16,8 @@ public partial class DX12RootSignatureCache: IDisposable
   private Dictionary<RootSignatureDesc, ComPtr<ID3D12RootSignature>> p_cache = [];
   private bool p_disposed;
 
-  public DX12RootSignatureCache(ComPtr<ID3D12Device> _device, D3D12 _d3d12) 
-  { 
+  public DX12RootSignatureCache(ComPtr<ID3D12Device> _device, D3D12 _d3d12)
+  {
     p_device = _device;
     p_d3d12 = _d3d12;
   }
@@ -79,7 +78,7 @@ public partial class DX12RootSignatureCache: IDisposable
 
     builder.AllowInputAssemblerInputLayout();
 
-    foreach(var shader in _shaders.Where(s => s != null))
+    foreach(var shader in _shaders.Where(_s => _s != null))
     {
       var reflection = shader.GetReflection();
 
