@@ -106,7 +106,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     p_stateTracker.Reset();
     ResetDX12State();
 
-
+    SetupDescriptorHeaps();
   }
 
   protected override void OnEnd()
@@ -120,8 +120,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     }
 
     base.OnEnd();
-
-    SetupDescriptorHeaps();
   }
 
   // === Можем переопределить критичные методы для производительности ===
@@ -795,13 +793,13 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     var heaps = stackalloc ID3D12DescriptorHeap*[2];
     uint heapCount = 0;
 
-    var cbvSrvUavHeap = descriptorManager.GetCBVSRVUAVHeap();
+    var cbvSrvUavHeap = descriptorManager.GetGPUCBVSRVUAVHeap();
     if(cbvSrvUavHeap != null)
     {
       heaps[heapCount++] = cbvSrvUavHeap;
     }
 
-    var samplerHeap = descriptorManager.GetSamplerHeap();
+    var samplerHeap = descriptorManager.GetGPUSamplerHeap();
     if(samplerHeap != null)
     {
       heaps[heapCount++] = samplerHeap;

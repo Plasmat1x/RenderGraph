@@ -178,13 +178,15 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     if(_data == null || _data.Length == 0)
       throw new ArgumentException("Data cannot be null or empty");
 
+    var dataSize = _data.Length * sizeof(T);
+
     var commandList = BeginResourceUpload();
 
     try
     {
       fixed(T* pData = _data)
       {
-        _texture.SetDataInternal(commandList, pData, _data.Length * sizeof(T), _mipLevel, _arraySlice);
+        _texture.SetDataInternal(commandList, pData, dataSize, _mipLevel, _arraySlice);
       }
 
       EndResourceUpload(true);

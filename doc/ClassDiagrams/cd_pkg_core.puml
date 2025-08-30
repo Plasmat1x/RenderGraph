@@ -1,311 +1,330 @@
-@startuml Core
+@startuml
+!define LIGHTBLUE #ADD8E6
+!define LIGHTGREEN #90EE90
+!define LIGHTPINK #FFB6C1
+!define LIGHTYELLOW #FFFFE0
+!define LIGHTGRAY #D3D3D3
 
-package "RenderGraph Core" {
-    class RenderGraph {
-        - _passes: List<RenderPass>
-        - _resourceManager: ResourceManager
-        - _dependencyResolver: DependencyResolver
-        - _device: IGraphicsDevice
-        - _builder: RenderGraphBuilder
-        - _frameData: FrameData
-        - _compiled: bool
-        - _executionOrder: List<RenderPass>
-        - _passContexts: Dictionary<RenderPass, RenderPassContext>
-        --
-        + AddPass<T>(pass: T): void
-        + RemovePass(pass: RenderPass): void
-        + GetPass<T>(): T
-        + GetPass(name: string): RenderPass
-        + Execute(commandBuffer: CommandBuffer): void
-        + Compile(): void
-        + Reset(): void
-        + ValidateGraph(): bool
-        + GetExecutionOrder(): List<RenderPass>
-        + UpdateFrameData(deltaTime: float, width: uint, height: uint): void
-        + SetViewMatrix(viewMatrix: Matrix4x4): void
-        + SetProjectionMatrix(projMatrix: Matrix4x4): void
-        + SetCameraPosition(position: Vector3): void
-        + ImportTexture(name: string, texture: ITexture): ResourceHandle
-        + ImportBuffer(name: string, buffer: IBuffer): ResourceHandle
-        + GetNamedResource(name: string): ResourceHandle
-        + HasNamedResource(name: string): bool
-        + GetMemoryUsage(): MemoryUsageInfo
-        + GetStatistics(): RenderGraphStatistics
-        + GetGraphicsDevice(): IGraphicsDevice
-        + Dispose(): void
-    }
+package Core {
 
-    abstract class RenderPass {
-        + Name: string
-        + Enabled: bool
-        + Inputs: IReadOnlyList<ResourceHandle>
-        + Outputs: IReadOnlyList<ResourceHandle>
-        + Dependencies: IReadOnlyList<RenderPass>
-        + ExecutionOrder: int
-        + AlwaysExecute: bool
-        + Category: PassCategory
-        + Priority: PassPriority
-        + Statistics: PassStatistics
-        --
-        + {abstract} Setup(builder: RenderGraphBuilder): void
-        + {abstract} Execute(context: RenderPassContext): void
-        + CanExecute(): bool
-        + Initialize(): void
-        + OnGraphCompiled(renderGraph: RenderGraph): void
-        + OnFrameBegin(frameData: FrameData): void
-        + OnFrameEnd(frameData: FrameData): void
-        + GetResourceUsage(): ResourceUsageInfo
-        + IsCompatibleWith(otherPass: RenderPass): bool
-        + Validate(out errorMessage: string): bool
-        + AddDependency(dependency: RenderPass): void
-        + RemoveDependency(dependency: RenderPass): void
-        + ClearDependencies(): void
-        + HasDependency(dependency: RenderPass): bool
-        + HasDependencyOn(targetPass: RenderPass): bool
-        + Dispose(): void
-    }
+  ' Core abstract classes and main components
+  abstract class RenderPass {
+    - p_inputs: List<ResourceHandle>
+    - p_outputs: List<ResourceHandle>
+    - p_dependencies: List<RenderPass>
+    - p_enabled: bool
+    - p_executionOrder: int
+    
+    + Name: string {get}
+    + Enabled: bool {get; set}
+    + Inputs: IReadOnlyList<ResourceHandle> {get}
+    + Outputs: IReadOnlyList<ResourceHandle> {get}
+    + Dependencies: IReadOnlyList<RenderPass> {get}
+    + ExecutionOrder: int {get; set}
+    + AlwaysExecute: bool {get; set}
+    + Category: PassCategory {get; set}
+    + Priority: PassPriority {get; set}
+    + Statistics: PassStatistics {get}
+    
+    + event OnPassSetup: Action<RenderPass>
+    + event OnPassExecuted: Action<RenderPass>
+    + event OnPassError: Action<RenderPass, Exception>
+    
+    + {abstract} Setup(RenderGraphBuilder): void
+    + {abstract} Execute(RenderPassContext): void
+    + CanExecute(): bool
+    + AddDependency(RenderPass): void
+    + RemoveDependency(RenderPass): void
+    + Validate(out string): bool
+    + Dispose(): void
+    
+    - InternalSetup(RenderGraphBuilder): void
+    - InternalExecute(RenderPassContext): void
+    - AddInput(ResourceHandle): void
+    - AddOutput(ResourceHandle): void
+    - ClearInputsOutputs(): void
+  }
 
-    class RenderGraphBuilder {
-        - _resourceManager: ResourceManager
-        - _currentPass: RenderPass
-        - _resourceUsages: Dictionary<ResourceHandle, ResourceUsageInfo>
-        - _namedResources: Dictionary<string, ResourceHandle>
-        - _currentPassUsages: List<ResourceUsageInfo>
-        --
-        + CreateTexture(name: string, desc: TextureDescription): ResourceHandle
-        + CreateBuffer(name: string, desc: BufferDescription): ResourceHandle
-        + ReadTexture(handle: ResourceHandle): void
-        + WriteTexture(handle: ResourceHandle): void
-        + ReadBuffer(handle: ResourceHandle): void
-        + WriteBuffer(handle: ResourceHandle): void
-        + ReadWriteTexture(handle: ResourceHandle): void
-        + ReadWriteBuffer(handle: ResourceHandle): void
-        + ReadTextureAsDepth(handle: ResourceHandle): void
-        + WriteTextureAsDepth(handle: ResourceHandle): void
-        + ReadTextureAsRenderTarget(handle: ResourceHandle): void
-        + ImportTexture(name: string, texture: ITexture): ResourceHandle
-        + ImportBuffer(name: string, buffer: IBuffer): ResourceHandle
-        + SetResourceLifetime(handle: ResourceHandle, lifetime: ResourceLifetime): void
-        + GetNamedResource(name: string): ResourceHandle
-        + HasNamedResource(name: string): bool
-        + GetResourceUsages(): IEnumerable<ResourceUsageInfo>
-        + GetResourceUsage(handle: ResourceHandle, passName: string): ResourceUsageInfo?
-        + GetResourceDescription(handle: ResourceHandle): ResourceDescription
-        + ValidateResourceUsages(): void
-        + Clear(): void
-    }
+  class RenderGraph {
+    - p_passes: List<RenderPass>
+    - p_resourceManager: ResourceManager
+    - p_dependencyResolver: DependencyResolver
+    - p_device: IGraphicsDevice
+    - p_builder: RenderGraphBuilder
+    - p_frameData: FrameData
+    - p_compiled: bool
+    - p_disposed: bool
+    - p_executionOrder: List<RenderPass>
+    - p_passContexts: Dictionary<RenderPass, RenderPassContext>
+    
+    + IsCompiled: bool {get}
+    + Passes: IReadOnlyList<RenderPass> {get}
+    + ExecutionOrder: IReadOnlyList<RenderPass> {get}
+    + FrameData: FrameData {get}
+    
+    + AddPass<T>(T): void where T : RenderPass
+    + RemovePass(RenderPass): void
+    + Compile(): void
+    + Execute(CommandBuffer): void
+    + Reset(): void
+    + UpdateFrameData(float, uint, uint): void
+    + SetViewMatrix(Matrix4x4): void
+    + SetProjectionMatrix(Matrix4x4): void
+    + SetCameraPosition(Vector3): void
+    + ImportTexture(string, ITexture): ResourceHandle
+    + ImportBuffer(string, IBuffer): ResourceHandle
+    + GetNamedResource(string): ResourceHandle
+    + HasNamedResource(string): bool
+    + GetMemoryUsage(): MemoryUsageInfo
+    + GetStatistics(): RenderGraphStatistics
+    + Dispose(): void
+  }
 
-    class RenderPassContext {
-        + CommandBuffer: CommandBuffer
-        + Resources: ResourceManager
-        + FrameData: FrameData
-        + PassIndex: int
-        + ViewportWidth: uint
-        + ViewportHeight: uint
-        --
-        + GetTexture(handle: ResourceHandle): ITexture
-        + GetBuffer(handle: ResourceHandle): IBuffer
-        + GetTextureView(handle: ResourceHandle, viewType: TextureViewType): ITextureView
-        + GetBufferView(handle: ResourceHandle, viewType: BufferViewType): IBufferView
-        + SetViewport(x: float, y: float, width: float, height: float, minDepth: float, maxDepth: float): void
-        + SetFullScreenViewport(): void
-    }
+  class RenderGraphBuilder {
+    - p_resourceManager: ResourceManager
+    - p_resourceUsages: Dictionary<ResourceHandle, List<ResourceUsageInfo>>
+    - p_namedResources: Dictionary<string, ResourceHandle>
+    - p_currentPassUsages: List<ResourceUsageInfo>
+    - p_currentPass: RenderPass
+    
+    + CreateTexture(string, TextureDescription): ResourceHandle
+    + CreateBuffer(string, BufferDescription): ResourceHandle
+    + CreateColorTarget(string, uint, uint, TextureFormat): ResourceHandle
+    + CreateDepthTarget(string, uint, uint, TextureFormat): ResourceHandle
+    + CreateConstantBuffer(string, uint): ResourceHandle
+    + ReadTexture(ResourceHandle): void
+    + WriteTexture(ResourceHandle): void
+    + WriteTextureAsDepth(ResourceHandle): void
+    + ReadBuffer(ResourceHandle): void
+    + WriteBuffer(ResourceHandle): void
+    + ImportTexture(string, ITexture): ResourceHandle
+    + ImportBuffer(string, IBuffer): ResourceHandle
+    + SetResourceLifetime(ResourceHandle, ResourceLifetime): void
+    + GetNamedResource(string): ResourceHandle
+    + HasNamedResource(string): bool
+    + ValidateResourceUsages(): void
+    + Clear(): void
+  }
 
-    class ResourceManager {
-        - _resources: Dictionary<ResourceHandle, IResource>
-        - _resourceDescriptions: Dictionary<ResourceHandle, ResourceDescription>
-        - _texturePool: ResourcePool<ITexture>
-        - _bufferPool: ResourcePool<IBuffer>
-        - _aliasedResources: Dictionary<ResourceHandle, ResourceHandle>
-        - _resourceLifetimes: Dictionary<ResourceHandle, ResourceLifetime>
-        - _handleGenerator: ResourceHandleGenerator
-        - _device: IGraphicsDevice
-        --
-        + CreateTexture(desc: TextureDescription): ResourceHandle
-        + CreateBuffer(desc: BufferDescription): ResourceHandle
-        + GetTexture(handle: ResourceHandle): ITexture
-        + GetBuffer(handle: ResourceHandle): IBuffer
-        + AliasResource(source: ResourceHandle, target: ResourceHandle): void
-        + TransitionResource(handle: ResourceHandle, state: ResourceState): void
-        + ReleaseResource(handle: ResourceHandle): void
-        + GetResourceDescription(handle: ResourceHandle): ResourceDescription
-        + OptimizeResourceUsage(): void
-        + GetMemoryUsage(): MemoryUsageInfo
-        + SetResourceLifetime(handle: ResourceHandle, lifetime: ResourceLifetime): void
-        + GetResourceLifetime(handle: ResourceHandle): ResourceLifetime
-        + ImportTexture(name: string, texture: ITexture): ResourceHandle
-        + ImportBuffer(name: string, buffer: IBuffer): ResourceHandle
-        + Dispose(): void
-    }
+  class RenderPassContext {
+    + CommandBuffer: CommandBuffer {get; set}
+    + Resources: ResourceManager {get; set}
+    + FrameData: FrameData {get; set}
+    + PassIndex: int {get; set}
+    + ViewportWidth: uint {get; set}
+    + ViewportHeight: uint {get; set}
+    
+    + GetTexture(ResourceHandle): ITexture
+    + GetBuffer(ResourceHandle): IBuffer
+    + GetTextureView(ResourceHandle, TextureViewType): ITextureView
+    + GetBufferView(ResourceHandle, BufferViewType): IBufferView
+    + SetViewport(float, float, float, float, float, float): void
+    + SetFullScreenViewport(): void
+  }
 
-    class DependencyResolver {
-        - _passGraph: DirectedGraph<RenderPass>
-        - _resourceDependencies: Dictionary<ResourceHandle, List<RenderPass>>
-        --
-        + AddNode(pass: RenderPass): void
-        + AddEdge(from: RenderPass, to: RenderPass): void
-        + BuildDependencyGraph(passes: List<RenderPass>): void
-        + TopologicalSort(): List<RenderPass>
-        + DetectCycles(): List<RenderPass>
-        + CullUnusedPasses(): List<RenderPass>
-        + ValidateDependencies(): bool
-        + GetCriticalPath(): List<RenderPass>
-        + Clear(): void
-    }
+  class DependencyResolver {
+    - p_passGraph: DirectedGraph<RenderPass>
+    - p_resourceDependencies: Dictionary<ResourceHandle, List<RenderPass>>
+    
+    + AddNode(RenderPass): void
+    + AddEdge(RenderPass, RenderPass): void
+    + BuildDependencyGraph(List<RenderPass>): void
+    + TopologicalSort(): List<RenderPass>
+    + DetectCycles(): List<RenderPass>
+    + CullUnusedPasses(): List<RenderPass>
+    + ValidateDependencies(): bool
+    + GetCriticalPath(): List<RenderPass>
+    + Clear(): void
+  }
 
-    class FrameData {
-        + FrameIndex: ulong
-        + DeltaTime: float
-        + ViewMatrix: Matrix4x4
-        + ProjectionMatrix: Matrix4x4
-        + ViewProjectionMatrix: Matrix4x4
-        + CameraPosition: Vector3
-        + ScreenWidth: uint
-        + ScreenHeight: uint
-        - _globalConstants: Dictionary<string, object>
-        --
-        + UpdateMatrices(): void
-        + GetConstantBuffer<T>(): T
-        + SetConstantBuffer<T>(data: T): void
-        + SetGlobalConstant(name: string, value: object): void
-        + GetGlobalConstant<T>(name: string): T
-        + Reset(): void
-    }
+  class FrameData {
+    - p_globalConstants: Dictionary<string, object>
+    
+    + FrameIndex: ulong {get; set}
+    + DeltaTime: float {get; set}
+    + ViewMatrix: Matrix4x4 {get; set}
+    + ProjectionMatrix: Matrix4x4 {get; set}
+    + ViewProjectionMatrix: Matrix4x4 {get}
+    + CameraPosition: Vector3 {get; set}
+    + ScreenWidth: uint {get; set}
+    + ScreenHeight: uint {get; set}
+    
+    + GetConstantBuffer<T>(): T where T : struct
+    + SetConstantBuffer<T>(T): void where T : struct
+    + SetGlobalConstants(string, object): void
+    + GetGlobalConstant<T>(string): T
+    + UpdateMatrices(): void
+    + Reset(): void
+  }
 
-    struct ResourceHandle {
-        + Id: uint
-        + Type: ResourceType
-        + Generation: uint
-        + Name: string
-        --
-        + IsValid(): bool
-        + Equals(other: ResourceHandle): bool
-        + GetHashCode(): int
-        + ToString(): string
-    }
+  class PassStatistics {
+    - p_setupStartTime: DateTime
+    - p_executionStartTime: DateTime
+    - p_errors: List<Exception>
+    
+    + LastSetupTime: TimeSpan {get}
+    + LastExecutionTime: TimeSpan {get}
+    + TotalSetupTime: TimeSpan {get}
+    + TotalExecutionTime: TimeSpan {get}
+    + SetupCount: int {get}
+    + ExecutionCount: int {get}
+    + ErrorCount: int {get}
+    + WasExecutedThisFrame: bool {get}
+    + CurrentFrameNumber: int {get}
+    + AverageSetupTime: TimeSpan {get}
+    + AverageExecutionTime: TimeSpan {get}
+    
+    + StartSetup(): void
+    + EndSetup(): void
+    + StartExecution(): void
+    + EndExecution(): void
+    + MarkExecutedThisFrame(): void
+    + StartFrame(): void
+    + EndFrame(): void
+    + RecordError(Exception): void
+    + GetErrors(): IReadOnlyList<Exception>
+    + GetLastError(): Exception
+    + Reset(): void
+    + ClearErrors(): void
+  }
 
-    class ResourceHandleGenerator {
-        - _nextId: uint
-        - _generationMap: Dictionary<uint, uint>
-        --
-        + Generate(type: ResourceType, name: string): ResourceHandle
-        + Release(handle: ResourceHandle): void
-        + IsHandleValid(handle: ResourceHandle): bool
-    }
+  class ResourceUsageInfo {
+    + Handle: ResourceHandle {get; set}
+    + AccessType: ResourceAccessType {get; set}
+    + Usage: ResourceUsage {get; set}
+    + State: ResourceState {get; set}
+    + PassName: string {get; set}
+    
+    + IsRead(): bool
+    + IsWrite(): bool
+    + ConflictsWith(ResourceUsageInfo): bool
+    + ToString(): string
+    + Equals(object): bool
+    + GetHashCode(): int
+  }
 
-    class ResourceUsageInfo {
-        + Handle: ResourceHandle
-        + AccessType: ResourceAccessType
-        + Usage: ResourceUsage
-        + State: ResourceState
-        + PassName: string
-        --
-        + IsRead(): bool
-        + IsWrite(): bool
-        + ConflictsWith(other: ResourceUsageInfo): bool
-        + ToString(): string
-        + Equals(obj: object): bool
-        + GetHashCode(): int
-    }
+  class RenderGraphStatistics {
+    + TotalPasses: int
+    + EnabledPasses: int
+    + DisabledPasses: int
+    + TotalResources: int
+    + MemoryUsage: MemoryUsageInfo
+    + IsCompiled: bool
+    + LastFrameIndex: ulong
+    + PassUtilization: float {get}
+  }
 
-    class PassStatistics {
-        + LastSetupTime: TimeSpan
-        + LastExecutionTime: TimeSpan
-        + TotalSetupTime: TimeSpan
-        + TotalExecutionTime: TimeSpan
-        + SetupCount: int
-        + ExecutionCount: int
-        + ErrorCount: int
-        + WasExecutedThisFrame: bool
-        + CurrentFrameNumber: int
-        + AverageSetupTime: TimeSpan
-        + AverageExecutionTime: TimeSpan
-        --
-        + StartSetup(): void
-        + EndSetup(): void
-        + StartExecution(): void
-        + EndExecution(): void
-        + MarkExecutedThisFrame(): void
-        + StartFrame(): void
-        + EndFrame(): void
-        + RecordError(exception: Exception): void
-        + GetErrors(): IReadOnlyList<Exception>
-        + GetLastError(): Exception
-        + Reset(): void
-        + ClearErrors(): void
-        + ToString(): string
-    }
+  ' Enumerations
+  enum PassCategory <<enumeration>> {
+    Initialization
+    GeometrySetup
+    ShadowMapping
+    Rendering
+    PostProcessing
+    UI
+    Debug
+    Finalization
+  }
 
-    enum ResourceType {
-        Texture1D
-        Texture2D
-        Texture3D
-        TextureCube
-        Texture2DArray
-        TextureCubeArray
-        Buffer
-        StructuredBuffer
-        RawBuffer
-    }
+  enum PassPriority <<enumeration>> {
+    Lowest = 0
+    Low = 25
+    Normal = 50
+    High = 75
+    Highest = 100
+    Critical = 200
+  }
 
-    enum ResourceAccessType {
-        Read
-        Write
-        ReadWrite
-    }
+  enum ResourceAccessType <<enumeration>> {
+    Read
+    Write
+    ReadWrite
+  }
 
-    enum ResourceLifetime {
-        Transient
-        Persistent
-        External
-        Imported
-    }
+  ' Extensions (Static classes)
+  class RenderPassExtensions <<static>> {
+    + {static} IsPostProcessPass(RenderPass): bool
+    + {static} IsRenderingPass(RenderPass): bool
+    + {static} IsHighPriority(RenderPass): bool
+    + {static} SetCategory(RenderPass, PassCategory): void
+    + {static} SetPriority(RenderPass, PassPriority): void
+    + {static} RequiresPass(RenderPass, RenderPass): void
+    + {static} MakeOptional(RenderPass): void
+    + {static} MakeRequired(RenderPass): void
+  }
 
-    enum PassCategory {
-        Initialization
-        GeometrySetup
-        ShadowMapping
-        Rendering
-        PostProcessing
-        UI
-        Debug
-        Finalization
-    }
-
-    enum PassPriority {
-        Lowest
-        Low
-        Normal
-        High
-        Highest
-        Critical
-    }
 }
 
-' Core Relationships
-RenderGraph *-- RenderPass : manages
-RenderGraph *-- ResourceManager : uses
-RenderGraph *-- DependencyResolver : uses
-RenderGraph *-- RenderGraphBuilder : uses
-RenderGraph *-- FrameData : contains
-RenderGraph --> IGraphicsDevice : uses
+' External dependencies
+class ResourceManager <<external>>
+class ResourceHandle <<external>>
+class CommandBuffer <<external>>
+interface IGraphicsDevice <<external>>
+class DirectedGraph<T> <<external>>
+class MemoryUsageInfo <<external>>
 
-RenderPass ..> RenderGraphBuilder : uses in Setup
-RenderPass ..> RenderPassContext : uses in Execute
-RenderPass *-- PassStatistics : contains
+' Relationships
+RenderGraph *-- RenderPass : contains
+RenderGraph *-- ResourceManager
+RenderGraph *-- DependencyResolver
+RenderGraph *-- RenderGraphBuilder
+RenderGraph *-- FrameData
+RenderGraph --> IGraphicsDevice
 
-RenderGraphBuilder --> ResourceManager : manages resources
-RenderPassContext --> ResourceManager : accesses resources
-RenderPassContext --> CommandBuffer : uses
-RenderPassContext --> FrameData : accesses
+RenderPass *-- PassStatistics
+RenderPass --> PassCategory
+RenderPass --> PassPriority
+RenderPass --> ResourceHandle : uses
 
-ResourceManager --> ResourceHandle : creates/manages
-ResourceManager --> ResourceHandleGenerator : uses
-ResourceManager --> ResourcePool : uses
-ResourceManager --> IGraphicsDevice : uses
-ResourceManager --> MemoryUsageInfo : provides
+RenderGraphBuilder *-- ResourceManager
+RenderGraphBuilder *-- ResourceUsageInfo : creates
+RenderGraphBuilder --> ResourceHandle : creates
 
-DependencyResolver --> DirectedGraph : uses
-ResourceUsageInfo --> ResourceHandle : references
+RenderPassContext --> ResourceManager
+RenderPassContext --> FrameData
+RenderPassContext --> CommandBuffer
+
+DependencyResolver *-- DirectedGraph
+
+ResourceUsageInfo --> ResourceAccessType
+ResourceUsageInfo --> ResourceHandle
+
+PassStatistics --> Exception : records
+
+RenderGraphStatistics --> MemoryUsageInfo
+
+' Extension relationships
+RenderPassExtensions ..> RenderPass : extends
+RenderPassExtensions ..> PassCategory : uses
+RenderPassExtensions ..> PassPriority : uses
+
+' Flow relationships
+RenderGraph ..> RenderPassContext : creates for
+RenderGraphBuilder ..> RenderPass : configures
+DependencyResolver ..> RenderPass : analyzes
+
+note top of RenderPass
+  Базовый абстрактный класс для всех проходов рендеринга.
+  Содержит логику управления зависимостями, статистику
+  выполнения и события жизненного цикла.
+end note
+
+note top of RenderGraph
+  Главный класс системы рендер-графа.
+  Управляет компиляцией, выполнением и оптимизацией
+  последовательности проходов рендеринга.
+end note
+
+note top of RenderGraphBuilder
+  Builder для создания и настройки ресурсов.
+  Используется в методах Setup() проходов рендеринга
+  для декларативного описания требуемых ресурсов.
+end note
+
+note top of DependencyResolver
+  Анализирует зависимости между проходами и ресурсами.
+  Выполняет топологическую сортировку, обнаружение циклов
+  и оптимизацию графа зависимостей.
+end note
 
 @enduml
