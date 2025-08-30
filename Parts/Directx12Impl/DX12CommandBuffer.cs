@@ -99,7 +99,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   {
     base.OnBegin();
 
-    // Reset command list
     var hr = p_commandList->Reset(p_commandAllocator, null);
     DX12Helpers.ThrowIfFailed(hr, "Failed to reset command list");
 
@@ -113,7 +112,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   {
     if(p_executionMode == CommandBufferExecutionMode.Immediate)
     {
-      // Flush pending barriers and close
       p_stateTracker.FlushResourceBarriers(p_commandList);
       var hr = p_commandList->Close();
       DX12Helpers.ThrowIfFailed(hr, "Failed to close command list");
@@ -128,14 +126,12 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   {
     if(p_executionMode == CommandBufferExecutionMode.Immediate)
     {
-      // Прямое выполнение без создания команды
       ValidateRecording();
       p_stateTracker.FlushResourceBarriers(p_commandList);
       p_commandList->DrawInstanced(_vertexCount, _instanceCount, _startVertex, _startInstance);
     }
     else
     {
-      // Используем базовую логику записи команд
       base.Draw(_vertexCount, _instanceCount, _startVertex, _startInstance);
     }
   }
@@ -211,7 +207,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   /// </summary>
   private void ExecuteCommandImmediate(ICommand _command)
   {
-    // Оптимизированные пути для часто используемых команд
     switch(_command)
     {
       case DrawCommand draw:
@@ -285,6 +280,8 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   /// </summary>
   private void ExecuteCommandDeferred(ICommand _command)
   {
+    //TODO: impl deferred render
+
     // В deferred режиме можем использовать более сложную логику
     // Например, группировку команд, дополнительную оптимизацию и т.д.
 
@@ -333,7 +330,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     {
       var colorTexture = colorView.Texture as DX12Texture;
 
-      // ДОБАВИТЬ: Resource barrier для color target
+      // TODO: Resource barrier для color target
       if(colorTexture != null)
       {
         p_stateTracker.TransitionResource(
@@ -350,7 +347,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     {
       var depthTexture = depthView.Texture as DX12Texture;
 
-      // ДОБАВИТЬ: Resource barrier для depth target
+      // TODO: Resource barrier для depth target
       if(depthTexture != null)
       {
         p_stateTracker.TransitionResource(
@@ -366,10 +363,9 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
       p_currentDepthStencil = null;
     }
 
-    // ВАЖНО: Flush barriers перед установкой render targets
+    // TODO: Flush barriers перед установкой render targets
     p_stateTracker.FlushResourceBarriers(p_commandList);
 
-    // Теперь устанавливаем render targets
     ApplyRenderTargets();
   }
 
@@ -784,12 +780,10 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private unsafe void SetupDescriptorHeaps()
   {
-    // Получаем descriptor manager из parent device
     var descriptorManager = GetDescriptorManager();
     if(descriptorManager == null)
       return;
 
-    // Устанавливаем descriptor heaps для CBV/SRV/UAV и Samplers
     var heaps = stackalloc ID3D12DescriptorHeap*[2];
     uint heapCount = 0;
 

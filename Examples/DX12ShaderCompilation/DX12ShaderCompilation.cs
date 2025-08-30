@@ -138,7 +138,6 @@ public class DX12ShaderCompilation
 
       var reflection = shader.GetReflection();
 
-      // Проверка константных буферов
       Console.WriteLine($"  Constant Buffers: {reflection.ConstantBuffers.Count}");
       foreach(var cb in reflection.ConstantBuffers)
       {
@@ -149,21 +148,18 @@ public class DX12ShaderCompilation
         }
       }
 
-      // Проверка текстур
       Console.WriteLine($"  Textures: {reflection.BoundResources.Count}");
       foreach(var resource in reflection.BoundResources)
       {
         Console.WriteLine($"    - {resource.Name} (Slot: t{resource.BindPoint})");
       }
 
-      // Проверка сэмплеров
       Console.WriteLine($"  Samplers: {reflection.Samplers.Count}");
       foreach(var sampler in reflection.Samplers)
       {
         Console.WriteLine($"    - {sampler.Name} (Slot: s{sampler.BindPoint})");
       }
 
-      // Тестирование методов проверки
       Console.WriteLine("\n  Resource checks:");
       Console.WriteLine($"    Has 'MaterialConstants': {shader.HasConstantBuffer("MaterialConstants")}");
       Console.WriteLine($"    Has 'DiffuseTexture': {shader.HasTexture("DiffuseTexture")}");
@@ -219,11 +215,9 @@ public class DX12ShaderCompilation
 
       var reflection = shader.GetReflection();
 
-      // Проверка размера группы потоков
       var threadGroup = reflection.ThreadGroupSize;
       Console.WriteLine($"  Thread Group Size: [{threadGroup.X}, {threadGroup.Y}, {threadGroup.Z}]");
 
-      // Проверка UAV
       Console.WriteLine($"  UAVs: {reflection.UnorderedAccessViews.Count}");
       foreach(var uav in reflection.UnorderedAccessViews)
       {
@@ -292,7 +286,6 @@ public class DX12ShaderCompilation
 
       var reflection = shader.GetReflection();
 
-      // Проверка что макросы сработали
       bool hasTexture = shader.HasTexture("MainTexture");
       bool hasSampler = shader.HasSampler("MainSampler");
 
@@ -377,12 +370,10 @@ public class DX12ShaderCompilation
 
       var reflection = shader.GetReflection();
 
-      // Информация о шейдере
       Console.WriteLine($"\n  Shader Info:");
       Console.WriteLine($"    Model: {reflection.Info.ShaderModel}");
       Console.WriteLine($"    Instructions: {reflection.Info.InstructionCount}");
 
-      // Детальная информация о константных буферах
       Console.WriteLine($"\n  Constant Buffers Details:");
       foreach(var cb in reflection.ConstantBuffers)
       {
@@ -399,7 +390,6 @@ public class DX12ShaderCompilation
         }
       }
 
-      // Входные/выходные параметры
       Console.WriteLine($"\n  Input/Output Layout:");
       Console.WriteLine($"    Inputs: {reflection.InputParameters.Count}");
       foreach(var input in reflection.InputParameters)
@@ -417,7 +407,6 @@ public class DX12ShaderCompilation
         Console.WriteLine($"        Register: {output.Register}");
       }
 
-      // Получение информации о конкретном константном буфере
       var cbInfo = shader.GetConstantBufferInfo("PerFrameData");
       if(cbInfo != null)
       {

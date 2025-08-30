@@ -40,7 +40,10 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   private ComPtr<ID3D12CommandAllocator> p_uploadCommandAllocator;
   private ComPtr<ID3D12GraphicsCommandList> p_uploadCommandList;
-  private ComPtr<ID3D12Fence> p_uploadFence;
+  //private ComPtr<ID3D12Fence> p_uploadFence;
+
+  private DX12Fence p_uploadFence;
+
   private ulong p_uploadFenceValue = 0;
   private readonly object p_uploadLock = new();
   private bool p_uploadInProgress = false;
@@ -226,7 +229,8 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     p_descriptorManager,
     this,
     _desc,
-    _windowHandle);
+    _windowHandle,
+    p_d3d12);
   }
 
   public IFence CreateFence(ulong _initialValue = 0)
@@ -514,7 +518,9 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
         p_directQueue.ExecuteCommandLists(1, (ID3D12CommandList**)p_uploadCommandList.GetAddressOf());
 
         p_uploadFenceValue++;
-        hr = p_directQueue.Signal(p_uploadFence, p_uploadFenceValue);
+
+        p_uploadFence.SignalFromQueue(p_directQueue, p_uploadFenceValue);
+
         DX12Helpers.ThrowIfFailed(hr, "Failed to signal upload fence");
 
         if(_waitForCompletion)
@@ -929,7 +935,8 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     p_uploadCommandList.Close();
 
-    hr = p_device.CreateFence(0, FenceFlags.None, out p_uploadFence);
+    p_uploadFence = new(p_device, 0);
+
     DX12Helpers.ThrowIfFailed(hr, "Failed to create upload fence");
     p_waitEvent = new AutoResetEvent(false);
   }
@@ -955,20 +962,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   private void WaitForUploadCompletion()
   {
-    if(p_uploadFence.GetCompletedValue() < p_uploadFenceValue)
-    {
-      try
-      {
-        var hr = p_uploadFence.SetEventOnCompletion(p_uploadFenceValue, (void*)p_waitEvent.SafeWaitHandle.DangerousGetHandle());
-        DX12Helpers.ThrowIfFailed(hr, "Failed to set fence event");
-
-        p_waitEvent.WaitOne(int.MaxValue);
-      }
-      finally
-      {
-        p_waitEvent.Close();
-      }
-    }
+    p_uploadFence.Wait(p_uploadFenceValue);
   }
 
   /// <summary>
@@ -1125,7 +1119,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
         }
         commandList->ResourceBarrier((uint)barriers.Count, barriersArray);
 
-        // ВАЖНО: Восстанавливаем исходные состояния
         _source.SetCurrentState(sourceCurrentState);
         _staging.SetCurrentState(stagingCurrentState);
       }

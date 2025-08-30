@@ -18,10 +18,8 @@ public class ExampleCommandBuffer: GraphicsAPI.GenericCommandBuffer
 
   protected override void ExecuteCommand(ICommand _command)
   {
-    // В реальной реализации здесь был бы код выполнения команды на GPU
     Console.WriteLine($"Executing command: {_command.Type} (Size: {_command.SizeInBytes} bytes)");
 
-    // Пример обработки разных типов команд
     switch(_command)
     {
       case DrawCommand draw:
@@ -33,7 +31,6 @@ public class ExampleCommandBuffer: GraphicsAPI.GenericCommandBuffer
       case ClearRenderTargetCommand clear:
         ExecuteClearRenderTargetCommand(clear);
         break;
-      // ... остальные команды
       default:
         Console.WriteLine($"  Command details: {_command}");
         break;
@@ -44,14 +41,11 @@ public class ExampleCommandBuffer: GraphicsAPI.GenericCommandBuffer
   {
     Console.WriteLine($"  Drawing {_command.VertexCount} vertices, {_command.InstanceCount} instances");
 
-    // Проверка состояния pipeline
     if(!IsGraphicsPipelineValid())
     {
       Console.WriteLine("  WARNING: Graphics pipeline is not valid!");
       return;
     }
-
-    // Здесь был бы реальный draw call
   }
 
   private void ExecuteSetShaderCommand(SetShaderCommand _command)

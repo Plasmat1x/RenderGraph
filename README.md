@@ -203,7 +203,7 @@ var postProcessChain = new RenderGraphBuilder()
 |--------|---------|--------|-----------|-----|
 |Forward Rendering|4.2ms|1,247|45 MB|
 |Deferred Shading|3.8ms|234|78 MB|
-|Forward+ Lighting|3.1ms|1,156|52 MBz|
+|Forward+ Lighting|3.1ms|1,156|52 MB|
 
 ### Memory Management
 - Resource Pooling - 40% reduction in allocations
