@@ -14,12 +14,12 @@ namespace Directx12ImplTests;
 /// </summary>
 public unsafe class DX12DataTransferTests: IDisposable
 {
-  private readonly DX12GraphicsDevice device;
+  private readonly DX12GraphicsDevice p_device;
 
   public DX12DataTransferTests()
   {
     // Создаем device для тестов (с подавлением debug вывода)
-    device = new DX12GraphicsDevice(false);
+    p_device = new DX12GraphicsDevice(false);
   }
 
   [Fact]
@@ -39,7 +39,7 @@ public unsafe class DX12DataTransferTests: IDisposable
     };
 
     // Act
-    var buffer = device.CreateBuffer(bufferDesc) as DX12Buffer;
+    var buffer = p_device.CreateBuffer(bufferDesc) as DX12Buffer;
 
     // Should not throw
     var exception = Record.Exception(() => buffer.SetData(testData));
@@ -68,7 +68,7 @@ public unsafe class DX12DataTransferTests: IDisposable
     };
 
     // Act
-    var buffer = device.CreateBuffer(bufferDesc) as DX12Buffer;
+    var buffer = p_device.CreateBuffer(bufferDesc) as DX12Buffer;
 
     // Should not throw
     var exception = Record.Exception(() => buffer.SetData(testData));
@@ -96,7 +96,7 @@ public unsafe class DX12DataTransferTests: IDisposable
       Stride = 1
     };
 
-    var buffer = device.CreateBuffer(bufferDesc) as DX12Buffer;
+    var buffer = p_device.CreateBuffer(bufferDesc) as DX12Buffer;
 
     // Act
     buffer.SetData(originalData);
@@ -127,7 +127,7 @@ public unsafe class DX12DataTransferTests: IDisposable
       Stride = sizeof(float)
     };
 
-    var buffer = device.CreateBuffer(bufferDesc) as DX12Buffer;
+    var buffer = p_device.CreateBuffer(bufferDesc) as DX12Buffer;
 
     // Act & Assert
     var exception = Record.Exception(() => buffer.SetData(testData, offset));
@@ -159,7 +159,7 @@ public unsafe class DX12DataTransferTests: IDisposable
     };
 
     // Act
-    var texture = device.CreateTexture(textureDesc) as DX12Texture;
+    var texture = p_device.CreateTexture(textureDesc) as DX12Texture;
 
     // Should not throw
     var exception = Record.Exception(() => texture.SetData(pixelData));
@@ -194,7 +194,7 @@ public unsafe class DX12DataTransferTests: IDisposable
       Usage = ResourceUsage.Default
     };
 
-    var texture = device.CreateTexture(textureDesc) as DX12Texture;
+    var texture = p_device.CreateTexture(textureDesc) as DX12Texture;
 
     // Act & Assert - Upload data to each mip level
     for(uint mip = 0; mip < mipLevels; mip++)
@@ -232,7 +232,7 @@ public unsafe class DX12DataTransferTests: IDisposable
       Usage = ResourceUsage.Default
     };
 
-    var texture = device.CreateTexture(textureDesc) as DX12Texture;
+    var texture = p_device.CreateTexture(textureDesc) as DX12Texture;
 
     // Act
     texture.SetData(originalData);
@@ -260,13 +260,11 @@ public unsafe class DX12DataTransferTests: IDisposable
     var texture = CreateTestTexture("Texture1", 64, 64);
 
     // Act
-    var exception = Record.Exception(() =>
-    {
-      device.BatchUploadResources(uploader =>
-      {
-        uploader.UploadBuffer(buffer1, buffer1Data);
-        uploader.UploadBuffer(buffer2, buffer2Data);
-        uploader.UploadTexture(texture, textureData);
+    var exception = Record.Exception(() => {
+      p_device.BatchUploadResources(_uploader => {
+        _uploader.UploadBuffer(buffer1, buffer1Data);
+        _uploader.UploadBuffer(buffer2, buffer2Data);
+        _uploader.UploadTexture(texture, textureData);
       });
     });
 
@@ -293,10 +291,10 @@ public unsafe class DX12DataTransferTests: IDisposable
       CPUAccessFlags = CPUAccessFlags.Write
     };
 
-    var buffer = device.CreateBuffer(bufferDesc) as DX12Buffer;
+    var buffer = p_device.CreateBuffer(bufferDesc) as DX12Buffer;
 
     // Act
-    var mappedPtr = device.MapBuffer(buffer, MapMode.WriteDiscard);
+    var mappedPtr = p_device.MapBuffer(buffer, MapMode.WriteDiscard);
 
     // Write some test data
     unsafe
@@ -305,7 +303,7 @@ public unsafe class DX12DataTransferTests: IDisposable
       *floatPtr = 42.0f;
     }
 
-    var exception = Record.Exception(() => device.UnmapBuffer(buffer));
+    var exception = Record.Exception(() => p_device.UnmapBuffer(buffer));
 
     // Assert
     Assert.NotEqual(IntPtr.Zero, mappedPtr);
@@ -337,7 +335,7 @@ public unsafe class DX12DataTransferTests: IDisposable
       Stride = 1
     };
 
-    var buffer = device.CreateBuffer(bufferDesc) as DX12Buffer;
+    var buffer = p_device.CreateBuffer(bufferDesc) as DX12Buffer;
 
     // Act
     var exception = Record.Exception(() => buffer.SetData(largeData));
@@ -351,7 +349,7 @@ public unsafe class DX12DataTransferTests: IDisposable
   [Theory]
   [InlineData(ResourceUsage.Default)]
   [InlineData(ResourceUsage.Dynamic)]
-  public void SetData_Should_Respect_Usage_Patterns(ResourceUsage usage)
+  public void SetData_Should_Respect_Usage_Patterns(ResourceUsage _usage)
   {
     // Arrange
     var testData = new Vector4[]
@@ -363,15 +361,15 @@ public unsafe class DX12DataTransferTests: IDisposable
 
     var bufferDesc = new BufferDescription
     {
-      Name = $"UsageTest_{usage}",
+      Name = $"UsageTest_{_usage}",
       Size = (ulong)(testData.Length * sizeof(Vector4)),
       BufferUsage = BufferUsage.Vertex,
       BindFlags = BindFlags.VertexBuffer,
-      Usage = usage,
-      CPUAccessFlags = usage == ResourceUsage.Dynamic ? CPUAccessFlags.Write : CPUAccessFlags.None
+      Usage = _usage,
+      CPUAccessFlags = _usage == ResourceUsage.Dynamic ? CPUAccessFlags.Write : CPUAccessFlags.None
     };
 
-    var buffer = device.CreateBuffer(bufferDesc) as DX12Buffer;
+    var buffer = p_device.CreateBuffer(bufferDesc) as DX12Buffer;
 
     // Act & Assert
     var exception = Record.Exception(() => buffer.SetData(testData));
@@ -382,28 +380,28 @@ public unsafe class DX12DataTransferTests: IDisposable
 
   // === Helper methods ===
 
-  private DX12Buffer CreateTestBuffer(string name, int sizeInBytes)
+  private DX12Buffer CreateTestBuffer(string _name, int _sizeInBytes)
   {
     var desc = new BufferDescription
     {
-      Name = name,
-      Size = (ulong)sizeInBytes,
+      Name = _name,
+      Size = (ulong)_sizeInBytes,
       BufferUsage = BufferUsage.Structured,
       BindFlags = BindFlags.ShaderResource,
       Usage = ResourceUsage.Default,
       Stride = 4
     };
 
-    return device.CreateBuffer(desc) as DX12Buffer;
+    return p_device.CreateBuffer(desc) as DX12Buffer;
   }
 
-  private DX12Texture CreateTestTexture(string name, uint width, uint height)
+  private DX12Texture CreateTestTexture(string _name, uint _width, uint _height)
   {
     var desc = new TextureDescription
     {
-      Name = name,
-      Width = width,
-      Height = height,
+      Name = _name,
+      Width = _width,
+      Height = _height,
       Depth = 1,
       MipLevels = 1,
       ArraySize = 1,
@@ -413,25 +411,25 @@ public unsafe class DX12DataTransferTests: IDisposable
       Usage = ResourceUsage.Default
     };
 
-    return device.CreateTexture(desc) as DX12Texture;
+    return p_device.CreateTexture(desc) as DX12Texture;
   }
 
-  private byte[] CreateTestTextureData(uint width, uint height)
+  private byte[] CreateTestTextureData(uint _width, uint _height)
   {
-    var data = new byte[width * height * 4]; // RGBA
+    var data = new byte[_width * _height * 4]; // RGBA
     var random = new Random(42); // Deterministic for tests
     random.NextBytes(data);
     return data;
   }
 
-  private byte[] CreateCheckerboardPattern(uint width, uint height)
+  private byte[] CreateCheckerboardPattern(uint _width, uint _height)
   {
-    var data = new byte[width * height * 4]; // RGBA
+    var data = new byte[_width * _height * 4]; // RGBA
     var index = 0;
 
-    for(uint y = 0; y < height; y++)
+    for(uint y = 0; y < _height; y++)
     {
-      for(uint x = 0; x < width; x++)
+      for(uint x = 0; x < _width; x++)
       {
         bool isWhite = ((x / 8) + (y / 8)) % 2 == 0;
         byte color = (byte)(isWhite ? 255 : 0);
@@ -448,6 +446,6 @@ public unsafe class DX12DataTransferTests: IDisposable
 
   public void Dispose()
   {
-    device?.Dispose();
+    p_device?.Dispose();
   }
 }

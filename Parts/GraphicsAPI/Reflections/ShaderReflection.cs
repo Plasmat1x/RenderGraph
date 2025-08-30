@@ -1,8 +1,3 @@
-using System.Linq.Expressions;
-using System.Numerics;
-using System.Reflection.Metadata;
-using System.Security.AccessControl;
-
 namespace GraphicsAPI.Reflections;
 
 public class ShaderReflection

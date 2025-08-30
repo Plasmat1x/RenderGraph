@@ -2,7 +2,6 @@
 using Directx12Impl.Parts;
 using Directx12Impl.Parts.Utils;
 
-using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 
 /// Менеджер upload heap для загрузки данных на GPU
@@ -432,9 +431,9 @@ public unsafe class DX12UploadHeapManager: IDisposable
   {
     lock(p_lock)
     {
-      var suitableBuffers = p_availableBuffers.Where(b =>
-          b.Size >= _requiredSize &&
-          b.Type == _type).OrderBy(b => b.Size);
+      var suitableBuffers = p_availableBuffers.Where(_b =>
+          _b.Size >= _requiredSize &&
+          _b.Type == _type).OrderBy(_b => _b.Size);
 
       var buffer = suitableBuffers.FirstOrDefault();
       if(buffer != null)

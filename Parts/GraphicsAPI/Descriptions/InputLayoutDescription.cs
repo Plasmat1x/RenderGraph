@@ -1,9 +1,7 @@
 using GraphicsAPI.Enums;
-using GraphicsAPI.Extensions;
 using GraphicsAPI.Interfaces;
 using GraphicsAPI.Reflections;
 using GraphicsAPI.Reflections.Enums;
-using GraphicsAPI.Utils;
 
 using Resources.Enums;
 using Resources.Extensions;
@@ -37,7 +35,7 @@ public class InputLayoutDescription
     if(_reflection.InputParameters == null || _reflection.InputParameters.Count == 0)
       return layout;
 
-    var sortedParams = _reflection.InputParameters.OrderBy(p => p.Register).ToList();
+    var sortedParams = _reflection.InputParameters.OrderBy(_p => _p.Register).ToList();
 
     uint currentOffset = 0;
     var inputClassification = _instanceDataStepRate > 0
@@ -112,7 +110,7 @@ public class InputLayoutDescription
           ? InputClassification.PerInstanceData
           : InputClassification.PerVertexData;
 
-      foreach(var param in parameters.OrderBy(p => p.Register))
+      foreach(var param in parameters.OrderBy(_p => _p.Register))
       {
         var element = new InputElementDescription
         {
@@ -174,9 +172,9 @@ public class InputLayoutDescription
       }
     }
 
-    foreach(var slotGroup in Elements.GroupBy(e => e.InputSlot))
+    foreach(var slotGroup in Elements.GroupBy(_e => _e.InputSlot))
     {
-      var sortedElements = slotGroup.OrderBy(e => e.AlignedByteOffset).ToList();
+      var sortedElements = slotGroup.OrderBy(_e => _e.AlignedByteOffset).ToList();
       uint expectedOffset = 0;
 
       foreach(var element in sortedElements)
@@ -196,7 +194,7 @@ public class InputLayoutDescription
 
   public uint GetVertexSizeForSlot(uint _slot)
   {
-    var slotElements = Elements.Where(e => e.InputSlot == _slot).ToList();
+    var slotElements = Elements.Where(_e => _e.InputSlot == _slot).ToList();
     if(slotElements.Count == 0)
       return 0;
 

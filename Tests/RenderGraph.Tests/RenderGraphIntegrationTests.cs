@@ -20,9 +20,9 @@ public class RenderGraphIntegrationTests: IDisposable
   {
     var executionOrder = new List<string>();
 
-    var pass1 = new MockRenderPass("Pass1") { AlwaysExecute = true};
-    var pass2 = new MockRenderPass("Pass2") { AlwaysExecute = true};
-    var pass3 = new MockRenderPass("Pass3") { AlwaysExecute = true};
+    var pass1 = new MockRenderPass("Pass1") { AlwaysExecute = true };
+    var pass2 = new MockRenderPass("Pass2") { AlwaysExecute = true };
+    var pass3 = new MockRenderPass("Pass3") { AlwaysExecute = true };
 
     pass1.OnExecute = () => executionOrder.Add("Pass1");
     pass2.OnExecute = () => executionOrder.Add("Pass2");
@@ -98,7 +98,7 @@ public class RenderGraphIntegrationTests: IDisposable
   public void Simple_Mock_Pass_Should_Execute()
   {
     var executionLog = new List<string>();
-    var pass = new DebugMockRenderPass("SimplePass") { AlwaysExecute = true, Enabled = true};
+    var pass = new DebugMockRenderPass("SimplePass") { AlwaysExecute = true, Enabled = true };
     pass.OnExecute = () => executionLog.Add("SimplePass");
 
     p_renderGraph.AddPass(pass);

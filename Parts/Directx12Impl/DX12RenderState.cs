@@ -1,17 +1,13 @@
-using Directx12Impl.Parts;
 using Directx12Impl.Parts.Data;
 using Directx12Impl.Parts.Structures;
 
 using GraphicsAPI.Descriptions;
-using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
 using Resources.Enums;
 
 using Silk.NET.Core.Native;
-using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D12;
-using Silk.NET.DXGI;
 
 namespace Directx12Impl;
 public unsafe class DX12RenderState: IRenderState

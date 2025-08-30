@@ -45,10 +45,10 @@ public unsafe class DX12StaticDescriptorHeap: IDisposable
     if(p_currentIndex + _count <= p_maxDescriptors)
     {
       var allocation = new DX12DescriptorAllocation(
-        this, 
-        p_currentIndex, 
-        _count, 
-        p_descriptorSize, 
+        this,
+        p_currentIndex,
+        _count,
+        p_descriptorSize,
         GetCPUHandle(p_currentIndex));
 
       p_currentIndex += _count;

@@ -47,7 +47,7 @@ public interface IGraphicsDevice: IDisposable
   /// Асинхронное выполнение командного буфера
   /// </summary>
   Task SubmitAsync(CommandBuffer _commandBuffer);
-  
+
 
   //void ExecuteCommandBuffer(CommandBuffer _commandBuffer);
   //void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers);

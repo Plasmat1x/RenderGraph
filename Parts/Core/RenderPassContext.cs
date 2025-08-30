@@ -72,7 +72,7 @@ internal class BufferViewStub: IBufferView
     ViewType = _viewType;
   }
 
-  public IBuffer Buffer {get;}
+  public IBuffer Buffer { get; }
 
   public BufferViewType ViewType { get; }
 
@@ -97,9 +97,9 @@ internal class TextureViewStub: ITextureView
     ViewType = _viewType;
   }
 
-  public ITexture Texture {get;}
+  public ITexture Texture { get; }
 
-  public TextureViewType ViewType { get;}
+  public TextureViewType ViewType { get; }
 
   public TextureViewDescription Description => throw new NotImplementedException();
 

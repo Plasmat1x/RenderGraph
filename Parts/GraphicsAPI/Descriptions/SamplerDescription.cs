@@ -34,7 +34,7 @@ public class SamplerDescription
     LODBias = 0.0f,
     MaxAnisotropy = 1,
     ComparisonFunction = ComparisonFunction.Always,
-    BorderColor = new Vector4 (0.0f, 0.0f, 0.0f, 0.0f ),
+    BorderColor = new Vector4(0.0f, 0.0f, 0.0f, 0.0f),
     MinLOD = 0.0f,
     MaxLOD = float.MaxValue
   };
@@ -53,7 +53,7 @@ public class SamplerDescription
     LODBias = 0.0f,
     MaxAnisotropy = 1,
     ComparisonFunction = ComparisonFunction.Always,
-    BorderColor = new Vector4 (0.0f, 0.0f, 0.0f, 0.0f ),
+    BorderColor = new Vector4(0.0f, 0.0f, 0.0f, 0.0f),
     MinLOD = 0.0f,
     MaxLOD = float.MaxValue
   };
@@ -72,7 +72,7 @@ public class SamplerDescription
     LODBias = 0.0f,
     MaxAnisotropy = 1,
     ComparisonFunction = ComparisonFunction.Always,
-    BorderColor = new Vector4 (0.0f, 0.0f, 0.0f, 0.0f ),
+    BorderColor = new Vector4(0.0f, 0.0f, 0.0f, 0.0f),
     MinLOD = 0.0f,
     MaxLOD = float.MaxValue
   };
@@ -91,7 +91,7 @@ public class SamplerDescription
     LODBias = 0.0f,
     MaxAnisotropy = 1,
     ComparisonFunction = ComparisonFunction.Always,
-    BorderColor = new Vector4 (0.0f, 0.0f, 0.0f, 0.0f ),
+    BorderColor = new Vector4(0.0f, 0.0f, 0.0f, 0.0f),
     MinLOD = 0.0f,
     MaxLOD = float.MaxValue
   };
@@ -110,7 +110,7 @@ public class SamplerDescription
     LODBias = 0.0f,
     MaxAnisotropy = 16,
     ComparisonFunction = ComparisonFunction.Always,
-    BorderColor = new Vector4 (0.0f, 0.0f, 0.0f, 0.0f ),
+    BorderColor = new Vector4(0.0f, 0.0f, 0.0f, 0.0f),
     MinLOD = 0.0f,
     MaxLOD = float.MaxValue
   };
@@ -129,7 +129,7 @@ public class SamplerDescription
     LODBias = 0.0f,
     MaxAnisotropy = 16,
     ComparisonFunction = ComparisonFunction.Always,
-    BorderColor = new Vector4 (0.0f, 0.0f, 0.0f, 0.0f ),
+    BorderColor = new Vector4(0.0f, 0.0f, 0.0f, 0.0f),
     MinLOD = 0.0f,
     MaxLOD = float.MaxValue
   };
@@ -148,7 +148,7 @@ public class SamplerDescription
     LODBias = 0.0f,
     MaxAnisotropy = 1,
     ComparisonFunction = ComparisonFunction.LessEqual,
-    BorderColor = new Vector4(1.0f, 1.0f, 1.0f, 1.0f ),
+    BorderColor = new Vector4(1.0f, 1.0f, 1.0f, 1.0f),
     MinLOD = 0.0f,
     MaxLOD = float.MaxValue
   };

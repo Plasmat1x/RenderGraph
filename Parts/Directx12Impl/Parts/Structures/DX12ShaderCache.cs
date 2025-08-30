@@ -80,12 +80,12 @@ public class DX12ShaderCache
     return Convert.ToBase64String(hash).Replace("/", "_").Replace("+", "-");
   }
 
-  private bool IsSourceNewer(ShaderDescription description, string cachePath)
+  private bool IsSourceNewer(ShaderDescription _description, string _cachePath)
   {
-    if(!string.IsNullOrEmpty(description.FilePath) && File.Exists(description.FilePath))
+    if(!string.IsNullOrEmpty(_description.FilePath) && File.Exists(_description.FilePath))
     {
-      var sourceTime = File.GetLastWriteTime(description.FilePath);
-      var cacheTime = File.GetLastWriteTime(cachePath);
+      var sourceTime = File.GetLastWriteTime(_description.FilePath);
+      var cacheTime = File.GetLastWriteTime(_cachePath);
       return sourceTime > cacheTime;
     }
     return false;

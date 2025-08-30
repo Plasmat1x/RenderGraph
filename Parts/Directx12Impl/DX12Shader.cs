@@ -8,12 +8,10 @@ using GraphicsAPI.Reflections.Extensions;
 
 using Resources.Enums;
 
-using Silk.NET.Core.Contexts;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D12;
 
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -116,23 +114,23 @@ public unsafe class DX12Shader: IShader
 
   public bool HasConstantBuffer(string _name)
   {
-    return p_reflection?.ConstantBuffers.Any(cb => cb.Name == _name) ?? false;
+    return p_reflection?.ConstantBuffers.Any(_cb => _cb.Name == _name) ?? false;
   }
 
   public bool HasTexture(string _name)
   {
-    return p_reflection?.BoundResources.Any(r =>
-        r.Name == _name && r.Type == ResourceBindingType.ShaderResource) ?? false;
+    return p_reflection?.BoundResources.Any(_r =>
+        _r.Name == _name && _r.Type == ResourceBindingType.ShaderResource) ?? false;
   }
 
   public bool HasSampler(string _name)
   {
-    return p_reflection?.Samplers.Any(s => s.Name == _name) ?? false;
+    return p_reflection?.Samplers.Any(_s => _s.Name == _name) ?? false;
   }
 
   public bool HasUnordererAccess(string _name)
   {
-    return p_reflection?.UnorderedAccessViews.Any(uav => uav.Name == _name) ?? false;
+    return p_reflection?.UnorderedAccessViews.Any(_uav => _uav.Name == _name) ?? false;
   }
 
   public ConstantBufferInfo GetConstantBufferInfo(string _name)
@@ -256,7 +254,7 @@ public unsafe class DX12Shader: IShader
       fixed(byte* pTarget = Encoding.UTF8.GetBytes(target + "\0"))
       fixed(byte* pSourceName = Encoding.UTF8.GetBytes((_desc.Name ?? "shader") + "\0"))
       {
-        HResult hr = s_compiler.Compile( 
+        HResult hr = s_compiler.Compile(
             pSource,
             (nuint)sourceBytes.Length,
             pSourceName,

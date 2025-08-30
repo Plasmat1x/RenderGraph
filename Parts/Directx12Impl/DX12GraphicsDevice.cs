@@ -1,5 +1,4 @@
 using Directx12Impl.Extensions;
-using Directx12Impl.Parts;
 using Directx12Impl.Parts.Managers;
 using Directx12Impl.Parts.Structures;
 using Directx12Impl.Parts.Utils;
@@ -201,14 +200,14 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   /// <summary>
   /// Пакетная загрузка нескольких ресурсов
   /// </summary>
-  public void BatchUploadResources(Action<IBatchUploader> uploadAction)
+  public void BatchUploadResources(Action<IBatchUploader> _uploadAction)
   {
     var commandList = BeginResourceUpload();
     var uploader = new DX12BatchUploader(this, commandList);
 
     try
     {
-      uploadAction(uploader);
+      _uploadAction(uploader);
       EndResourceUpload(true);
     }
     catch
@@ -1071,7 +1070,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
           barriersArray[i] = barriers[i];
         }
         commandList->ResourceBarrier((uint)barriers.Count, barriersArray);
- 
+
         if(sourceCurrentState != ResourceStates.CopySource)
           _source.SetCurrentState(ResourceStates.CopySource);
         if(stagingCurrentState != ResourceStates.CopyDest)
@@ -1140,18 +1139,18 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   /// <summary>
   /// Загрузить данные в регион текстуры
   /// </summary>
-  internal void UploadTextureDataRegion<T>(DX12Texture texture, T[] data,
-      uint mipLevel, uint arraySlice, uint x, uint y, uint z,
-      uint width, uint height, uint depth) where T : unmanaged
+  internal void UploadTextureDataRegion<T>(DX12Texture _texture, T[] _data,
+      uint _mipLevel, uint _arraySlice, uint _x, uint _y, uint _z,
+      uint _width, uint _height, uint _depth) where T : unmanaged
   {
     var commandList = BeginResourceUpload();
 
     try
     {
-      fixed(T* pData = data)
+      fixed(T* pData = _data)
       {
-        texture.SetDataRegionInternal(commandList, pData, data.Length * sizeof(T),
-            mipLevel, arraySlice, x, y, z, width, height, depth);
+        _texture.SetDataRegionInternal(commandList, pData, _data.Length * sizeof(T),
+            _mipLevel, _arraySlice, _x, _y, _z, _width, _height, _depth);
       }
 
       EndResourceUpload(true);

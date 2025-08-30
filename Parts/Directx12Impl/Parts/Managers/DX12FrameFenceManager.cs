@@ -1,14 +1,8 @@
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Directx12Impl.Parts.Managers;
-public class DX12FrameFenceManager : IDisposable
+public class DX12FrameFenceManager: IDisposable
 {
   private readonly DX12Fence p_fence;
   private readonly ulong[] p_fenceValues;

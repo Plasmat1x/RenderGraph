@@ -1,5 +1,4 @@
 using Directx12Impl;
-using Directx12Impl.Builders;
 
 using Examples;
 
@@ -16,58 +15,58 @@ using System.Numerics;
 /// </summary>
 public unsafe class RenderingExample
 {
-  private DX12GraphicsDevice device;
-  private DX12SwapChain swapChain;
-  private DX12CommandBuffer commandBuffer;
-  private DX12RenderState simpleRenderState;
-  private DX12Buffer vertexBuffer;
-  private DX12Buffer indexBuffer;
-  private DX12Buffer constantBuffer;
-  private DX12Texture depthTexture;
-  private DX12TextureView depthStencilView;
+  private DX12GraphicsDevice p_device;
+  private DX12SwapChain p_swapChain;
+  private DX12CommandBuffer p_commandBuffer;
+  private DX12RenderState p_simpleRenderState;
+  private DX12Buffer p_vertexBuffer;
+  private DX12Buffer p_indexBuffer;
+  private DX12Buffer p_constantBuffer;
+  private DX12Texture p_depthTexture;
+  private DX12TextureView p_depthStencilView;
 
   private struct Vertex
   {
     public Vector3 Position;
     public Vector4 Color;
 
-    public Vertex(Vector3 position, Vector4 color)
+    public Vertex(Vector3 _position, Vector4 _color)
     {
-      Position = position;
-      Color = color;
+      Position = _position;
+      Color = _color;
     }
   }
 
-  public void Initialize(IntPtr windowHandle, uint width, uint height)
+  public void Initialize(IntPtr _windowHandle, uint _width, uint _height)
   {
-    device = new DX12GraphicsDevice(true);
+    p_device = new DX12GraphicsDevice(true);
 
     var swapChainDesc = new SwapChainDescription
     {
-      Width = width,
-      Height = height,
+      Width = _width,
+      Height = _height,
       Format = TextureFormat.R8G8B8A8_UNORM,
       BufferCount = 2,
       SampleCount = 1,
       SwapEffect = SwapEffect.FlipDiscard
     };
 
-    swapChain = device.CreateSwapChain(swapChainDesc, windowHandle) as DX12SwapChain;
+    p_swapChain = p_device.CreateSwapChain(swapChainDesc, _windowHandle) as DX12SwapChain;
 
     CreatePipelineState();
 
-    commandBuffer = device.CreateCommandBuffer(
+    p_commandBuffer = p_device.CreateCommandBuffer(
         CommandBufferType.Direct,
         CommandBufferExecutionMode.Immediate) as DX12CommandBuffer;
 
     CreateAndUploadResources();
 
     Console.WriteLine("✅ DX12 Rendering Example initialized successfully!");
-    Console.WriteLine($"   Device: {device.Name}");
-    Console.WriteLine($"   SwapChain: {width}x{height}, Format: {swapChainDesc.Format}");
-    Console.WriteLine($"   Vertex Buffer: {vertexBuffer.Size} bytes");
-    Console.WriteLine($"   Index Buffer: {indexBuffer.Size} bytes");
-    Console.WriteLine($"   Constant Buffer: {constantBuffer.Size} bytes");
+    Console.WriteLine($"   Device: {p_device.Name}");
+    Console.WriteLine($"   SwapChain: {_width}x{_height}, Format: {swapChainDesc.Format}");
+    Console.WriteLine($"   Vertex Buffer: {p_vertexBuffer.Size} bytes");
+    Console.WriteLine($"   Index Buffer: {p_indexBuffer.Size} bytes");
+    Console.WriteLine($"   Constant Buffer: {p_constantBuffer.Size} bytes");
   }
 
   private void CreatePipelineState()
@@ -90,8 +89,8 @@ public unsafe class RenderingExample
       EntryPoint = "PSMain"
     };
 
-    var vertexShader = device.CreateShader(vsDesc);
-    var pixelShader = device.CreateShader(psDesc);
+    var vertexShader = p_device.CreateShader(vsDesc);
+    var pixelShader = p_device.CreateShader(psDesc);
 
     var renderStateDesc = new RenderStateDescription
     {
@@ -114,7 +113,7 @@ public unsafe class RenderingExample
       SampleQuality = 0
     };
 
-    simpleRenderState = device.CreateRenderState(renderStateDesc, pipelineStateDesc) as DX12RenderState;
+    p_simpleRenderState = p_device.CreateRenderState(renderStateDesc, pipelineStateDesc) as DX12RenderState;
   }
 
   private void CreateAndUploadResources()
@@ -136,9 +135,9 @@ public unsafe class RenderingExample
       Stride = (uint)sizeof(Vertex)
     };
 
-    vertexBuffer = device.CreateBuffer(vbDesc) as DX12Buffer;
+    p_vertexBuffer = p_device.CreateBuffer(vbDesc) as DX12Buffer;
 
-    vertexBuffer.SetData(vertices);
+    p_vertexBuffer.SetData(vertices);
     Console.WriteLine($"✅ Uploaded {vertices.Length} vertices to vertex buffer");
 
     var indices = new ushort[] { 0, 1, 2 };
@@ -153,9 +152,9 @@ public unsafe class RenderingExample
       Stride = sizeof(ushort)
     };
 
-    indexBuffer = device.CreateBuffer(ibDesc) as DX12Buffer;
+    p_indexBuffer = p_device.CreateBuffer(ibDesc) as DX12Buffer;
 
-    indexBuffer.SetData(indices);
+    p_indexBuffer.SetData(indices);
     Console.WriteLine($"✅ Uploaded {indices.Length} indices to index buffer");
 
     var cbDesc = new BufferDescription
@@ -168,7 +167,7 @@ public unsafe class RenderingExample
       CPUAccessFlags = CPUAccessFlags.Write
     };
 
-    constantBuffer = device.CreateBuffer(cbDesc) as DX12Buffer;
+    p_constantBuffer = p_device.CreateBuffer(cbDesc) as DX12Buffer;
 
     var mvpMatrix = Matrix4x4.Identity;
     UpdateConstantBuffer(mvpMatrix);
@@ -177,8 +176,8 @@ public unsafe class RenderingExample
     var depthDesc = new TextureDescription
     {
       Name = "DepthBuffer",
-      Width = swapChain.Description.Width,
-      Height = swapChain.Description.Height,
+      Width = p_swapChain.Description.Width,
+      Height = p_swapChain.Description.Height,
       Depth = 1,
       MipLevels = 1,
       ArraySize = 1,
@@ -189,8 +188,8 @@ public unsafe class RenderingExample
       Usage = ResourceUsage.Default
     };
 
-    depthTexture = device.CreateTexture(depthDesc) as DX12Texture;
-    depthStencilView = depthTexture.CreateView(
+    p_depthTexture = p_device.CreateTexture(depthDesc) as DX12Texture;
+    p_depthStencilView = p_depthTexture.CreateView(
         TextureViewDescription.CreateDSV(TextureFormat.D24_UNORM_S8_UINT)) as DX12TextureView;
 
     Console.WriteLine($"✅ Created depth buffer: {depthDesc.Width}x{depthDesc.Height}");
@@ -204,47 +203,47 @@ public unsafe class RenderingExample
       var rotationMatrix = Matrix4x4.CreateRotationZ(time * 0.5f);
       UpdateConstantBuffer(rotationMatrix);
 
-      device.BeginFrame();
+      p_device.BeginFrame();
 
-      var backBuffer = swapChain.GetCurrentBackBuffer();
+      var backBuffer = p_swapChain.GetCurrentBackBuffer();
       var renderTargetView = backBuffer.GetDefaultRenderTargetView();
 
-      commandBuffer.Begin();
+      p_commandBuffer.Begin();
 
       try
       {
-        using var debugScope = commandBuffer.BeginDebugScope("Triangle Render Pass");
+        using var debugScope = p_commandBuffer.BeginDebugScope("Triangle Render Pass");
 
-        commandBuffer.SetRenderTarget(renderTargetView, depthStencilView);
+        p_commandBuffer.SetRenderTarget(renderTargetView, p_depthStencilView);
 
         var viewport = new Resources.Viewport
         {
           X = 0,
           Y = 0,
-          Width = swapChain.Description.Width,
-          Height = swapChain.Description.Height,
+          Width = p_swapChain.Description.Width,
+          Height = p_swapChain.Description.Height,
           MinDepth = 0.0f,
           MaxDepth = 1.0f
         };
-        commandBuffer.SetViewport(viewport);
+        p_commandBuffer.SetViewport(viewport);
 
-        commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
-        commandBuffer.ClearDepthStencil(depthStencilView, ClearFlags.Depth, 1.0f, 0);
+        p_commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
+        p_commandBuffer.ClearDepthStencil(p_depthStencilView, ClearFlags.Depth, 1.0f, 0);
 
-        commandBuffer.SetRenderState(simpleRenderState);
+        p_commandBuffer.SetRenderState(p_simpleRenderState);
 
-        var vertexView = vertexBuffer.GetDefaultShaderResourceView();
-        var indexView = indexBuffer.GetDefaultShaderResourceView();
-        var constantView = constantBuffer.GetDefaultShaderResourceView();
+        var vertexView = p_vertexBuffer.GetDefaultShaderResourceView();
+        var indexView = p_indexBuffer.GetDefaultShaderResourceView();
+        var constantView = p_constantBuffer.GetDefaultShaderResourceView();
 
-        commandBuffer.SetVertexBuffer(vertexView, 0);
-        commandBuffer.SetIndexBuffer(indexView, IndexFormat.UInt16);
-        commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
-        commandBuffer.SetConstantBuffer(ShaderStage.Vertex, 0, constantView);
+        p_commandBuffer.SetVertexBuffer(vertexView, 0);
+        p_commandBuffer.SetIndexBuffer(indexView, IndexFormat.UInt16);
+        p_commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
+        p_commandBuffer.SetConstantBuffer(ShaderStage.Vertex, 0, constantView);
 
-        commandBuffer.DrawIndexed(3, 1, 0, 0, 0);
+        p_commandBuffer.DrawIndexed(3, 1, 0, 0, 0);
 
-        if(commandBuffer is DX12CommandBuffer dx12Buffer && backBuffer is DX12Texture dx12BackBuffer)
+        if(p_commandBuffer is DX12CommandBuffer dx12Buffer && backBuffer is DX12Texture dx12BackBuffer)
         {
           dx12Buffer.TransitionBackBufferForPresent(dx12BackBuffer);
         }
@@ -253,19 +252,19 @@ public unsafe class RenderingExample
       }
       finally
       {
-        commandBuffer.End();
+        p_commandBuffer.End();
       }
 
-      device.Submit(commandBuffer);
-      swapChain.Present();
-      device.EndFrame();
+      p_device.Submit(p_commandBuffer);
+      p_swapChain.Present();
+      p_device.EndFrame();
     }
     catch(TimeoutException ex)
     {
       Console.WriteLine($"⚠️ GPU Timeout: {ex.Message}");
       try
       {
-        device.WaitForGPU();
+        p_device.WaitForGPU();
       }
       catch
       {
@@ -281,21 +280,21 @@ public unsafe class RenderingExample
     }
   }
 
-  private void UpdateConstantBuffer(Matrix4x4 worldViewProj)
+  private void UpdateConstantBuffer(Matrix4x4 _worldViewProj)
   {
-    var mappedPtr = device.MapBuffer(constantBuffer, MapMode.WriteDiscard);
+    var mappedPtr = p_device.MapBuffer(p_constantBuffer, MapMode.WriteDiscard);
 
     try
     {
       unsafe
       {
         var matrixPtr = (Matrix4x4*)mappedPtr.ToPointer();
-        *matrixPtr = worldViewProj;
+        *matrixPtr = _worldViewProj;
       }
     }
     finally
     {
-      device.UnmapBuffer(constantBuffer);
+      p_device.UnmapBuffer(p_constantBuffer);
     }
   }
 
@@ -305,24 +304,23 @@ public unsafe class RenderingExample
     {
       Console.WriteLine("🧹 Starting cleanup...");
 
-      device?.WaitForGPU();
+      p_device?.WaitForGPU();
 
-      depthStencilView?.Dispose();
-      depthTexture?.Dispose();
-      constantBuffer?.Dispose();
-      indexBuffer?.Dispose();
-      vertexBuffer?.Dispose();
-      simpleRenderState?.Dispose();
-      commandBuffer?.Dispose();
-      swapChain?.Dispose();
-      device?.Dispose();
+      p_depthStencilView?.Dispose();
+      p_depthTexture?.Dispose();
+      p_constantBuffer?.Dispose();
+      p_indexBuffer?.Dispose();
+      p_vertexBuffer?.Dispose();
+      p_simpleRenderState?.Dispose();
+      p_commandBuffer?.Dispose();
+      p_swapChain?.Dispose();
+      p_device?.Dispose();
 
       Console.WriteLine("✅ Cleanup completed successfully!");
     }
     catch(Exception ex)
     {
       Console.WriteLine($"⚠️ Error during cleanup: {ex.Message}");
-      // Не re-throw в cleanup
     }
 
     Console.WriteLine("🧹 Cleanup completed successfully!");
@@ -389,15 +387,14 @@ public unsafe class RenderingExample
       }
     };
 
-    var textures = textureDescs.Select(desc => device.CreateTexture(desc) as DX12Texture).ToArray();
+    var textures = textureDescs.Select(_desc => p_device.CreateTexture(_desc) as DX12Texture).ToArray();
 
     var texture1Data = CreateCheckerboardPattern(256, 256);
     var texture2Data = CreateGradientPattern(512, 512);
 
-    device.BatchUploadResources(uploader =>
-    {
-      uploader.UploadTexture(textures[0], texture1Data, 0, 0);
-      uploader.UploadTexture(textures[1], texture2Data, 0, 0);
+    p_device.BatchUploadResources(_uploader => {
+      _uploader.UploadTexture(textures[0], texture1Data, 0, 0);
+      _uploader.UploadTexture(textures[1], texture2Data, 0, 0);
 
       Console.WriteLine("  ✅ Uploaded textures in batch operation");
     });
@@ -429,7 +426,7 @@ public unsafe class RenderingExample
       Stride = sizeof(float)
     };
 
-    var buffer = device.CreateBuffer(bufferDesc) as DX12Buffer;
+    var buffer = p_device.CreateBuffer(bufferDesc) as DX12Buffer;
 
     buffer.SetData(testData);
     Console.WriteLine($"  📤 Uploaded data: [{string.Join(", ", testData)}]");
@@ -444,14 +441,14 @@ public unsafe class RenderingExample
     Console.WriteLine("✅ Readback demonstration completed!");
   }
 
-  private byte[] CreateCheckerboardPattern(uint width, uint height)
+  private byte[] CreateCheckerboardPattern(uint _width, uint _height)
   {
-    var data = new byte[width * height * 4];
+    var data = new byte[_width * _height * 4];
     var index = 0;
 
-    for(uint y = 0; y < height; y++)
+    for(uint y = 0; y < _height; y++)
     {
-      for(uint x = 0; x < width; x++)
+      for(uint x = 0; x < _width; x++)
       {
         bool isWhite = ((x / 32) + (y / 32)) % 2 == 0;
         byte color = (byte)(isWhite ? 255 : 0);
@@ -466,17 +463,17 @@ public unsafe class RenderingExample
     return data;
   }
 
-  private byte[] CreateGradientPattern(uint width, uint height)
+  private byte[] CreateGradientPattern(uint _width, uint _height)
   {
-    var data = new byte[width * height * 4];
+    var data = new byte[_width * _height * 4];
     var index = 0;
 
-    for(uint y = 0; y < height; y++)
+    for(uint y = 0; y < _height; y++)
     {
-      for(uint x = 0; x < width; x++)
+      for(uint x = 0; x < _width; x++)
       {
-        data[index++] = (byte)(x * 255 / width);
-        data[index++] = (byte)(y * 255 / height);
+        data[index++] = (byte)(x * 255 / _width);
+        data[index++] = (byte)(y * 255 / _height);
         data[index++] = 128;
         data[index++] = 255;
       }

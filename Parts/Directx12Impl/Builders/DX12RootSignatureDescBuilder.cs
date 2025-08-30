@@ -1,15 +1,8 @@
 using Silk.NET.Core.Native;
-using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D12;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Directx12Impl.Builders;
-public unsafe class DX12RootSignatureDescBuilder : IDisposable
+public unsafe class DX12RootSignatureDescBuilder: IDisposable
 {
   private readonly List<RootParameter1> p_parameters = [];
   private readonly List<StaticSamplerDesc> p_staticSamplers = [];
@@ -34,8 +27,8 @@ public unsafe class DX12RootSignatureDescBuilder : IDisposable
   }
 
   public DX12RootSignatureDescBuilder AddRootCBV(
-    uint _shaderRegister, 
-    uint _registerSpace = 0, 
+    uint _shaderRegister,
+    uint _registerSpace = 0,
     ShaderVisibility _visibility = ShaderVisibility.All)
   {
     var key = (_visibility, _shaderRegister);

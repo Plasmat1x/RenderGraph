@@ -1,6 +1,8 @@
 using Core;
 using Core.Enums;
+
 using GraphicsAPI.Enums;
+
 using Resources;
 
 public class DemoBlurPass: RenderPass

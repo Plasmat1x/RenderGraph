@@ -14,8 +14,8 @@ public unsafe class DX12DynamicDescriptorHeap: IDisposable
   private bool p_disposed;
 
   public DX12DynamicDescriptorHeap(
-    ComPtr<ID3D12Device> _device, 
-    DescriptorHeapType _type, 
+    ComPtr<ID3D12Device> _device,
+    DescriptorHeapType _type,
     uint _maxDescriptors)
   {
     p_device = _device;

@@ -1,9 +1,7 @@
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
-using GraphicsAPI.Extensions;
 using GraphicsAPI.Reflections.Enums;
 using GraphicsAPI.Reflections.Interfaces;
-using GraphicsAPI.Utils;
 
 using Resources.Extensions;
 
@@ -70,27 +68,24 @@ public abstract class ShaderReflectionProviderBase: IShaderReflectionProvider
     };
   }
 
-  protected static uint GetVariableTypeSize(ShaderVariableType type)
+  protected static uint GetVariableTypeSize(ShaderVariableType _type) => _type switch
   {
-    return type switch
-    {
-      ShaderVariableType.Bool => 4,
-      ShaderVariableType.Int => 4,
-      ShaderVariableType.UInt => 4,
-      ShaderVariableType.Float => 4,
-      ShaderVariableType.Float2 => 8,
-      ShaderVariableType.Float3 => 12,
-      ShaderVariableType.Float4 => 16,
-      ShaderVariableType.Int2 => 8,
-      ShaderVariableType.Int3 => 12,
-      ShaderVariableType.Int4 => 16,
-      ShaderVariableType.UInt2 => 8,
-      ShaderVariableType.UInt3 => 12,
-      ShaderVariableType.UInt4 => 16,
-      ShaderVariableType.Float2x2 => 32,
-      ShaderVariableType.Float3x3 => 48,
-      ShaderVariableType.Float4x4 => 64,
-      _ => 0
-    };
-  }
+    ShaderVariableType.Bool => 4,
+    ShaderVariableType.Int => 4,
+    ShaderVariableType.UInt => 4,
+    ShaderVariableType.Float => 4,
+    ShaderVariableType.Float2 => 8,
+    ShaderVariableType.Float3 => 12,
+    ShaderVariableType.Float4 => 16,
+    ShaderVariableType.Int2 => 8,
+    ShaderVariableType.Int3 => 12,
+    ShaderVariableType.Int4 => 16,
+    ShaderVariableType.UInt2 => 8,
+    ShaderVariableType.UInt3 => 12,
+    ShaderVariableType.UInt4 => 16,
+    ShaderVariableType.Float2x2 => 32,
+    ShaderVariableType.Float3x3 => 48,
+    ShaderVariableType.Float4x4 => 64,
+    _ => 0
+  };
 }

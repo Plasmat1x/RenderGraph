@@ -11,6 +11,6 @@ public class ShaderVariableInfo
   public uint Rows { get; set; }
   public uint Columns { get; set; }
   public uint Elements { get; set; }
-  public ShaderVariableFlags Flags {get;set;}
-  public object DefaultValue { get;set;}
+  public ShaderVariableFlags Flags { get; set; }
+  public object DefaultValue { get; set; }
 }

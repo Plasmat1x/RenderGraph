@@ -3,13 +3,7 @@ using GraphicsAPI.Interfaces;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Directx12Impl;
 public class DX12Fence: IFence
@@ -18,7 +12,7 @@ public class DX12Fence: IFence
   private readonly AutoResetEvent p_fenceEvent;
   private ulong p_fenceValue;
   private bool p_disposed;
-    
+
   public DX12Fence(ComPtr<ID3D12Device>? _device, ulong _initialValue = 0)
   {
     if(_device == null)
@@ -35,7 +29,7 @@ public class DX12Fence: IFence
     p_fenceEvent = new AutoResetEvent(false);
   }
 
-  public ulong Value  => p_fenceValue;
+  public ulong Value => p_fenceValue;
 
   public bool IsSignaled
   {
@@ -129,7 +123,7 @@ public class DX12Fence: IFence
 
   public ComPtr<ID3D12Fence> GetFence()
   {
-    ThrowIfDisposed(); 
+    ThrowIfDisposed();
     return p_fence;
   }
 

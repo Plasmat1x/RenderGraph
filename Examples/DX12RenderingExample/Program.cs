@@ -1,14 +1,7 @@
-using GraphicsAPI.Enums;
-
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace DX12RenderingExample;
 

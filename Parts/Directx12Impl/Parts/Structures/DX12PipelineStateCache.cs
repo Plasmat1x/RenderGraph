@@ -3,17 +3,10 @@ using Directx12Impl.Parts.Data;
 using Directx12Impl.Parts.Utils;
 
 using GraphicsAPI.Descriptions;
-using GraphicsAPI.Enums;
-
-using Resources.Enums;
 
 using Silk.NET.Core.Native;
-using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
-
-using System.Linq.Expressions;
-using System.Security.Cryptography;
 
 namespace Directx12Impl.Parts.Structures;
 public unsafe class DX12PipelineStateCache: IDisposable
@@ -24,8 +17,8 @@ public unsafe class DX12PipelineStateCache: IDisposable
   private readonly object p_cacheLock = new();
   private bool p_disposed;
 
-  public DX12PipelineStateCache(ComPtr<ID3D12Device> _device) 
-  { 
+  public DX12PipelineStateCache(ComPtr<ID3D12Device> _device)
+  {
     p_device = _device;
   }
 
@@ -217,7 +210,7 @@ public unsafe class DX12PipelineStateCache: IDisposable
     lock(p_cacheLock)
     {
       foreach(var pso in p_graphicsCache.Values)
-          pso.Dispose();
+        pso.Dispose();
 
       p_graphicsCache.Clear();
 

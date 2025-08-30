@@ -2,9 +2,7 @@ using Directx12Impl.Extensions;
 using Directx12Impl.Parts.Managers;
 using Directx12Impl.Parts.Utils;
 
-using GraphicsAPI;
 using GraphicsAPI.Descriptions;
-using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
 using Resources;
@@ -15,11 +13,7 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
-using System;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Directx12Impl;
 

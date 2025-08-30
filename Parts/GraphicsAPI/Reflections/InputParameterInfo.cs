@@ -21,9 +21,9 @@ public class InputParameterInfo
   public int GetComponentCount()
   {
     var count = 0;
-    for (var i = 0; i<4; i++)
+    for(var i = 0; i < 4; i++)
     {
-      if ((Mask & 1 << i) != 0)
+      if((Mask & 1 << i) != 0)
         count++;
     }
 

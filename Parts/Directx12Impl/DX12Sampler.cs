@@ -10,13 +10,8 @@ using Resources.Enums;
 
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
-using Silk.NET.DXGI;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Directx12Impl;
 public class DX12Sampler: ISampler
@@ -28,7 +23,7 @@ public class DX12Sampler: ISampler
   private bool p_disposed;
 
   public DX12Sampler(ComPtr<ID3D12Device>? _device,
-    SamplerDescription _description, 
+    SamplerDescription _description,
     DX12DescriptorAllocation _allocation)
   {
     p_device = _device ?? throw new ArgumentNullException(nameof(_device));
@@ -65,7 +60,7 @@ public class DX12Sampler: ISampler
 
   public void Dispose()
   {
-    if(p_disposed) 
+    if(p_disposed)
       return;
 
     p_allocation.Dispose();
