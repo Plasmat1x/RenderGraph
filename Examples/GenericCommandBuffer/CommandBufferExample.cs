@@ -16,23 +16,17 @@ public static class CommandBufferExample
   {
     Console.WriteLine("=== Command Buffer Example ===\n");
 
-    // Создаем mock устройство
     var device = new MockGraphicsDevice();
 
-    // Создаем командный буфер
     using var commandBuffer = new ExampleCommandBuffer(device, CommandBufferType.Direct);
-
-    // Демонстрируем базовое использование
     BasicUsageExample(commandBuffer, device);
 
     Console.WriteLine();
 
-    // Демонстрируем продвинутые функции
     AdvancedFeaturesExample(commandBuffer, device);
 
     Console.WriteLine();
 
-    // Демонстрируем оптимизацию
     OptimizationExample(commandBuffer, device);
   }
 
@@ -40,7 +34,6 @@ public static class CommandBufferExample
   {
     Console.WriteLine("--- Basic Usage Example ---");
 
-    // Создаем ресурсы
     var colorTexture = _device.CreateTexture(new TextureDescription
     {
       Width = 1920,
@@ -77,17 +70,14 @@ public static class CommandBufferExample
       EntryPoint = "main"
     });
 
-    // Начинаем запись команд
     _commandBuffer.Begin();
 
     try
     {
-      // Настройка render targets
       var colorView = colorTexture.GetDefaultRenderTargetView();
       var depthView = depthTexture.GetDefaultDepthStencilView();
       _commandBuffer.SetRenderTarget(colorView, depthView);
 
-      // Настройка viewport
       _commandBuffer.SetViewport(new Viewport
       {
         X = 0, Y = 0,
@@ -95,32 +85,25 @@ public static class CommandBufferExample
         MinDepth = 0.0f, MaxDepth = 1.0f
       });
 
-      // Очистка буферов
       _commandBuffer.ClearRenderTarget(colorView, new Vector4(0.2f, 0.3f, 0.8f, 1.0f)); // Синий фон
       _commandBuffer.ClearDepthStencil(depthView);
 
-      // Настройка шейдеров
       _commandBuffer.SetVertexShader(vertexShader);
       _commandBuffer.SetPixelShader(pixelShader);
 
-      // Настройка topology
       _commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
 
-      // Рисование
-      _commandBuffer.Draw(3, 1); // Fullscreen triangle
+      _commandBuffer.Draw(3, 1);
 
       Console.WriteLine($"Commands recorded: {_commandBuffer.CommandCount}");
     }
     finally
     {
-      // Завершаем запись
       _commandBuffer.End();
     }
 
-    // Выполняем команды
     _commandBuffer.Execute();
 
-    // Получаем статистику
     var stats = _commandBuffer.GetStats();
     Console.WriteLine($"Stats: {stats}");
   }
@@ -129,7 +112,6 @@ public static class CommandBufferExample
   {
     Console.WriteLine("--- Advanced Features Example ---");
 
-    // Создаем compute shader и ресурсы для compute
     var computeShader = _device.CreateShader(new ShaderDescription
     {
       Stage = ShaderStage.Compute,
@@ -173,17 +155,13 @@ public static class CommandBufferExample
 
     try
     {
-      // Используем debug scope
       using var debugScope = _commandBuffer.BeginDebugScope("Blur Pass");
 
-      // Transition resources
       _commandBuffer.TransitionResource(inputTexture, ResourceState.ShaderResource);
       _commandBuffer.TransitionResource(outputTexture, ResourceState.UnorderedAccess);
 
-      // Setup compute pipeline
       _commandBuffer.SetComputeShader(computeShader);
 
-      // Bind resources
       var inputView = inputTexture.GetDefaultShaderResourceView();
       var outputView = outputTexture.GetDefaultUnorderedAccessView();
       var constantView = constantBuffer.GetDefaultShaderResourceView();
@@ -192,15 +170,12 @@ public static class CommandBufferExample
       _commandBuffer.SetUnorderedAccess(ShaderStage.Compute, 0, outputView);
       _commandBuffer.SetConstantBuffer(ShaderStage.Compute, 0, constantView);
 
-      // Dispatch compute work
       var groupsX = (inputTexture.Description.Width + 7) / 8;
       var groupsY = (inputTexture.Description.Height + 7) / 8;
       _commandBuffer.Dispatch(groupsX, groupsY, 1);
 
-      // UAV Barrier
       _commandBuffer.UAVBarrier(outputTexture);
 
-      // Copy result back for further processing
       _commandBuffer.TransitionResource(outputTexture, ResourceState.CopySource);
       _commandBuffer.TransitionResource(inputTexture, ResourceState.CopyDest);
       _commandBuffer.CopyTexture(outputTexture, inputTexture);
@@ -212,7 +187,6 @@ public static class CommandBufferExample
       _commandBuffer.End();
     }
 
-    // Execute and show stats
     _commandBuffer.Execute();
     var stats = _commandBuffer.GetStats();
     Console.WriteLine($"Advanced Stats: {stats}");
@@ -229,21 +203,18 @@ public static class CommandBufferExample
 
     try
     {
-      // Записываем много избыточных state changes
       _commandBuffer.SetVertexShader(shader1);
-      _commandBuffer.SetVertexShader(shader2);  // Overrides previous
-      _commandBuffer.SetVertexShader(shader1);  // Overrides again
+      _commandBuffer.SetVertexShader(shader2);
+      _commandBuffer.SetVertexShader(shader1);
 
       _commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
-      _commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleStrip);  // Overrides
-      _commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);   // Back to original
+      _commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleStrip);
+      _commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
 
-      // Actual draw call
       _commandBuffer.Draw(3, 1);
 
-      // More redundant state changes
       _commandBuffer.SetVertexShader(shader2);
-      _commandBuffer.SetVertexShader(shader1);  // Will be optimized out if no draw follows
+      _commandBuffer.SetVertexShader(shader1);
 
       Console.WriteLine($"Commands before optimization: {_commandBuffer.CommandCount}");
     }
@@ -252,7 +223,6 @@ public static class CommandBufferExample
       _commandBuffer.End();
     }
 
-    // Show commands before optimization
     Console.WriteLine("Commands before optimization:");
     for(int i = 0; i < _commandBuffer.Commands.Count; i++)
     {
@@ -271,7 +241,6 @@ public static class CommandBufferExample
       Console.WriteLine($"  {i}: {cmd.Type} - {cmd}");
     }
 
-    // Execute optimized commands
     _commandBuffer.Execute();
   }
 
@@ -311,22 +280,18 @@ public static class CommandBufferExample
 
     try
     {
-      // Используем convenience methods
-      commandBuffer.SetRenderTarget(colorTexture, depthTexture);  // Из текстур напрямую
-      commandBuffer.SetViewportFullTexture(colorTexture);         // Viewport на всю текстуру
-      commandBuffer.SetScissorRectFullTexture(colorTexture);      // Scissor на всю текстуру
+      commandBuffer.SetRenderTarget(colorTexture, depthTexture);
+      commandBuffer.SetViewportFullTexture(colorTexture);
+      commandBuffer.SetScissorRectFullTexture(colorTexture);
 
-      // Очистка стандартными значениями
       var colorView = colorTexture.GetDefaultRenderTargetView();
       var depthView = depthTexture.GetDefaultDepthStencilView();
 
-      commandBuffer.ClearRenderTarget(colorView);  // Черный цвет по умолчанию
-      commandBuffer.ClearDepthStencil(depthView);  // 1.0f depth, 0 stencil
+      commandBuffer.ClearRenderTarget(colorView);
+      commandBuffer.ClearDepthStencil(depthView);
 
-      // Рисование fullscreen quad
       commandBuffer.DrawFullscreenQuad();
 
-      // Batch операции
       var texture1 = device.CreateTexture(new TextureDescription
       {
         Width = 256, Height = 256,
@@ -368,7 +333,6 @@ public static class CommandBufferExample
     var device = new MockGraphicsDevice();
     using var commandBuffer = device.CreateCommandBuffer(CommandBufferType.Direct, CommandBufferExecutionMode.Immediate);
 
-    // Создаем простые ресурсы
     var vertexBuffer = device.CreateBuffer(new BufferDescription
     {
       Size = 1024,
@@ -391,19 +355,16 @@ public static class CommandBufferExample
 
     try
     {
-      // Настройка buffers
       var vertexView = vertexBuffer.GetDefaultShaderResourceView();
       var indexView = indexBuffer.GetDefaultShaderResourceView();
 
       commandBuffer.SetVertexBuffer(vertexView, 0);
       commandBuffer.SetIndexBuffer(indexView, IndexFormat.UInt16);
 
-      // Множественные draw calls с разными параметрами
-      commandBuffer.DrawIndexed(36, 1, 0, 0, 0);    // Куб
-      commandBuffer.DrawIndexed(6, 1, 36, 0, 0);    // Квад
-      commandBuffer.Draw(3, 1, 0, 0);               // Треугольник
+      commandBuffer.DrawIndexed(36, 1, 0, 0, 0);
+      commandBuffer.DrawIndexed(6, 1, 36, 0, 0);
+      commandBuffer.Draw(3, 1, 0, 0);
 
-      // Compute dispatch
       commandBuffer.Dispatch(8, 8, 1);
 
       Console.WriteLine("Mock implementation demo completed");
@@ -413,7 +374,6 @@ public static class CommandBufferExample
       commandBuffer.End();
     }
 
-    // Выполняем через device
     device.ExecuteCommandBuffer(commandBuffer);
   }
 }

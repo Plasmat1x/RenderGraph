@@ -547,13 +547,24 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     }
     else
     {
-      UploadTextureDataWithPadding(
-          _commandList,
-          uploadManager,
-          subresource,
-          _data,
-          _dataSize,
-          layouts[0]);
+      //TODO: Fix upload
+
+      //UploadTextureDataWithPadding(
+      //    _commandList,
+      //    uploadManager,
+      //    subresource,
+      //    _data,
+      //    _dataSize,
+      //    layouts[0]);
+
+      uploadManager.UploadTextureData(
+        _commandList,
+        p_resource,
+        subresource,
+        _data,
+        (ulong)_dataSize,
+        layouts[0].Footprint.RowPitch,
+        0);
     }
 
     barrier.Transition.StateBefore = ResourceStates.CopyDest;

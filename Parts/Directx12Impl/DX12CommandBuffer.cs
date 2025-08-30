@@ -784,12 +784,10 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private unsafe void SetupDescriptorHeaps()
   {
-    // Получаем descriptor manager из parent device
     var descriptorManager = GetDescriptorManager();
     if(descriptorManager == null)
       return;
 
-    // Устанавливаем descriptor heaps для CBV/SRV/UAV и Samplers
     var heaps = stackalloc ID3D12DescriptorHeap*[2];
     uint heapCount = 0;
 

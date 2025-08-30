@@ -50,7 +50,6 @@ public class ShaderReflectionDemo
     Console.WriteLine($"   Input Parameters: {vsReflection.InputParameters.Count}");
     Console.WriteLine($"   Output Parameters: {vsReflection.OutputParameters.Count}");
 
-    // Создаем пиксельный шейдер
     var psDesc = new ShaderDescription
     {
       Name = "BasicPixelShader",

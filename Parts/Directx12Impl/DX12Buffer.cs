@@ -295,21 +295,6 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
 
     var initialState = GetInitialResourceState();
 
-    //fixed(ID3D12Resource** ppResource = &p_resource)
-    //fixed(Guid* pGuid = &ID3D12Resource.Guid)
-    //{
-    //  HResult hr = p_device->CreateCommittedResource(
-    //    &heapProperties,
-    //    HeapFlags.None,
-    //    &resourceDesc,
-    //    initialState,
-    //    null,
-    //    pGuid,
-    //    (void**)&ppResource);
-
-    //  DX12Helpers.ThrowIfFailed(hr, "Failed to create buffer resource");
-    //}
-
     ID3D12Resource* resource = null;
     var riid = ID3D12Resource.Guid;
 
@@ -401,13 +386,11 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
   {
     if(!p_disposed)
     {
-      // Убеждаемся, что буфер не замаплен
       if(p_mappedData != null)
       {
         Unmap();
       }
 
-      // Освобождаем все представления
       foreach(var view in p_views.Values)
       {
         view.Dispose();
@@ -483,7 +466,6 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
   {
     var readbackSize = (ulong)(_result.Length * sizeof(T));
 
-    // Создаем временный staging buffer
     var stagingDesc = new BufferDescription
     {
       Name = $"{Name}_ReadbackStaging",
@@ -495,10 +477,8 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
 
     using var stagingBuffer = (DX12Buffer)p_parentDevice.CreateBuffer(stagingDesc);
 
-    // Копируем данные в staging buffer через command list
     p_parentDevice.CopyBufferToStaging(this, stagingBuffer, _offset, 0, readbackSize);
 
-    // Читаем из staging buffer
     stagingBuffer.GetDataViaMappedMemory(_result, 0);
   }
 

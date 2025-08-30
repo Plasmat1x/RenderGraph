@@ -39,13 +39,10 @@ public class RenderPassCommandBuffer: GraphicsAPI.GenericCommandBuffer
 
   protected override void ExecuteCommand(ICommand _command)
   {
-    // Добавляем префикс к выводу
     Console.WriteLine($"[{p_passName}] Executing: {_command.Type}");
 
-    // Можно добавить специфичную для прохода логику
     if(_command.IsDrawCommand())
     {
-      // Логирование draw calls
       Console.WriteLine($"[{p_passName}] Draw call executed");
     }
   }
@@ -62,7 +59,7 @@ public class RenderPassCommandBuffer: GraphicsAPI.GenericCommandBuffer
       SetViewportFullTexture(mockColor.Texture);
     }
 
-    ClearRenderTarget(_colorTarget, new Vector4(0.1f, 0.1f, 0.2f, 1.0f)); // Темно-синий
+    ClearRenderTarget(_colorTarget, new Vector4(0.1f, 0.1f, 0.2f, 1.0f));
     ClearDepthStencil(_depthTarget);
 
     SetPrimitiveTopology(PrimitiveTopology.TriangleList);
