@@ -1,316 +1,789 @@
-@startuml GraphicsAPI
+@startuml
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle Rectangle
 
-package "GraphicsAPI Abstraction" {
+package "GraphicsAPI" {
+    
+    ' === Основные интерфейсы ресурсов ===
+    interface IResource {
+        +Name: string
+        +ResourceType: ResourceType
+        +GetNativeHandle(): IntPtr
+        +IsValid: bool
+        +GetMemorySize(): ulong
+        +Dispose(): void
+    }
+    
     interface IGraphicsDevice {
-        + Name: string
-        + API: GraphicsAPI
-        + Capabilities: DeviceCapabilities
-        --
-        + CreateTexture(description: TextureDescription): ITexture
-        + CreateBuffer(description: BufferDescription): IBuffer
-        + CreateShader(description: ShaderDescription): IShader
-        + CreateRenderState(description: RenderStateDescription): IRenderState
-        + CreateSampler(description: SamplerDescription): ISampler
-        + CreateCommandBuffer(): CommandBuffer
-        + CreateCommandBuffer(type: CommandBufferType): CommandBuffer
-        + ExecuteCommandBuffer(commandBuffer: CommandBuffer): void
-        + ExecuteCommandBuffers(commandBuffers: CommandBuffer[]): void
-        + WaitForGPU(): void
-        + WaitForFence(fence: IFence): void
-        + CreateFence(initialValue: ulong): IFence
-        + GetMemoryInfo(): MemoryInfo
-        + GetTotalMemory(): ulong
-        + GetAvailableMemory(): ulong
-        + CreateSwapChain(description: SwapChainDescription): ISwapChain
-        + Present(): void
-        + SupportsFormat(format: TextureFormat, usage: FormatUsage): bool
-        + GetFormatBytesPerPixel(format: TextureFormat): uint
-        + GetSupportedSampleCounts(format: TextureFormat): SampleCountFlags
-        + Dispose(): void
+        +Name: string
+        +API: API
+        +Capabilities: DeviceCapabilities
+        +CreateTexture(description: TextureDescription): ITexture
+        +CreateBuffer(description: BufferDescription): IBuffer
+        +CreateShader(description: ShaderDescription): IShader
+        +CreateRenderState(description: RenderStateDescription): IRenderState
+        +CreateRenderState(renderStateDesc: RenderStateDescription, pipelineStateDesc: PipelineStateDescription): IRenderState
+        +CreateSampler(description: SamplerDescription): ISampler
+        +CreateFence(initialValue: ulong): IFence
+        +CreateSwapChain(description: SwapChainDescription, windowHandle: IntPtr): ISwapChain
+        +CreateCommandBuffer(): CommandBuffer
+        +CreateCommandBuffer(type: CommandBufferType, mode: CommandBufferExecutionMode): CommandBuffer
+        +Submit(commandBuffer: CommandBuffer): void
+        +Submit(commandBuffers: CommandBuffer[]): void
+        +Submit(commandBuffer: CommandBuffer, fence: IFence, fenceValue: ulong): void
+        +SubmitAsync(commandBuffer: CommandBuffer): Task
+        +WaitForGPU(): void
+        +WaitForFence(fence: IFence): void
+        +WaitForFenceValue(fence: IFence, value: ulong): void
+        +Present(): void
+        +Present(swapChain: ISwapChain): void
+        +GetMemoryInfo(): MemoryInfo
+        +GetTotalMemory(): ulong
+        +GetAvailableMemory(): ulong
+        +SupportsFormat(format: TextureFormat, usage: FormatUsage): bool
+        +GetFormatBytesPerPixel(format: TextureFormat): uint
+        +GetSupportedSampleCounts(format: TextureFormat): SampleCountFlags
+        +SetDebugName(resource: IResource, name: string): void
+        +BeginEvent(name: string): void
+        +EndEvent(): void
+        +SetMarker(name: string): void
+        +Dispose(): void
     }
-
+    
     interface ITexture {
-        + Description: TextureDescription
-        + Name: string
-        + ResourceType: ResourceType
-        + Width: uint
-        + Height: uint
-        + Depth: uint
-        + MipLevels: uint
-        + ArraySize: uint
-        + Format: TextureFormat
-        + SampleCount: uint
-        + IsDisposed: bool
-        --
-        + CreateView(description: TextureViewDescription): ITextureView
-        + GetDefaultShaderResourceView(): ITextureView
-        + GetDefaultRenderTargetView(): ITextureView
-        + GetDefaultDepthStencilView(): ITextureView
-        + GetDefaultUnorderedAccessView(): ITextureView
-        + SetData<T>(data: T[], mipLevel: uint, arraySlice: uint): void
-        + GetData<T>(mipLevel: uint, arraySlice: uint): T[]
-        + GetSubresourceIndex(mipLevel: uint, arraySlice: uint): uint
-        + GenerateMips(): void
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
+        +Description: TextureDescription
+        +Width: uint
+        +Height: uint
+        +Depth: uint
+        +MipLevels: uint
+        +ArraySize: uint
+        +Format: TextureFormat
+        +SampleCount: uint
+        +CreateView(description: TextureViewDescription): ITextureView
+        +GetDefaultShaderResourceView(): ITextureView
+        +GetDefaultRenderTargetView(): ITextureView
+        +GetDefaultDepthStencilView(): ITextureView
+        +GetDefaultUnorderedAccessView(): ITextureView
+        +SetData<T>(data: T[], mipLevel: uint, arraySlice: uint): void
+        +GetData<T>(mipLevel: uint, arraySlice: uint): T[]
+        +GetSubresourceIndex(mipLevel: uint, arraySlice: uint): uint
+        +GenerateMips(): void
     }
-
+    
     interface IBuffer {
-        + Description: BufferDescription
-        + Name: string
-        + ResourceType: ResourceType
-        + Size: ulong
-        + Stride: uint
-        + Usage: BufferUsage
-        + IsMapped: bool
-        + IsDisposed: bool
-        --
-        + CreateView(description: BufferViewDescription): IBufferView
-        + GetDefaultShaderResourceView(): IBufferView
-        + GetDefaultUnorderedAccessView(): IBufferView
-        + Map(mode: MapMode): IntPtr
-        + Unmap(): void
-        + SetData<T>(data: T[], offset: ulong): void
-        + SetData<T>(data: T, offset: ulong): void
-        + GetData<T>(offset: ulong, count: ulong): T[]
-        + GetData<T>(offset: ulong): T
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
+        +Description: BufferDescription
+        +Size: ulong
+        +Stride: uint
+        +Usage: BufferUsage
+        +IsMapped: bool
+        +CreateView(description: BufferViewDescription): IBufferView
+        +GetDefaultShaderResourceView(): IBufferView
+        +GetDefaultUnorderedAccessView(): IBufferView
+        +Map(mode: MapMode): IntPtr
+        +Unmap(): void
+        +SetData<T>(data: T[], offset: ulong): void
+        +SetData<T>(data: T, offset: ulong): void
+        +GetData<T>(offset: ulong, count: int): T[]
+        +GetData<T>(offset: ulong): T
     }
-
+    
     interface IShader {
-        + Name: string
-        + ResourceType: ResourceType
-        + Stage: ShaderStage
-        + Description: ShaderDescription
-        + Bytecode: byte[]
-        + IsDisposed: bool
-        --
-        + GetReflection(): ShaderReflection
-        + HasConstantBuffer(name: string): bool
-        + HasTexture(name: string): bool
-        + HasSampler(name: string): bool
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
+        +Stage: ShaderStage
+        +Description: ShaderDescription
+        +Bytecode: byte[]
+        +GetReflection(): ShaderReflection
+        +HasConstantBuffer(name: string): bool
+        +HasTexture(name: string): bool
+        +HasSampler(name: string): bool
+        +HasUnordererAccess(name: string): bool
+        +GetConstantBufferInfo(name: string): ConstantBufferInfo
+        +GetResourceInfo(name: string): ResourceBindingInfo
+        +GetSamplerInfo(name: string): SamplerBindingInfo
+        +IsCompatibleWith(otherShader: IShader): bool
     }
-
-    abstract class CommandBuffer {
-        + IsRecording: bool
-        + Type: CommandBufferType
-        + Name: string
-        --
-        + Begin(): void
-        + End(): void
-        + Reset(): void
-        + SetRenderTargets(colorTargets: ITextureView[], depthTarget: ITextureView): void
-        + SetRenderTarget(colorTarget: ITextureView, depthTarget: ITextureView): void
-        + SetViewport(viewport: Viewport): void
-        + SetViewports(viewports: Viewport[]): void
-        + SetScissorRect(rect: Rectangle): void
-        + SetScissorRects(rects: Rectangle[]): void
-        + ClearRenderTarget(target: ITextureView, color: Vector4): void
-        + ClearDepthStencil(target: ITextureView, flags: ClearFlags, depth: float, stencil: byte): void
-        + ClearUnorderedAccess(target: ITextureView, value: Vector4): void
-        + ClearUnorderedAccess(target: IBufferView, value: uint): void
-        + TransitionResource(resource: IResource, newState: ResourceState): void
-        + TransitionResources(resources: IResource[], newStates: ResourceState[]): void
-        + UAVBarrier(resource: IResource): void
-        + UAVBarriers(resources: IResource[]): void
-        + SetVertexBuffer(buffer: IBufferView, slot: uint): void
-        + SetVertexBuffers(buffers: IBufferView[], startSlot: uint): void
-        + SetIndexBuffer(buffer: IBufferView, format: IndexFormat): void
-        + SetVertexShader(shader: IShader): void
-        + SetPixelShader(shader: IShader): void
-        + SetComputeShader(shader: IShader): void
-        + SetGeometryShader(shader: IShader): void
-        + SetHullShader(shader: IShader): void
-        + SetDomainShader(shader: IShader): void
-        + SetShaderResource(stage: ShaderStage, slot: uint, resource: ITextureView): void
-        + SetShaderResources(stage: ShaderStage, startSlot: uint, resources: ITextureView[]): void
-        + SetUnorderedAccess(stage: ShaderStage, slot: uint, resource: ITextureView): void
-        + SetUnorderedAccesses(stage: ShaderStage, startSlot: uint, resources: ITextureView[]): void
-        + SetConstantBuffer(stage: ShaderStage, slot: uint, buffer: IBufferView): void
-        + SetConstantBuffers(stage: ShaderStage, startSlot: uint, buffers: IBufferView[]): void
-        + SetSampler(stage: ShaderStage, slot: uint, sampler: ISampler): void
-        + SetSamplers(stage: ShaderStage, startSlot: uint, samplers: ISampler[]): void
-        + SetRenderState(renderState: IRenderState): void
-        + SetBlendState(blendState: IBlendState, blendFactor: Vector4, sampleMask: uint): void
-        + SetDepthStencilState(depthStencilState: IDepthStencilState, stencilRef: uint): void
-        + SetRasterizerState(rasterizerState: IRasterizerState): void
-        + Draw(vertexCount: uint, instanceCount: uint, startVertex: uint, startInstance: uint): void
-        + DrawIndexed(indexCount: uint, instanceCount: uint, startIndex: uint, baseVertex: int, startInstance: uint): void
-        + DrawIndirect(argsBuffer: IBufferView, offset: ulong): void
-        + DrawIndexedIndirect(argsBuffer: IBufferView, offset: ulong): void
-        + Dispatch(groupCountX: uint, groupCountY: uint, groupCountZ: uint): void
-        + DispatchIndirect(argsBuffer: IBufferView, offset: ulong): void
-        + CopyTexture(src: ITexture, dst: ITexture): void
-        + CopyTextureRegion(src: ITexture, srcMip: uint, srcArray: uint, srcBox: Box, dst: ITexture, dstMip: uint, dstArray: uint, dstOffset: Point3D): void
-        + CopyBuffer(src: IBuffer, dst: IBuffer): void
-        + CopyBufferRegion(src: IBuffer, srcOffset: ulong, dst: IBuffer, dstOffset: ulong, size: ulong): void
-        + ResolveTexture(src: ITexture, srcArray: uint, dst: ITexture, dstArray: uint, format: TextureFormat): void
-        + BeginQuery(query: IQuery): void
-        + EndQuery(query: IQuery): void
-        + PushDebugGroup(name: string): void
-        + PopDebugGroup(): void
-        + InsertDebugMarker(name: string): void
-        + DrawFullscreenQuad(): void
-        + Dispose(): void
-    }
-
+    
     interface ITextureView {
-        + Texture: ITexture
-        + ViewType: TextureViewType
-        + Description: TextureViewDescription
-        --
-        + GetNativeHandle(): IntPtr
-        + Dispose(): void
+        +Texture: ITexture
+        +ViewType: TextureViewType
+        +Description: TextureViewDescription
+        +GetNativeHandle(): IntPtr
+        +Dispose(): void
     }
-
+    
     interface IBufferView {
-        + Buffer: IBuffer
-        + ViewType: BufferViewType
-        + Description: BufferViewDescription
-        --
-        + GetNativeHandle(): IntPtr
-        + Dispose(): void
+        +Buffer: IBuffer
+        +ViewType: BufferViewType
+        +Description: BufferViewDescription
+        +GetNativeHandle(): IntPtr
+        +Dispose(): void
     }
-
+    
     interface ISampler {
-        + Name: string
-        + ResourceType: ResourceType
-        + Description: SamplerDescription
-        + IsDisposed: bool
-        --
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
+        +Description: SamplerDescription
     }
-
+    
+    interface IBlendState {
+        +Description: BlendStateDescription
+    }
+    
     interface IRenderState {
-        + Name: string
-        + ResourceType: ResourceType
-        + Description: RenderStateDescription
-        + IsDisposed: bool
-        --
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
+        +Description: RenderStateDescription
     }
-
-    interface IFence {
-        + Value: ulong
-        + IsSignaled: bool
-        --
-        + Signal(value: ulong): void
-        + Wait(value: ulong, timeoutMs: uint): void
-        + GetNativeHandle(): IntPtr
-        + Dispose(): void
-    }
-
+    
     interface ISwapChain {
-        + Description: SwapChainDescription
-        + CurrentBackBufferIndex: uint
-        --
-        + GetBackBuffer(index: uint): ITexture
-        + Present(syncInterval: uint): void
-        + Resize(width: uint, height: uint): void
-        + GetNativeHandle(): IntPtr
-        + Dispose(): void
+        +Description: SwapChainDescription
+        +CurrentBackBufferIndex: uint
+        +GetBackBuffer(index: uint): ITexture
+        +GetBackBufferRTV(index: uint): ITextureView
+        +Present(syncInterval: uint): void
+        +Resize(width: uint, height: uint): void
+        +SetFullscreenState(fullscreen: bool, monitor: IMonitor): void
+        +IsFullscreen(): bool
+        +GetNativeHandle(): IntPtr
+        +Dispose(): void
     }
-
-    enum ResourceState {
-        Undefined
-        Common
-        RenderTarget
-        UnorderedAccess
-        DepthWrite
-        DepthRead
-        ShaderResource
-        StreamOut
-        IndirectArgument
-        CopyDestination
-        CopySource
-        ResolveDestination
-        ResolveSource
-        Present
+    
+    interface IFence {
+        +Value: ulong
+        +IsSignaled: bool
+        +Signal(value: ulong): void
+        +Wait(value: ulong, timeoutMs: uint): void
+        +GetNativeHandle(): IntPtr
+        +Dispose(): void
     }
-
-    enum GraphicsAPI {
-        Unknown
-        DirectX11
-        DirectX12
-        Vulkan
-        OpenGL
-        Metal
+    
+    interface IBatchUploader {
+        +UploadBuffer<T>(buffer: IBuffer, data: T[], offset: ulong): void
+        +UploadTexture<T>(texture: ITexture, data: T[], mipLevel: uint, arraySlice: uint): void
     }
-
-    enum CommandBufferType {
-        Direct
-        Bundle
-        Compute
-        Copy
+    
+    interface IMonitor {
+        +Name: string
+        +Width: int
+        +Height: int
+        +RefreshRate: int
+        +Handle: IntPtr
     }
-
-    enum ShaderStage {
-        Vertex
-        Hull
-        Domain
-        Geometry
-        Pixel
-        Compute
-        All
+    
+    interface IQuery {
+        +QueryType: QueryType
+        +GetResult<T>(): T
+        +IsReady(): bool
     }
-
-    enum MapMode {
-        Read
-        Write
-        ReadWrite
-        WriteDiscard
-        WriteNoOverwrite
+    
+    ' === CommandBuffer абстрактный класс ===
+    abstract class CommandBuffer {
+        +IsRecording: bool {abstract}
+        +Type: CommandBufferType {abstract}
+        +Name: string
+        +Begin(): void {abstract}
+        +End(): void {abstract}
+        +Reset(): void {abstract}
+        +SetRenderTargets(colorTargets: ITextureView[], depthTarget: ITextureView): void {abstract}
+        +SetRenderTarget(colorTarget: ITextureView, depthTarget: ITextureView): void {abstract}
+        +SetViewport(viewport: Viewport): void {abstract}
+        +SetViewports(viewports: Viewport[]): void {abstract}
+        +SetScissorRect(rect: Rectangle): void {abstract}
+        +SetScissorRects(rects: Rectangle[]): void {abstract}
+        +ClearRenderTarget(target: ITextureView, color: Vector4): void {abstract}
+        +ClearDepthStencil(target: ITextureView, flags: ClearFlags, depth: float, stencil: byte): void {abstract}
+        +ClearUnorderedAccess(target: ITextureView, value: Vector4): void {abstract}
+        +ClearUnorderedAccess(target: IBufferView, value: uint): void {abstract}
+        +TransitionResource(resource: IResource, newState: ResourceState): void {abstract}
+        +TransitionResources(resources: IResource[], newStates: ResourceState[]): void {abstract}
+        +UAVBarrier(resource: IResource): void {abstract}
+        +UAVBarriers(resources: IResource[]): void {abstract}
+        +SetVertexBuffer(buffer: IBufferView, slot: uint): void {abstract}
+        +SetVertexBuffers(buffers: IBufferView[], startSlot: uint): void {abstract}
+        +SetIndexBuffer(buffer: IBufferView, format: IndexFormat): void {abstract}
+        +SetVertexShader(shader: IShader): void {abstract}
+        +SetPixelShader(shader: IShader): void {abstract}
+        +SetComputeShader(shader: IShader): void {abstract}
+        +SetGeometryShader(shader: IShader): void {abstract}
+        +SetHullShader(shader: IShader): void {abstract}
+        +SetDomainShader(shader: IShader): void {abstract}
+        +SetShaderResource(resource: ITextureView, slot: uint, stage: ShaderStage): void {abstract}
+        +SetShaderResource(resource: IBufferView, slot: uint, stage: ShaderStage): void {abstract}
+        +SetConstantBuffer(buffer: IBufferView, slot: uint, stage: ShaderStage): void {abstract}
+        +SetSampler(sampler: ISampler, slot: uint, stage: ShaderStage): void {abstract}
+        +SetRenderState(renderState: IRenderState): void {abstract}
+        +Draw(vertexCount: uint, startVertex: uint): void {abstract}
+        +DrawIndexed(indexCount: uint, startIndex: uint, baseVertex: int): void {abstract}
+        +DrawIndirect(buffer: IBuffer, offset: ulong): void {abstract}
+        +DrawIndexedIndirect(buffer: IBuffer, offset: ulong): void {abstract}
+        +Dispatch(threadGroupCountX: uint, threadGroupCountY: uint, threadGroupCountZ: uint): void {abstract}
+        +DispatchIndirect(buffer: IBuffer, offset: ulong): void {abstract}
+        +CopyTexture(src: ITexture, dst: ITexture): void {abstract}
+        +CopyBuffer(src: IBuffer, dst: IBuffer): void {abstract}
+        +BeginQuery(query: IQuery): void {abstract}
+        +EndQuery(query: IQuery): void {abstract}
+        +PushDebugGroup(name: string): void {abstract}
+        +PopDebugGroup(): void {abstract}
+        +InsertDebugMarker(name: string): void {abstract}
+        +Dispose(): void
     }
-
-    enum TextureViewType {
-        ShaderResource
-        RenderTarget
-        DepthStencil
-        UnorderedAccess
+    
+    abstract class GenericCommandBuffer {
+        #p_type: CommandBufferType
+        #p_isRecording: bool
+        #p_commands: List<ICommand>
+        #p_state: Dictionary<string, object>
+        #p_currentRenderTargets: ITextureView[]
+        #p_currentDepthTarget: ITextureView
+        #p_currentViewport: Viewport
+        #p_currentScissorRect: Rectangle
+        #p_currentTopology: PrimitiveTopology
+        #p_currentShaders: IShader[]
+        +CommandCount: int
+        +Commands: IReadOnlyList<ICommand>
+        #OnBegin(): void {virtual}
+        #OnEnd(): void {virtual}
+        #OnReset(): void {virtual}
+        #ResetState(): void
+        #ValidateRecording(): void
+        #RecordCommand(command: ICommand): void
+        +GetCurrentRenderTargets(): IReadOnlyList<ITextureView>
+        +GetCurrentDepthTarget(): ITextureView
+        +GetCurrentTopology(): PrimitiveTopology
+        +GetCurrentShader(stage: ShaderStage): IShader
     }
-
-    enum BufferViewType {
-        ShaderResource
-        UnorderedAccess
-        VertexBuffer
-        IndexBuffer
-        ConstantBuffer
+    
+    ' === Структуры ===
+    class Box <<struct>> {
+        +Left: uint
+        +Top: uint
+        +Front: uint
+        +Right: uint
+        +Bottom: uint
+        +Back: uint
+        +Width: uint
+        +Height: uint
+        +Depth: uint
     }
-
-    enum ClearFlags {
-        Depth
-        Stencil
-        DepthStencil
+    
+    class DeviceCapabilities <<struct>> {
+        +MaxTexture1DSize: uint
+        +MaxTexture2DSize: uint
+        +MaxTexture3DSize: uint
+        +MaxTextureCubeSize: uint
+        +MaxTextureArrayLayers: uint
+        +MaxColorAttachments: uint
+        +MaxVertexAttributes: uint
+        +MaxVertexBuffers: uint
+        +MaxUniformBufferBindings: uint
+        +MaxStorageBufferBindings: uint
+        +MaxSampledImageBindings: uint
+        +MaxStorageImageBindings: uint
+        +MaxSamplerBindings: uint
+        +MaxComputeWorkGroupSize: uint
+        +MaxComputeWorkGroupInvocations: uint
+        +SupportedSampleCounts: SampleCountFlags
+        +SupportsGeometryShader: bool
+        +SupportsTessellation: bool
+        +SupportsComputeShader: bool
+        +SupportsMultiDrawIndirect: bool
+        +SupportsDrawIndirect: bool
+        +SupportsDepthClamp: bool
+        +SupportsAnisotropicFiltering: bool
+        +SupportsTextureCompressionBC: bool
+        +SupportsTextureCompressionETC: bool
+        +SupportsTextureCompressionASTC: bool
+    }
+    
+    ' === Пакет Descriptions ===
+    package "Descriptions" {
+        class InputElementDescription {
+            +SemanticName: string
+            +SemanticIndex: uint
+            +Format: TextureFormat
+            +InputSlot: uint
+            +AlignedByteOffset: uint
+            +InputSlotClass: InputClassification
+            +InstanceDataStepRate: uint
+        }
+        
+        class InputLayoutDescription {
+            +Elements: List<InputElementDescription>
+        }
+        
+        class TextureViewDescription {
+            +ViewType: TextureViewType
+            +Format: TextureFormat
+            +MostDetailedMip: uint
+            +MipLevels: uint
+            +FirstArraySlice: uint
+            +ArraySize: uint
+            +ComponentMapping: ComponentMapping
+            +PlaneSlice: uint
+            +ResourceMinLODClamp: float
+            +Flags: TextureViewFlags
+            +{static} CreateSRV(format: TextureFormat, mipLevels: uint, arraySize: uint): TextureViewDescription
+            +{static} CreateRTV(format: TextureFormat, mipLevel: uint, arraySize: uint): TextureViewDescription
+            +{static} CreateDSV(format: TextureFormat, mipLevel: uint, arraySize: uint): TextureViewDescription
+        }
+        
+        class BufferViewDescription {
+            +ViewType: BufferViewType
+            +Format: TextureFormat
+            +FirstElement: ulong
+            +NumElements: ulong
+            +StructureByteStride: uint
+            +Flags: BufferViewFlags
+            +CounterOffsetInBytes: ulong
+            +{static} CreateCBV(sizeInBytes: ulong, offsetInBytes: ulong): BufferViewDescription
+            +{static} CreateStructuredSRV(numElements: ulong, stride: uint, firstElement: ulong): BufferViewDescription
+            +{static} CreateRawSRV(sizeInBytes: ulong, offsetInBytes: ulong): BufferViewDescription
+            +{static} CreateStructuredUAV(numElements: ulong, stride: uint, firstElement: ulong, hasCounter: bool): BufferViewDescription
+        }
+        
+        class SwapChainDescription {
+            +Width: uint
+            +Height: uint
+            +Format: TextureFormat
+            +BufferCount: uint
+            +SampleCount: uint
+            +SampleQuality: uint
+            +SwapEffect: SwapEffect
+            +Flags: SwapChainFlags
+            +RefreshRate: uint
+            +Scaling: ScalingMode
+            +AlphaMode: AlphaMode
+        }
+        
+        class ShaderDescription {
+            +Name: string
+            +Stage: ShaderStage
+            +FilePath: string
+            +SourceCode: string
+            +ByteCode: byte[]
+            +EntryPoint: string
+            +ShaderModel: string
+            +Defines: List<ShaderMacro>
+            +IncludePaths: List<string>
+            +CompileFlags: ShaderCompileFlags
+            +CachedReflection: ShaderReflection
+            +Metadata: Dictionary<string, object>
+            +Validate(errorMessage: out string): bool
+            +Clone(): ShaderDescription
+            +GetRecommendedFileSuffix(): string
+            +GetTargetProfile(): string
+        }
+        
+        class RenderStateDescription {
+            +Name: string
+            +BlendState: BlendStateDescription
+            +DepthStencilState: DepthStencilStateDescription
+            +RasterizerState: RasterizerStateDescription
+        }
+        
+        class PipelineStateDescription {
+            +Name: string
+            +VertexShader: IShader
+            +PixelShader: IShader
+            +DomainShader: IShader
+            +HullShader: IShader
+            +GeometryShader: IShader
+            +ComputeShader: IShader
+            +InputLayout: InputLayoutDescription
+            +PrimitiveTopology: PrimitiveTopology
+            +RenderTargetFormats: TextureFormat[]
+            +DepthStencilFormat: TextureFormat
+            +RenderTargetCount: uint
+            +SampleCount: uint
+            +SampleQuality: uint
+            +SampleMask: uint
+        }
+        
+        class SamplerDescription {
+            +Name: string
+            +MinFilter: FilterMode
+            +MagFilter: FilterMode
+            +MipFilter: FilterMode
+            +AddressModeU: AddressMode
+            +AddressModeV: AddressMode
+            +AddressModeW: AddressMode
+            +ComparisonFunction: ComparisonFunction
+            +MaxAnisotropy: uint
+            +BorderColor: float[]
+            +MinLOD: float
+            +MaxLOD: float
+        }
+        
+        class BlendStateDescription {
+            +AlphaToCoverageEnable: bool
+            +IndependentBlendEnable: bool
+            +RenderTargets: RenderTargetBlendDescription[]
+        }
+    }
+    
+    ' === Пакет Enums ===
+    package "Enums" {
+        enum API {
+            Unknown
+            DirectX11
+            DirectX12
+            Vulkan
+            OpenGL
+            Metal
+        }
+        
+        enum InputClassification {
+            PerVertexData
+            PerInstanceData
+        }
+        
+        enum CommandBufferType {
+            Direct
+            Bundle
+            Compute
+            Copy
+        }
+        
+        enum ShaderStage {
+            Vertex
+            Pixel
+            Geometry
+            Hull
+            Domain
+            Compute
+            Amplification
+            Mesh
+        }
+        
+        enum FilterMode {
+            Point
+            Linear
+            Anisotropic
+        }
+        
+        enum AddressMode {
+            Wrap
+            Mirror
+            Clamp
+            Border
+        }
+        
+        enum ComparisonFunction {
+            Never
+            Less
+            Equal
+            LessEqual
+            Greater
+            NotEqual
+            GreaterEqual
+            Always
+        }
+    }
+    
+    ' === Пакет Reflections ===
+    package "Reflections" {
+        class ShaderReflection {
+            +Info: ShaderInfo
+            +ConstantBuffers: List<ConstantBufferInfo>
+            +BoundResources: List<ResourceBindingInfo>
+            +Samplers: List<SamplerBindingInfo>
+            +UnorderedAccessViews: List<ResourceBindingInfo>
+            +InputParameters: List<InputParameterInfo>
+            +OutputParameters: List<OutputParameterInfo>
+            +ThreadGroupSize: ThreadGroupSize
+            +GetConstantBuffer(name: string): ConstantBufferInfo
+            +GetResource(name: string): ResourceBindingInfo
+            +GetSampler(name: string): SamplerBindingInfo
+        }
+        
+        class ConstantBufferInfo {
+            +Name: string
+            +Size: uint
+            +BindPoint: uint
+            +BindCount: uint
+            +Type: ConstantBufferType
+            +Variables: List<ShaderVariableInfo>
+            +GetVariable(name: string): ShaderVariableInfo
+        }
+        
+        class ResourceBindingInfo {
+            +Name: string
+            +Type: ResourceBindingType
+            +BindPoint: uint
+            +BindCount: uint
+            +ReturnType: string
+            +Dimension: string
+            +SampleCount: uint
+            +Flags: ResourceBindingFlags
+        }
+        
+        class SamplerBindingInfo {
+            +Name: string
+            +BindPoint: uint
+            +BindCount: uint
+            +Type: SamplerType
+        }
+        
+        class InputParameterInfo {
+            +SemanticName: string
+            +SemanticIndex: uint
+            +Register: uint
+            +SystemValue: string
+            +ComponentType: string
+            +Mask: byte
+            +ReadWriteMask: byte
+            +Stream: uint
+        }
+        
+        class OutputParameterInfo {
+        }
+        
+        class ShaderVariableInfo {
+            +Name: string
+            +Offset: uint
+            +Size: uint
+            +Type: ShaderVariableType
+        }
+        
+        class ShaderInfo {
+            +Version: uint
+            +Creator: string
+            +Flags: uint
+            +ConstantBuffers: uint
+            +BoundResources: uint
+            +InputParameters: uint
+            +OutputParameters: uint
+            +InstructionCount: uint
+        }
+        
+        class ThreadGroupSize {
+            +X: uint
+            +Y: uint
+            +Z: uint
+        }
+        
+        package "Enums" {
+            enum ShaderVariableType {
+                Void
+                Bool
+                Int
+                UInt
+                Float
+                String
+                Texture
+                Texture1D
+                Texture2D
+                Texture3D
+                TextureCube
+                Sampler
+                Sampler1D
+                Sampler2D
+                Sampler3D
+                SamplerCube
+                PixelShader
+                VertexShader
+                GeometryShader
+                RasterOrderedTexture1D
+                RasterOrderedTexture2D
+                RasterOrderedTexture3D
+                Float2x2
+                Float3x3
+                Float4x4
+                Float2
+                Float3
+                Float4
+                Int2
+                Int3
+                Int4
+                UInt2
+                UInt3
+                UInt4
+                Float1Array
+                Float2Array
+                Float3Array
+                Float4Array
+                UserDefined
+            }
+            
+            enum ResourceBindingType {
+                ConstantBuffer
+                TextureSRV
+                UAV
+                Sampler
+            }
+        }
+        
+        package "Extensions" {
+            class ShaderReflectionExtensions <<static>> {
+                +{static} Compatible(stage: ShaderReflection, other: ShaderReflection): bool
+                +{static} CalculateTotalConstantBufferSize(reflection: ShaderReflection): uint
+                +{static} GetUsedResourceSlots(reflection: ShaderReflection, type: ResourceBindingType): HashSet<uint>
+            }
+        }
+    }
+    
+    ' === Пакет Commands ===
+    package "Commands" {
+        interface ICommand {
+            +Type: CommandType
+            +SizeInBytes: int
+        }
+        
+        package "enums" {
+            enum CommandType {
+                SetRenderTargets
+                SetViewport
+                SetViewports
+                SetScissorRect
+                SetScissorRects
+                ClearRenderTarget
+                ClearDepthStencil
+                ClearUnorderedAccess
+                TransitionResource
+                TransitionResources
+                UAVBarrier
+                UAVBarriers
+                SetVertexBuffer
+                SetVertexBuffers
+                SetIndexBuffer
+                SetShader
+                SetShaderResource
+                SetShaderResources
+                SetUnorderedAccess
+                SetUnorderedAccesses
+                SetConstantBuffer
+                SetConstantBuffers
+                SetSampler
+                SetSamplers
+                SetRenderState
+                SetBlendState
+                SetDepthStencilState
+                SetRasterizerState
+                SetPrimitiveTopology
+                Draw
+                DrawIndexed
+                DrawIndirect
+                DrawIndexedIndirect
+                Dispatch
+                DispatchIndirect
+                CopyTexture
+                CopyTextureRegion
+                CopyBuffer
+                CopyBufferRegion
+                ResolveTexture
+                BeginQuery
+                EndQuery
+                PushDebugGroup
+                PopDebugGroup
+                InsertDebugMarker
+                BeginEvent
+            }
+        }
+        
+        class SetViewportCommand <<record>> {
+            +Viewport: Viewport
+            +Type: CommandType
+            +SizeInBytes: int
+        }
+        
+        class SetRenderStateCommand <<record>> {
+            +RenderState: IRenderState
+            +Type: CommandType
+            +SizeInBytes: int
+        }
+        
+        class SetIndexBufferCommand <<record>> {
+            +Buffer: IBufferView
+            +Format: IndexFormat
+            +Type: CommandType
+            +SizeInBytes: int
+        }
+        
+        class BeginQueryCommand <<record>> {
+            +Query: IQuery
+            +Type: CommandType
+            +SizeInBytes: int
+        }
+    }
+    
+    ' === Пакет Extensions ===
+    package "Extensions" {
+        class InputElementDescriptionExtension <<static>> {
+            +{static} Position: InputLayoutDescription
+            +{static} PositionColor: InputLayoutDescription
+            +{static} PositionTexture: InputLayoutDescription
+        }
+        
+        class ResourceTypeExtensions <<static>> {
+            +{static} GetResourceType(description: TextureDescription): ResourceType
+            +{static} GetResourceType(description: BufferDescription): ResourceType
+            +{static} GetResourceType(shader: IShader): ResourceType
+            +{static} GetResourceType(renderState: IRenderState): ResourceType
+            +{static} GetResourceType(sampler: ISampler): ResourceType
+        }
+        
+        class SamplerDescriptionExtension <<static>> {
+            +{static} CreatePointWrap(name: string): SamplerDescription
+            +{static} CreatePointClamp(name: string): SamplerDescription
+            +{static} CreateLinearWrap(name: string): SamplerDescription
+            +{static} CreateLinearClamp(name: string): SamplerDescription
+            +{static} CreateAnisatropic(maxAnisotropy: uint, name: string): SamplerDescription
+            +{static} CreateComparisonSampler(func: ComparisonFunction, name: string): SamplerDescription
+            +{static} CreateShadowSampler(name: string): SamplerDescription
+        }
     }
 }
 
-' Graphics API Relationships
-IGraphicsDevice --> ITexture : creates
-IGraphicsDevice --> IBuffer : creates
-IGraphicsDevice --> IShader : creates
-IGraphicsDevice --> ISampler : creates
-IGraphicsDevice --> IRenderState : creates
-IGraphicsDevice --> CommandBuffer : creates
-IGraphicsDevice --> IFence : creates
-IGraphicsDevice --> ISwapChain : creates
+' === Наследование ===
+ITexture --|> IResource
+IBuffer --|> IResource
+IShader --|> IResource
+ISampler --|> IResource
+IBlendState --|> IResource
+IRenderState --|> IResource
+ITextureView --|> IDisposable
+IBufferView --|> IDisposable
+ISwapChain --|> IDisposable
+IFence --|> IDisposable
+IGraphicsDevice --|> IDisposable
+CommandBuffer --|> IDisposable
+GenericCommandBuffer --|> CommandBuffer
+OutputParameterInfo --|> InputParameterInfo
+SetViewportCommand ..|> ICommand
+SetRenderStateCommand ..|> ICommand
+SetIndexBufferCommand ..|> ICommand
+BeginQueryCommand ..|> ICommand
 
-ITexture --> ITextureView : creates
-IBuffer --> IBufferView : creates
-
-CommandBuffer --> ITextureView : uses
-CommandBuffer --> IBufferView : uses
-CommandBuffer --> IShader : uses
-CommandBuffer --> ISampler : uses
-CommandBuffer --> IRenderState : uses
+' === Композиция и Ассоциации ===
+IGraphicsDevice ..> DeviceCapabilities : has
+ITexture ..> TextureViewDescription : creates
+IBuffer ..> BufferViewDescription : creates
+ITextureView ..> ITexture : references
+IBufferView ..> IBuffer : references
+InputLayoutDescription *-- InputElementDescription : contains
+IGraphicsDevice ..> CommandBuffer : creates
+IGraphicsDevice ..> ITexture : creates
+IGraphicsDevice ..> IBuffer : creates
+IGraphicsDevice ..> IShader : creates
+IGraphicsDevice ..> IRenderState : creates
+IGraphicsDevice ..> ISampler : creates
+IGraphicsDevice ..> ISwapChain : creates
+IGraphicsDevice ..> IFence : creates
+CommandBuffer ..> ITextureView : uses
+CommandBuffer ..> IBufferView : uses
+CommandBuffer ..> IShader : uses
+CommandBuffer ..> IRenderState : uses
+CommandBuffer ..> ISampler : uses
+CommandBuffer ..> IQuery : uses
+GenericCommandBuffer ..> ICommand : records
+IShader ..> ShaderReflection : provides
+ShaderReflection *-- ConstantBufferInfo : contains
+ShaderReflection *-- ResourceBindingInfo : contains
+ShaderReflection *-- SamplerBindingInfo : contains
+ShaderReflection *-- InputParameterInfo : contains
+ShaderReflection *-- OutputParameterInfo : contains
+ShaderReflection *-- ThreadGroupSize : contains
+ConstantBufferInfo *-- ShaderVariableInfo : contains
+PipelineStateDescription ..> IShader : references
+PipelineStateDescription ..> InputLayoutDescription : uses
+RenderStateDescription *-- BlendStateDescription : contains
+ISwapChain ..> IMonitor : uses
 
 @enduml

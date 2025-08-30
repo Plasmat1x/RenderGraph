@@ -522,8 +522,10 @@ public unsafe class DX12Texture: DX12Resource, ITexture
         rowSizes,
         &totalSize);
 
-    if((ulong)_dataSize < totalSize)
-      throw new ArgumentException($"Data size ({_dataSize}) is less than required ({totalSize})");
+    var expectedDataSize = CalculateSubresourceSize(_mipLevel, _arraySlice);
+
+    if((ulong)_dataSize < expectedDataSize)
+      throw new ArgumentException($"Data size ({_dataSize}) is less than required ({expectedDataSize})");
 
     var barrier = new ResourceBarrier
     {
@@ -538,18 +540,117 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     };
     _commandList->ResourceBarrier(1, &barrier);
 
-    uploadManager.UploadTextureData(
-        _commandList,
-        p_resource,
-        subresource,
-        _data,
-        (ulong)_dataSize,
-        layouts[0].Footprint.RowPitch,
-        0);
+    if((ulong)_dataSize == totalSize)
+    {
+      uploadManager.UploadTextureData(
+          _commandList,
+          p_resource,
+          subresource,
+          _data,
+          (ulong)_dataSize,
+          layouts[0].Footprint.RowPitch,
+          0);
+    }
+    else
+    {
+      UploadTextureDataWithPadding(
+          _commandList,
+          uploadManager,
+          subresource,
+          _data,
+          _dataSize,
+          layouts[0]);
+    }
 
     barrier.Transition.StateBefore = ResourceStates.CopyDest;
     barrier.Transition.StateAfter = p_currentState;
     _commandList->ResourceBarrier(1, &barrier);
+  }
+
+  /// <summary>
+  /// Загрузка данных текстуры с добавлением padding'а для row pitch
+  /// </summary>
+  private void UploadTextureDataWithPadding(
+      ID3D12GraphicsCommandList* _commandList,
+      DX12UploadHeapManager _uploadManager,
+      uint _subresource,
+      void* _sourceData,
+      int _sourceDataSize,
+      PlacedSubresourceFootprint _layout)
+  {
+    var footprint = _layout.Footprint;
+    var mipWidth = footprint.Width;
+    var mipHeight = footprint.Height;
+    var rowPitch = footprint.RowPitch;
+
+    var formatSize = p_description.Format.GetFormatSize();
+    var sourceRowSize = mipWidth * formatSize;
+
+    if(sourceRowSize == rowPitch)
+    {
+      _uploadManager.UploadTextureData(
+          _commandList,
+          p_resource,
+          _subresource,
+          _sourceData,
+          (ulong)_sourceDataSize,
+          rowPitch,
+          0);
+    }
+    else
+    {
+      var paddedSize = rowPitch * mipHeight;
+      var uploadBuffer = _uploadManager.AcquireBuffer(paddedSize);
+
+      try
+      {
+        var srcPtr = (byte*)_sourceData;
+        var mappedPtr = (byte*)uploadBuffer.MappedData;
+
+        for(uint row = 0; row < mipHeight; row++)
+        {
+          var srcOffset = row * sourceRowSize;
+          var dstOffset = row * rowPitch;
+
+          Buffer.MemoryCopy(
+              srcPtr + srcOffset,
+              mappedPtr + dstOffset,
+              sourceRowSize,
+              sourceRowSize);
+
+          if(rowPitch > sourceRowSize)
+          {
+            var paddingSize = rowPitch - sourceRowSize;
+            var pDest = new byte[paddingSize];
+            Buffer.MemoryCopy(
+                mappedPtr + dstOffset + sourceRowSize,
+                &pDest,
+                paddingSize,
+                paddingSize);
+          }
+        }
+
+        var destLocation = new TextureCopyLocation
+        {
+          PResource = p_resource,
+          Type = TextureCopyType.SubresourceIndex,
+          SubresourceIndex = _subresource
+        };
+
+        var srcLocation = new TextureCopyLocation
+        {
+          PResource = uploadBuffer.Resource,
+          Type = TextureCopyType.PlacedFootprint,
+          PlacedFootprint = _layout
+        };
+
+        _commandList->CopyTextureRegion(&destLocation, 0, 0, 0, &srcLocation, null);
+      }
+      finally
+      {
+        _uploadManager.ReleaseBuffer(uploadBuffer);
+      }
+    }
   }
 
   private void ValidateSubresource(uint _mipLevel, uint _arraySlice)
@@ -612,29 +713,29 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   private struct TextureViewKey: IEquatable<TextureViewKey>
   {
-  public TextureViewType ViewType;
-  public TextureViewDescription Description;
+    public TextureViewType ViewType;
+    public TextureViewDescription Description;
 
-  public TextureViewKey(TextureViewType _viewType, TextureViewDescription _description)
-  {
-    ViewType = _viewType;
-    Description = _description;
-  }
+    public TextureViewKey(TextureViewType _viewType, TextureViewDescription _description)
+    {
+      ViewType = _viewType;
+      Description = _description;
+    }
 
-  public bool Equals(TextureViewKey _other)
-  {
-    return ViewType == _other.ViewType &&
-           Description.Format == _other.Description.Format &&
-           Description.MostDetailedMip == _other.Description.MostDetailedMip &&
-           Description.MipLevels == _other.Description.MipLevels &&
-           Description.FirstArraySlice == _other.Description.FirstArraySlice &&
-           Description.ArraySize == _other.Description.ArraySize;
-  }
+    public bool Equals(TextureViewKey _other)
+    {
+      return ViewType == _other.ViewType &&
+             Description.Format == _other.Description.Format &&
+             Description.MostDetailedMip == _other.Description.MostDetailedMip &&
+             Description.MipLevels == _other.Description.MipLevels &&
+             Description.FirstArraySlice == _other.Description.FirstArraySlice &&
+             Description.ArraySize == _other.Description.ArraySize;
+    }
 
-  public override int GetHashCode()
-  {
-    return HashCode.Combine(ViewType, Description.Format, Description.MostDetailedMip,
-      Description.MipLevels, Description.FirstArraySlice, Description.ArraySize);
+    public override int GetHashCode()
+    {
+      return HashCode.Combine(ViewType, Description.Format, Description.MostDetailedMip,
+        Description.MipLevels, Description.FirstArraySlice, Description.ArraySize);
+    }
   }
-}
 }
