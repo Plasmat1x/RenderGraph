@@ -1,59 +1,80 @@
 @startuml DirectX12Implementation
 
-package "DirectX12 Implementation" {
+package "Directx12Impl" {
+    
+    ' Базовые классы
+    abstract class DX12Resource {
+        # p_device: ID3D12Device*
+        # p_resource: ID3D12Resource*
+        # p_currentState: ResourceStates
+        # p_name: string
+        # p_disposed: bool
+        --
+        + Name: string
+        + {abstract} ResourceType: ResourceType
+        + IsDisposed: bool
+        --
+        + GetNativeHandle(): IntPtr
+        + {abstract} GetMemorySize(): ulong
+        + GetResource(): ID3D12Resource*
+        + GetCurrentState(): ResourceStates
+        + SetCurrentState(state: ResourceStates): void
+        + GetD3D12Description(): ResourceDesc
+        + GetGPUVirtualAddress(): ulong
+        + SupportsState(state: ResourceStates): bool
+        + {abstract} Dispose(): void
+    }
+
+    ' Основной класс устройства
     class DX12GraphicsDevice {
-        - _d3d12: D3D12
-        - _dxgi: DXGI
-        - _device: ID3D12Device*
-        - _dxgiFactory: IDXGIFactory4*
-        - _adapter: IDXGIAdapter1*
-        - _directQueue: ID3D12CommandQueue*
-        - _computeQueue: ID3D12CommandQueue*
-        - _copyQueue: ID3D12CommandQueue*
-        - _descriptorManager: DX12DescriptorHeapManager
-        - _frameManager: FrameFenceManager
-        - _rootSignatureCache: DX12RootSignatureCache
-        - _pipelineStateCache: DX12PipelineStateCache
-        - _capabilities: DeviceCapabilities
-        - _isDisposed: bool
+        - p_d3d12: D3D12
+        - p_dxgi: DXGI
+        - p_device: ComPtr<ID3D12Device>
+        - p_dxgiFactory: ComPtr<IDXGIFactory4>
+        - p_adapter: ComPtr<IDXGIAdapter1>
+        - p_directQueue: ComPtr<ID3D12CommandQueue>
+        - p_computeQueue: ComPtr<ID3D12CommandQueue>
+        - p_copyQueue: ComPtr<ID3D12CommandQueue>
+        - p_descriptorManager: DX12DescriptorHeapManager
+        - p_frameManager: FrameFenceManager
+        - p_rootSignatureCache: DX12RootSignatureCache
+        - p_pipelineStateCache: DX12PipelineStateCache
+        - p_capabilities: DeviceCapabilities
+        - p_disposed: bool
         --
         + Name: string
         + API: GraphicsAPI
         + Capabilities: DeviceCapabilities
         --
-        + CreateTexture(description: TextureDescription): ITexture
-        + CreateBuffer(description: BufferDescription): IBuffer
-        + CreateShader(description: ShaderDescription): IShader
-        + CreateSampler(description: SamplerDescription): ISampler
-        + CreateRenderState(description: RenderStateDescription): IRenderState
-        + CreateRenderState(description: RenderStateDescription, pipeline: PipelineStateDescription): IRenderState
+        + CreateTexture(desc: TextureDescription): ITexture
+        + CreateBuffer(desc: BufferDescription): IBuffer
         + CreateCommandBuffer(): CommandBuffer
-        + CreateCommandBuffer(type: CommandBufferType): CommandBuffer
-        + ExecuteCommandBuffer(commandBuffer: CommandBuffer): void
-        + ExecuteCommandBuffers(commandBuffers: CommandBuffer[]): void
+        + CreateShader(desc: ShaderDescription): IShader
+        + CreateSampler(desc: SamplerDescription): ISampler
+        + CreateRenderState(desc: RenderStateDescription, pipeline: PipelineStateDescription): IRenderState
+        + CreateSwapChain(desc: SwapChainDescription, windowHandle: IntPtr): ISwapChain
+        + CreateFence(initialValue: ulong): IFence
+        + ExecuteCommandBuffer(cmdBuffer: CommandBuffer): void
         + WaitForGPU(): void
+        + WaitForFence(fence: IFence): void
         + BeginFrame(): void
         + EndFrame(): void
         + GetCurrentFrameIndex(): int
-        + CreateSwapChain(description: SwapChainDescription): ISwapChain
-        + Present(): void
+        + BatchUploadResources(uploadAction: Action<IBatchUploader>): void
+        + UploadTextureData<T>(texture: DX12Texture, data: T[], mipLevel: uint, arraySlice: uint): void
+        + GetDescriptorManager(): DX12DescriptorHeapManager
         + Dispose(): void
     }
 
+    ' Ресурсы
     class DX12Texture {
-        - _device: ID3D12Device*
-        - _d3d12: D3D12
-        - _resource: ID3D12Resource*
-        - _description: TextureDescription
-        - _currentState: ResourceStates
-        - _dxgiFormat: Format
-        - _views: Dictionary<TextureViewKey, DX12TextureView>
-        - _releaseDescriptorCallback: Action<CpuDescriptorHandle>
-        - _isDisposed: bool
+        - p_d3d12: D3D12
+        - p_description: TextureDescription
+        - p_descriptorManager: DX12DescriptorHeapManager
+        - p_parentDevice: DX12GraphicsDevice
+        - p_views: Dictionary<TextureViewKey, DX12TextureView>
         --
         + Description: TextureDescription
-        + Name: string
-        + ResourceType: ResourceType
         + Width: uint
         + Height: uint
         + Depth: uint
@@ -61,9 +82,8 @@ package "DirectX12 Implementation" {
         + ArraySize: uint
         + Format: TextureFormat
         + SampleCount: uint
-        + IsDisposed: bool
         --
-        + CreateView(description: TextureViewDescription): ITextureView
+        + CreateView(desc: TextureViewDescription): ITextureView
         + GetDefaultShaderResourceView(): ITextureView
         + GetDefaultRenderTargetView(): ITextureView
         + GetDefaultDepthStencilView(): ITextureView
@@ -72,460 +92,422 @@ package "DirectX12 Implementation" {
         + GetData<T>(mipLevel: uint, arraySlice: uint): T[]
         + GetSubresourceIndex(mipLevel: uint, arraySlice: uint): uint
         + GenerateMips(): void
-        + GetResource(): ID3D12Resource*
-        + GetCurrentState(): ResourceStates
-        + SetCurrentState(state: ResourceStates): void
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
+        + SetDataInternal(cmdList: ComPtr<ID3D12GraphicsCommandList>, data: void*, size: int, mipLevel: uint, arraySlice: uint): void
+        - CreateTextureResource(): void
+        - GetTextureResourceType(): ResourceType
     }
 
     class DX12Buffer {
-        - _device: ID3D12Device*
-        - _d3d12: D3D12
-        - _resource: ID3D12Resource*
-        - _description: BufferDescription
-        - _currentState: ResourceStates
-        - _gpuVirtualAddress: ulong
-        - _mappedData: void*
-        - _views: Dictionary<BufferViewType, DX12BufferView>
-        - _releaseDescriptorCallback: Action<CpuDescriptorHandle>
-        - _isDisposed: bool
+        - p_d3d12: D3D12
+        - p_description: BufferDescription
+        - p_descriptorManager: DX12DescriptorHeapManager
+        - p_parentDevice: DX12GraphicsDevice
+        - p_mappedData: IntPtr
+        - p_views: Dictionary<BufferViewKey, DX12BufferView>
         --
         + Description: BufferDescription
-        + Name: string
-        + ResourceType: ResourceType
-        + Size: ulong
-        + Stride: uint
+        + Size: uint
         + Usage: BufferUsage
-        + IsMapped: bool
-        + IsDisposed: bool
         --
-        + CreateView(description: BufferViewDescription): IBufferView
-        + GetDefaultShaderResourceView(): IBufferView
-        + GetDefaultUnorderedAccessView(): IBufferView
-        + Map(mode: MapMode): IntPtr
+        + CreateView(desc: BufferViewDescription): IBufferView
+        + SetData<T>(data: T[]): void
+        + GetData<T>(): T[]
+        + Map(): IntPtr
         + Unmap(): void
-        + SetData<T>(data: T[], offset: ulong): void
-        + SetData<T>(data: T, offset: ulong): void
-        + GetData<T>(offset: ulong, count: ulong): T[]
-        + GetData<T>(offset: ulong): T
-        + GetResource(): ID3D12Resource*
-        + GetGPUVirtualAddress(): ulong
-        + GetCurrentState(): ResourceStates
-        + SetCurrentState(state: ResourceStates): void
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
+        - CreateBufferResource(): void
+        - GetBufferResourceType(): ResourceType
     }
 
+    ' Command Buffer
     class DX12CommandBuffer {
-        - _device: ID3D12Device*
-        - _d3d12: D3D12
-        - _commandList: ID3D12GraphicsCommandList*
-        - _commandAllocator: ID3D12CommandAllocator*
-        - _d3d12Type: CommandListType
-        - _currentPipelineState: ID3D12PipelineState*
-        - _currentRootSignature: ID3D12RootSignature*
-        - _stateTracker: DX12ResourceStateTracker
-        - _currentRenderTargets: CpuDescriptorHandle[]
-        - _currentDepthStencil: CpuDescriptorHandle?
-        - _renderTargetCount: uint
+        - p_device: ComPtr<ID3D12Device>
+        - p_commandList: ComPtr<ID3D12GraphicsCommandList>
+        - p_allocator: ComPtr<ID3D12CommandAllocator>
+        - p_type: CommandBufferType
+        - p_isRecording: bool
+        - p_stateTracker: DX12ResourceStateTracker
+        - p_currentRenderState: DX12RenderState
+        --
+        + Type: CommandBufferType
+        + IsRecording: bool
         --
         + Begin(): void
         + End(): void
-        + Reset(): void
-        + SetRenderTargets(colorTargets: ITextureView[], depthTarget: ITextureView): void
-        + SetRenderTarget(colorTarget: ITextureView, depthTarget: ITextureView): void
-        + SetViewport(viewport: Viewport): void
-        + SetScissorRect(rect: Rectangle): void
-        + ClearRenderTarget(target: ITextureView, color: Vector4): void
-        + ClearDepthStencil(target: ITextureView, flags: ClearFlags, depth: float, stencil: byte): void
-        + TransitionResource(resource: IResource, newState: ResourceState): void
-        + Draw(vertexCount: uint, instanceCount: uint, startVertex: uint, startInstance: uint): void
-        + DrawIndexed(indexCount: uint, instanceCount: uint, startIndex: uint, baseVertex: int, startInstance: uint): void
-        + Dispatch(groupCountX: uint, groupCountY: uint, groupCountZ: uint): void
-        + SetVertexBuffer(buffer: IBufferView, slot: uint): void
-        + SetIndexBuffer(buffer: IBufferView, format: IndexFormat): void
-        + SetPrimitiveTopology(topology: PrimitiveTopology): void
-        + SetRenderState(renderState: IRenderState): void
-        + SetVertexShader(shader: IShader): void
-        + SetPixelShader(shader: IShader): void
-        + SetComputeShader(shader: IShader): void
-        + SetShaderResource(stage: ShaderStage, slot: uint, resource: ITextureView): void
-        + SetUnorderedAccess(stage: ShaderStage, slot: uint, resource: ITextureView): void
-        + SetConstantBuffer(stage: ShaderStage, slot: uint, buffer: IBufferView): void
-        + SetSampler(stage: ShaderStage, slot: uint, sampler: ISampler): void
+        + BeginRenderPass(targets: ITextureView[], depth: ITextureView): void
+        + EndRenderPass(): void
+        + SetRenderState(state: IRenderState): void
+        + SetTexture(slot: uint, view: ITextureView): void
+        + SetConstantBuffer(slot: uint, view: IBufferView): void
+        + DrawIndexed(count: uint): void
+        + Dispatch(x: uint, y: uint, z: uint): void
         + CopyTexture(src: ITexture, dst: ITexture): void
-        + CopyBuffer(src: IBuffer, dst: IBuffer): void
-        + DrawFullscreenQuad(): void
         + GetCommandList(): ID3D12GraphicsCommandList*
-        + Dispose(): void
+        - SetRenderStateDirectly(state: IRenderState): void
+        - SetShaderResourceDirectly(cmd: SetShaderResourceCommand): void
+        - SetConstantBufferDirectly(cmd: SetConstantBufferCommand): void
+        - GetRootParameterIndex(stage: ShaderStage, slot: uint, type: ResourceType): uint
     }
 
-    class DX12Shader {
-        - _description: ShaderDescription
-        - _bytecode: byte[]
-        - _stage: ShaderStage
-        - _d3d12Bytecode: ShaderBytecode
-        - _isDisposed: bool
-        --
-        + Name: string
-        + ResourceType: ResourceType
-        + Stage: ShaderStage
-        + Description: ShaderDescription
-        + Bytecode: byte[]
-        + IsDisposed: bool
-        --
-        + GetReflection(): ShaderReflection
-        + HasConstantBuffer(name: string): bool
-        + HasTexture(name: string): bool
-        + HasSampler(name: string): bool
-        + GetD3D12Bytecode(): ShaderBytecode
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
-    }
-
-    class DX12Sampler {
-        - _device: ID3D12Device*
-        - _description: SamplerDescription
-        - _descriptor: CpuDescriptorHandle
-        - _releaseDescriptorCallback: Action<CpuDescriptorHandle>
-        - _isDisposed: bool
-        --
-        + Name: string
-        + ResourceType: ResourceType
-        + Description: SamplerDescription
-        + IsDisposed: bool
-        --
-        + GetDescriptorHandle(): CpuDescriptorHandle
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
-    }
-
-    class DX12RenderState {
-        - _device: ID3D12Device*
-        - _description: RenderStateDescription
-        - _pipelineDescription: PipelineStateDescription
-        - _rootSignatureCache: DX12RootSignatureCache
-        - _pipelineStateCache: DX12PipelineStateCache
-        - _pipelineState: ID3D12PipelineState*
-        - _rootSignature: ID3D12RootSignature*
-        - _isDisposed: bool
-        --
-        + Name: string
-        + ResourceType: ResourceType
-        + Description: RenderStateDescription
-        + IsDisposed: bool
-        --
-        + GetPipelineState(): ID3D12PipelineState*
-        + GetRootSignature(): ID3D12RootSignature*
-        + GetNativeHandle(): IntPtr
-        + GetMemorySize(): ulong
-        + Dispose(): void
-    }
-
+    ' Views
     class DX12TextureView {
-        - _texture: DX12Texture
-        - _viewType: TextureViewType
-        - _description: TextureViewDescription
-        - _descriptor: CpuDescriptorHandle
-        - _isDisposed: bool
+        - p_texture: DX12Texture
+        - p_viewType: TextureViewType
+        - p_description: TextureViewDescription
+        - p_descriptor: CpuDescriptorHandle
+        - p_isDisposed: bool
         --
         + Texture: ITexture
         + ViewType: TextureViewType
         + Description: TextureViewDescription
         --
         + GetDescriptorHandle(): CpuDescriptorHandle
-        + GetNativeHandle(): IntPtr
-        + Dispose(): void
+        + GetShaderResourceView(): CpuDescriptorHandle
+        + GetRenderTargetView(): CpuDescriptorHandle
+        + GetDepthStencilView(): CpuDescriptorHandle
+        + GetUnorderedAccessView(): CpuDescriptorHandle
     }
 
     class DX12BufferView {
-        - _buffer: DX12Buffer
-        - _viewType: BufferViewType
-        - _description: BufferViewDescription
-        - _descriptor: CpuDescriptorHandle
-        - _isDisposed: bool
+        - p_buffer: DX12Buffer
+        - p_viewType: BufferViewType  
+        - p_description: BufferViewDescription
+        - p_descriptor: CpuDescriptorHandle
+        - p_isDisposed: bool
         --
         + Buffer: IBuffer
         + ViewType: BufferViewType
         + Description: BufferViewDescription
         --
         + GetDescriptorHandle(): CpuDescriptorHandle
-        + GetVertexBufferView(): VertexBufferView
-        + GetIndexBufferView(): IndexBufferView
-        + GetConstantBufferViewDesc(): ConstantBufferViewDesc
-        + GetNativeHandle(): IntPtr
-        + Dispose(): void
+        + GetConstantBufferView(): CpuDescriptorHandle
+        + GetShaderResourceView(): CpuDescriptorHandle
+        + GetUnorderedAccessView(): CpuDescriptorHandle
+        + GetResource(): ID3D12Resource*
     }
 
+    ' Шейдеры
+    class DX12Shader {
+        - p_description: ShaderDescription
+        - p_bytecode: byte[]
+        - p_stage: ShaderStage
+        - p_d3d12Bytecode: ShaderBytecode
+        - p_reflection: ShaderReflection
+        - p_isDisposed: bool
+        --
+        + Name: string
+        + Stage: ShaderStage
+        + Description: ShaderDescription
+        + Bytecode: byte[]
+        + ResourceType: ResourceType
+        --
+        + GetD3D12Bytecode(): ShaderBytecode
+        + GetReflection(): ShaderReflection
+        + HasConstantBuffer(name: string): bool
+        + HasTexture(name: string): bool
+        + HasSampler(name: string): bool
+    }
+
+    ' Sampler
+    class DX12Sampler {
+        - p_device: ComPtr<ID3D12Device>
+        - p_description: SamplerDescription
+        - p_descriptor: CpuDescriptorHandle
+        - p_releaseDescriptorCallback: Action<CpuDescriptorHandle>
+        - p_isDisposed: bool
+        --
+        + Name: string
+        + ResourceType: ResourceType
+        + Description: SamplerDescription
+        --
+        + GetDescriptorHandle(): CpuDescriptorHandle
+    }
+
+    ' Fence
     class DX12Fence {
-        - _fence: ID3D12Fence*
-        - _fenceEvent: AutoResetEvent
-        - _currentValue: ulong
-        - _isDisposed: bool
+        - p_fence: ComPtr<ID3D12Fence>
+        - p_value: ulong
+        - p_event: EventHandle
+        - p_isDisposed: bool
         --
         + Value: ulong
-        + IsSignaled: bool
+        + ResourceType: ResourceType
         --
-        + Signal(value: ulong): void
-        + SignalFromQueue(queue: ID3D12CommandQueue*, value: ulong): void
-        + Wait(value: ulong, timeoutMs: uint): void
-        + GetCompletedValue(): ulong
-        + WaitForQueue(queue: ID3D12CommandQueue*, value: ulong): void
-        + GetFence(): ID3D12Fence*
-        + GetNativeHandle(): IntPtr
-        + Dispose(): void
+        + Signal(queue: ID3D12CommandQueue*): void
+        + Wait(value: ulong): void
+        + IsComplete(): bool
     }
 
-    ' Helper classes
-    class FrameFenceManager {
-        - _fence: DX12Fence
-        - _fenceValues: ulong[]
-        - _frameCount: int
-        - _currentFenceValue: ulong
-        - _currentFrameIndex: int
-        --
-        + CurrentFrameIndex: int
-        + CurrentFenceValue: ulong
-        --
-        + WaitForPreviousFrame(): void
-        + SignalEndOfFrame(queue: ID3D12CommandQueue*): void
-        + MoveToNextFrame(): void
-        + WaitForGPU(queue: ID3D12CommandQueue*): void
-        + Dispose(): void
-    }
-
-    class DX12ResourceStateTracker {
-        - {static} s_globalResourceStates: Dictionary<ID3D12Resource*, ResourceStates>
-        - {static} s_globalMutex: object
-        - _finalResourceStates: Dictionary<ID3D12Resource*, ResourceStates>
-        - _pendingResourceBarriers: List<ResourceBarrier>
-        - _resourceBarriers: List<ResourceBarrier>
-        - _pendingResourceStates: Dictionary<ID3D12Resource*, ResourceStates>
-        --
-        + TransitionResource(resource: ID3D12Resource*, stateAfter: ResourceStates, subresource: uint): void
-        + UAVBarrier(resource: ID3D12Resource*): void
-        + AliasBarrier(resourceBefore: ID3D12Resource*, resourceAfter: ID3D12Resource*): void
-        + FlushResourceBarriers(commandList: ID3D12GraphicsCommandList*): void
-        + ResolvePendingResourceBarriers(): void
-        + CommitFinalResourceStates(): void
-        + Reset(): void
-        + GetPendingBarrierCount(): int
-        + {static} ResetGlobalState(): void
-    }
-
-    class DX12RootSignatureCache {
-        - _device: ID3D12Device*
-        - _cache: Dictionary<RootSignatureDesc, ID3D12RootSignature*>
-        - _isDisposed: bool
-        --
-        + GetOrCreate(desc: RootSignatureDesc): ID3D12RootSignature*
-        + GetDefaultGraphicsRootSignature(): ID3D12RootSignature*
-        + GetDefaultComputeRootSignature(): ID3D12RootSignature*
-        + Clear(): void
-        + Dispose(): void
-    }
-
-    class DX12PipelineStateCache {
-        - _graphicsCache: Dictionary<GraphicsPipelineStateDesc, ID3D12PipelineState*>
-        - _computeCache: Dictionary<ComputePipelineStateDesc, ID3D12PipelineState*>
-        - _device: ID3D12Device*
-        - _isDisposed: bool
-        --
-        + GetOrCreateGraphicsPipeline(desc: GraphicsPipelineStateDesc): ID3D12PipelineState*
-        + GetOrCreateComputePipeline(desc: ComputePipelineStateDesc): ID3D12PipelineState*
-        + Clear(): void
-        + Dispose(): void
-    }
-
-    class DX12Helpers {
-        + {static} ConvertFormat(format: TextureFormat): Format
-        + {static} ConvertResourceState(state: ResourceState): ResourceStates
-        + {static} ConvertFilter(minFilter: TextureFilter, magFilter: TextureFilter, mipFilter: TextureFilter, isComparison: bool): D3D12_FILTER
-        + {static} ConvertAddressMode(mode: TextureAddressMode): D3D12_TEXTURE_ADDRESS_MODE
-        + {static} ConvertComparisonFunc(func: ComparisonFunc): D3D12_COMPARISON_FUNC
-        + {static} ConvertComparisonFunction(func: ComparisonFunction): ComparisonFunc
-        + {static} ConvertToHeapType(usage: ResourceUsage): D3D12_HEAP_TYPE
-        + {static} ConvertBindFlags(flags: BindFlags): D3D12_RESOURCE_FLAGS
-        + {static} GetFormatSize(format: Format): uint
-        + {static} IsCompressedFormat(format: Format): bool
-        + {static} IsDepthStencilFormat(format: Format): bool
-        + {static} AlignUp(size: ulong, alignment: ulong): ulong
-        + {static} CalculateTextureSize(width: uint, height: uint, depth: uint, mipLevels: uint, arraySize: uint, format: Format): ulong
-    }
-
-    class TextureUploadHelper {
-        - _device: ID3D12Device*
-        - _d3d12: D3D12
-        --
-        + UploadTextureData<T>(texture: DX12Texture, data: T[], mipLevel: uint, arraySlice: uint, commandList: ID3D12GraphicsCommandList*): void
-    }
-
-    class PipelineStateDescription <<helper>> {
-        + VertexShader: IShader
-        + PixelShader: IShader
-        + DomainShader: IShader
-        + HullShader: IShader
-        + GeometryShader: IShader
-        + ComputeShader: IShader
-        + InputLayout: InputLayoutDescription
-        + PrimitiveTopology: PrimitiveTopology
-        + RenderTargetCount: uint
-        + RenderTargetFormats: TextureFormat[]
-        + DepthStencilFormat: TextureFormat
-        + SampleCount: uint
-        + SampleQuality: uint
-        + SampleMask: uint
-    }
-
+    ' SwapChain
     class DX12SwapChain {
+        - p_device: ComPtr<ID3D12Device>
+        - p_swapChain: ComPtr<IDXGISwapChain3>
+        - p_backBuffers: DX12Texture[]
+        - p_description: SwapChainDescription
+        - p_currentBackBufferIndex: uint
+        - p_disposed: bool
+        --
         + Description: SwapChainDescription
         + CurrentBackBufferIndex: uint
+        + ResourceType: ResourceType
+        --
         + GetBackBuffer(index: uint): ITexture
         + Present(syncInterval: uint): void
         + Resize(width: uint, height: uint): void
-        + GetNativeHandle(): IntPtr
-        + Dispose(): void
     }
 
-    class DX12DescriptorHeapManager{
-        - _rtvHeap: StaticDescriptorHeap
-        - _dsvHeap: StaticDescriptorHeap
-        - _srvHeap: StaticDescriptorHeap
-        - _samplerHeap: StaticDescriptorHeap
-        - _gpuSrvHeap: DynamicDescriptorHeap
-        - _gpuSamplerHeap: DynamicDescriptorHeap
+    ' Render State
+    class DX12RenderState {
+        - p_pipelineStateCache: DX12PipelineStateCache
+        - p_rootSignatureCache: DX12RootSignatureCache
+        - p_pipelineState: ComPtr<ID3D12PipelineState>
+        - p_rootSignature: ComPtr<ID3D12RootSignature>
+        - p_description: RenderStateDescription
+        - p_pipelineDescription: PipelineStateDescription
+        - p_disposed: bool
         --
-        + AllocateRTV(count: uint): DescriptorAllocation
-        + AllocateDSV(count: uint): DescriptorAllocation
-        + AllocateCBVSRVUAV(count: uint): DescriptorAllocation
-        + AllocateSampler(count: uint): DescriptorAllocation
-        + SetDescriptorHeaps(ID3D12GraphicsCommandList*): void
-        + CopyToGPUHeap(CpuDescriptorHandle, count: uint): GpuDescriptorHandle
-        + CopySamplerToGPUHeap(CpuDescriptorHandle, count: uint)
+        + Description: RenderStateDescription
+        + ResourceType: ResourceType
+        --
+        + GetPipelineState(): ComPtr<ID3D12PipelineState>
+        + GetRootSignature(): ComPtr<ID3D12RootSignature>
+        - CreatePipelineState(): void
+        - CreateGraphicsPipelineState(): void
+        - CreateComputePipelineState(): void
+    }
+
+    ' Управление дескрипторами
+    class DX12DescriptorHeapManager {
+        - p_device: ComPtr<ID3D12Device>
+        - p_rtvHeap: DX12StaticDescriptorHeap
+        - p_dsvHeap: DX12StaticDescriptorHeap
+        - p_srvHeap: DX12StaticDescriptorHeap
+        - p_samplerHeap: DX12StaticDescriptorHeap
+        - p_gpuSrvHeap: DX12DynamicDescriptorHeap
+        - p_gpuSamplerHeap: DX12DynamicDescriptorHeap
+        - p_disposed: bool
+        --
+        + AllocateRTV(count: uint): DX12DescriptorAllocation
+        + AllocateDSV(count: uint): DX12DescriptorAllocation
+        + AllocateCBVSRVUAV(count: uint): DX12DescriptorAllocation
+        + AllocateSampler(count: uint): DX12DescriptorAllocation
+        + SetDescriptorHeaps(cmdList: ComPtr<ID3D12GraphicsCommandList>): void
+        + CopyToGPUHeap(cpuHandle: CpuDescriptorHandle, count: uint): GpuDescriptorHandle
+        + CopySamplerToGPUHeap(cpuHandle: CpuDescriptorHandle, count: uint): GpuDescriptorHandle
         + ResetForNewFrame(): void
+        + GetCBVSRVUAVHeap(): ID3D12DescriptorHeap*
+        + GetSamplerHeap(): ID3D12DescriptorHeap*
+        + GetRTVHeap(): ID3D12DescriptorHeap*
+        + GetDSVHeap(): ID3D12DescriptorHeap*
+        + GetGPUCBVSRVUAVHeap(): ID3D12DescriptorHeap*
+        + GetGPUSamplerHeap(): ID3D12DescriptorHeap*
     }
 
-    class StaticDescriptorHeap{
-        - _device: ID3D12Device*
-        - _heap: ID3D12DescriptorHeap*
-        - _dsecriptorSize: uint
-        - _maxDescriptors: uint
-        - _freeIndices: Stack<uint>
-        - _currentIndex: uint
+    ' Статическая куча дескрипторов
+    class DX12StaticDescriptorHeap {
+        - p_device: ComPtr<ID3D12Device>
+        - p_heap: ComPtr<ID3D12DescriptorHeap>
+        - p_descriptorSize: uint
+        - p_maxDescriptors: uint
+        - p_freeIndices: Stack<uint>
+        - p_currentIndex: uint
+        - p_disposed: bool
         --
-        + Allocate(count: uint): DescriptorAllocation
+        + Allocate(count: uint): DX12DescriptorAllocation
         + GetCPUHandle(index: uint): CpuDescriptorHandle
-        + GetHeap(): ID3D12DescriptorHeap
-        + Free(baseIndex: uint, count: uint)
+        + GetHeap(): ComPtr<ID3D12DescriptorHeap>
+        + Free(index: uint, count: uint): void
     }
 
-    class DynamicDescriptorHeap{
-        - _device: ID3D12Device*
-        - _heap: ID3D12DescriptorHeap*
-        - _type: DescriptorHeapType
-        - _dsecriptorSize: uint
-        - _maxDescriptors: uint
-        - _currentOffset: uint
+    ' Динамическая куча дескрипторов
+    class DX12DynamicDescriptorHeap {
+        - p_device: ComPtr<ID3D12Device>
+        - p_heap: ComPtr<ID3D12DescriptorHeap>
+        - p_type: DescriptorHeapType
+        - p_descriptorSize: uint
+        - p_maxDescriptors: uint
+        - p_currentOffset: uint
+        - p_disposed: bool
         --
-        + CopyDescriptor(CpuDescriptorHandle, count: uint)
+        + CopyDescriptor(srcHandle: CpuDescriptorHandle, count: uint): GpuDescriptorHandle
         + Reset(): void
+        + GetHeap(): ComPtr<ID3D12DescriptorHeap>
         - GetGPUHandle(index: uint): GpuDescriptorHandle
-        - GetCPUHnaadle(index: uint): CpuDescriptorHandle
+        - GetCPUHandle(index: uint): CpuDescriptorHandle
     }
 
-    class DescriptorAllocation{
-        - _heap: StaticDescriptorHeap
-        - _baseIndex: uint
-        - _count: uint
-        - _dsecriptorSize: uint
-        - _cpuHandle: CpuDescriptorHandle
-        + Count: uint
+    ' Аллокация дескрипторов
+    class DX12DescriptorAllocation {
+        - p_heap: DX12StaticDescriptorHeap
+        - p_startIndex: uint
+        - p_count: uint
+        - p_descriptorSize: uint
+        - p_cpuHandle: CpuDescriptorHandle
+        --
         + CpuHandle: CpuDescriptorHandle
+        + Count: uint
+        + StartIndex: uint
         --
-        + GetHandle(index: uint): CpuDescriptorHandle  
+        + GetCpuHandle(offset: uint): CpuDescriptorHandle
     }
 
-    class RootSignatureBuilder{
-        - _parameters: List<RootParameters>
-        - _staticSamplers: List<StaticSamplerDesc>
-        - _flags: RootSignatureFlags
+    ' Отслеживание состояний ресурсов
+    class DX12ResourceStateTracker {
+        - p_globalResourceStates: Dictionary<ID3D12Resource*, ResourceStates>
+        - p_pendingTransitions: List<ResourceBarrier>
         --
-        + AllowInputAssembleInputLayout(): RootSignatureBuilderEx
-        + AddConstantBufferView(): RootSignatureBuilderEx
-        + AddShaderResourceView(): RootSignatureBuilderEx
-        + AddUnordererdAccessView(): RootSignatureBuilderEx
-        + Build(): RootSignatureDesc
+        + TrackResource(resource: ID3D12Resource*, state: ResourceStates): void
+        + TransitionResource(resource: ID3D12Resource*, newState: ResourceStates): void
+        + FlushBarriers(cmdList: ID3D12GraphicsCommandList*): void
+        + Reset(): void
+        - CreateTransitionBarrier(resource: ID3D12Resource*, before: ResourceStates, after: ResourceStates): ResourceBarrier
     }
-    
-    class RootSignatureBuilderEx{
-        - _parameters: List<RootParameters>
-        - _staticSamplers: List<StaticSamplerDesc>
-        - _flags: RootSignatureFlags
+
+    ' Кэши
+    class DX12RootSignatureCache {
+        - p_device: ComPtr<ID3D12Device>
+        - p_cache: Dictionary<RootSignatureDesc, ComPtr<ID3D12RootSignature>>
         --
-        + AllowInputAssembleInputLayout(): RootSignatureBuilderEx
-        + AddConstantBufferView(): RootSignatureBuilderEx
-        + AddShaderResourceView(): RootSignatureBuilderEx
-        + AddUnordererdAccessView(): RootSignatureBuilderEx
-        + Build(): RootSignatureDesc
+        + GetOrCreateFromShaderReflection(vs: DX12Shader, ps: DX12Shader, hs: DX12Shader, gs: DX12Shader, ds: DX12Shader): ComPtr<ID3D12RootSignature>
+        + GetDefaultGraphicsRootSignature(): ComPtr<ID3D12RootSignature>
+        + GetDefaultComputeRootSignature(): ComPtr<ID3D12RootSignature>
+        + GetPostProcessRootSignature(): ComPtr<ID3D12RootSignature>
+        + GetOrCreateFromDesc1(desc: RootSignatureDesc1): ComPtr<ID3D12RootSignature>
+        + Clear(): void
+    }
+
+    class DX12PipelineStateCache {
+        - p_device: ComPtr<ID3D12Device>
+        - p_cache: Dictionary<PSOCacheKey, ComPtr<ID3D12PipelineState>>
+        - p_computeCache: Dictionary<ComputePSOCacheKey, ComPtr<ID3D12PipelineState>>
+        --
+        + GetOrCreatePSO(key: PSOCacheKey): ComPtr<ID3D12PipelineState>
+        + GetOrCreateComputePSO(key: ComputePSOCacheKey): ComPtr<ID3D12PipelineState>
+        + Clear(): void
+        - CreateGraphicsPSOFromKey(key: PSOCacheKey): ComPtr<ID3D12PipelineState>
+        - CreateComputePSOFromKey(key: ComputePSOCacheKey): ComPtr<ID3D12PipelineState>
+    }
+
+    ' Frame Management
+    class FrameFenceManager {
+        - p_fence: ComPtr<ID3D12Fence>
+        - p_fenceValues: ulong[]
+        - p_frameIndex: int
+        - p_event: EventHandle
+        --
+        + CurrentFrameIndex: int
+        --
+        + SignalEndOfFrame(queue: ComPtr<ID3D12CommandQueue>): void
+        + WaitForPreviousFrame(): void
+        + WaitForGPU(queue: ComPtr<ID3D12CommandQueue>): void
+        + MoveToNextFrame(): void
+    }
+
+    ' Builders
+    class DX12RootSignatureDescBuilder {
+        - p_parameters: List<RootParameter1>
+        - p_staticSamplers: List<StaticSamplerDesc>
+        - p_flags: RootSignatureFlags
+        --
+        + AllowInputAssemblerInputLayout(): DX12RootSignatureDescBuilder
+        + AddRootCBV(shaderRegister: uint, registerSpace: uint, visibility: ShaderVisibility): DX12RootSignatureDescBuilder
+        + AddDescriptorTableSRV(baseRegister: uint, registerSpace: uint, visibility: ShaderVisibility): DX12RootSignatureDescBuilder
+        + AddDescriptorTableUAV(baseRegister: uint, registerSpace: uint, visibility: ShaderVisibility): DX12RootSignatureDescBuilder
+        + AddDescriptorTableSamplers(baseRegister: uint, descriptorCount: uint, registerSpace: uint, visibility: ShaderVisibility): DX12RootSignatureDescBuilder
+        + AddStaticSampler(shaderRegister: uint, filter: Filter, addressMode: TextureAddressMode, registerSpace: uint, visibility: ShaderVisibility): DX12RootSignatureDescBuilder
+        + Build(): RootSignatureDesc1
+    }
+
+    ' Utilities
+    class TextureUploadHelper {
+        - p_device: ComPtr<ID3D12Device>
+        - p_d3d12: D3D12
+        --
+        + UploadTextureData<T>(texture: DX12Texture, data: T[], mipLevel: uint, arraySlice: uint, commandList: ComPtr<ID3D12GraphicsCommandList>): void
+    }
+
+    class DX12BatchUploader {
+        - p_device: DX12GraphicsDevice
+        - p_commandList: ComPtr<ID3D12GraphicsCommandList>
+        --
+        + UploadTexture<T>(texture: DX12Texture, data: T[], mipLevel: uint, arraySlice: uint): void
+        + UploadBuffer<T>(buffer: DX12Buffer, data: T[]): void
+    }
+
+    ' Data structures
+    class PSOCacheKey {
+        + VertexShader: DX12Shader
+        + PixelShader: DX12Shader
+        + DomainShader: DX12Shader
+        + HullShader: DX12Shader
+        + GeometryShader: DX12Shader
+        + PipelineStateDescription: PipelineStateDescription
+        + RenderStateDescription: RenderStateDescription
+        + RootSignature: ComPtr<ID3D12RootSignature>
+    }
+
+    class ComputePSOCacheKey {
+        + ComputeShader: DX12Shader
+        + RootSignature: ComPtr<ID3D12RootSignature>
     }
 }
 
-' Реализация интерфейсов
-IGraphicsDevice <|.. DX12GraphicsDevice
-ITexture <|.. DX12Texture
-IBuffer <|.. DX12Buffer
-CommandBuffer <|-- DX12CommandBuffer
-IShader <|.. DX12Shader
-ISampler <|.. DX12Sampler
-ITextureView <|.. DX12TextureView
-IBufferView <|.. DX12BufferView
-IFence <|.. DX12Fence
-IRenderState <|.. DX12RenderState
-ISwapChain <|.. DX12SwapChain : "not implemented"
+' Наследование
+DX12Resource <|-- DX12Texture
+DX12Resource <|-- DX12Buffer
 
-' Внутренние связи
+' Композиция и использование
+DX12GraphicsDevice --> DX12DescriptorHeapManager : contains
+DX12GraphicsDevice --> DX12ResourceStateTracker : contains
+DX12GraphicsDevice --> FrameFenceManager : contains
+DX12GraphicsDevice --> DX12RootSignatureCache : contains
+DX12GraphicsDevice --> DX12PipelineStateCache : contains
 DX12GraphicsDevice --> DX12Texture : creates
 DX12GraphicsDevice --> DX12Buffer : creates
 DX12GraphicsDevice --> DX12CommandBuffer : creates
 DX12GraphicsDevice --> DX12Shader : creates
 DX12GraphicsDevice --> DX12Sampler : creates
 DX12GraphicsDevice --> DX12RenderState : creates
-DX12GraphicsDevice --> DX12Fence : uses
-DX12GraphicsDevice --> DescriptorAllocator : uses multiple
-DX12GraphicsDevice --> FrameFenceManager : uses
-DX12GraphicsDevice --> DX12RootSignatureCache : uses
-DX12GraphicsDevice --> DX12PipelineStateCache : uses
+DX12GraphicsDevice --> DX12Fence : creates
+DX12GraphicsDevice --> DX12SwapChain : creates
 
 DX12Texture --> DX12TextureView : creates
 DX12Texture --> TextureUploadHelper : uses
 DX12Buffer --> DX12BufferView : creates
 
 DX12CommandBuffer --> DX12ResourceStateTracker : uses
-DX12CommandBuffer --> DX12Texture : uses
-DX12CommandBuffer --> DX12Buffer : uses
-DX12CommandBuffer --> DX12TextureView : uses
-DX12CommandBuffer --> DX12BufferView : uses
 DX12CommandBuffer --> DX12RenderState : uses
+
+DX12TextureView --> DX12Texture : references
+DX12BufferView --> DX12Buffer : references
 
 DX12RenderState --> DX12RootSignatureCache : uses
 DX12RenderState --> DX12PipelineStateCache : uses
-DX12RenderState --> PipelineStateDescription : uses
-StaticDescriptorHeap -->  DescriptorAllocation : uses
-DX12DescriptorHeapManager --> StaticDescriptorHeap : store
-DX12DescriptorHeapManager --> DynamicDescriptorHeap : store
 
+DX12DescriptorHeapManager --> DX12StaticDescriptorHeap : contains
+DX12DescriptorHeapManager --> DX12DynamicDescriptorHeap : contains
+DX12StaticDescriptorHeap --> DX12DescriptorAllocation : creates
+DX12DynamicDescriptorHeap --> DX12DescriptorAllocation : creates
 
-note bottom of DX12GraphicsDevice
-  Все основные компоненты реализованы:
-  - Resource State Tracking
-  - Frame Synchronization
-  - PSO/Root Signature Caching
-  - Descriptor Management
+DX12RootSignatureCache --> DX12RootSignatureDescBuilder : uses
+DX12PipelineStateCache --> PSOCacheKey : uses
+DX12PipelineStateCache --> ComputePSOCacheKey : uses
+
+note right of DX12GraphicsDevice
+  Основной класс DirectX12 реализации:
+  - Создает все ресурсы и объекты
+  - Управляет кэшами состояний
+  - Координирует загрузку ресурсов
+  - Управляет синхронизацией кадров
+  - Содержит все основные менеджеры
+end note
+
+note bottom of DX12DescriptorHeapManager
+  Полная система управления дескрипторами:
+  - 6 различных куч для разных типов
+  - Статические для RTV/DSV/SRV/Sampler
+  - Динамические GPU-visible для шейдеров
+  - Автоматическое копирование в GPU кучи
+  - Сброс динамических куч каждый кадр
 end note
 
 @enduml
