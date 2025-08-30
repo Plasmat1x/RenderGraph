@@ -21,6 +21,7 @@ public unsafe class DX12SwapChain: ISwapChain
   private readonly DX12DescriptorHeapManager p_descriptorManager;
   private readonly DX12GraphicsDevice p_parentDevice;
   private readonly SwapChainDescription p_description;
+  private readonly D3D12 p_d3d12;
 
   private IDXGISwapChain3* p_swapChain;
   private DX12Texture[] p_backBuffers;
@@ -38,7 +39,8 @@ public unsafe class DX12SwapChain: ISwapChain
       DX12DescriptorHeapManager _descriptorManager,
       DX12GraphicsDevice _parentDevice,
       SwapChainDescription _description,
-      IntPtr _windowHandle)
+      IntPtr _windowHandle,
+      D3D12 _d3d12)
   {
     p_device = _device;
     p_dxgiFactory = _dxgiFactory;
@@ -46,6 +48,7 @@ public unsafe class DX12SwapChain: ISwapChain
     p_descriptorManager = _descriptorManager ?? throw new ArgumentNullException(nameof(_descriptorManager));
     p_parentDevice = _parentDevice;
     p_description = _description ?? throw new ArgumentNullException(nameof(_description));
+    p_d3d12 = _d3d12;
 
     if(_windowHandle == IntPtr.Zero)
       throw new ArgumentException("Window handle is required", nameof(_windowHandle));
@@ -228,7 +231,8 @@ public unsafe class DX12SwapChain: ISwapChain
     for(uint i = 0; i < p_description.BufferCount; i++)
     {
       ID3D12Resource* backBuffer;
-      HResult hr = p_swapChain->GetBuffer(i, SilkMarshal.GuidPtrOf<ID3D12Resource>(), (void**)&backBuffer);
+      var riid = ID3D12Resource.Guid;
+      HResult hr = p_swapChain->GetBuffer(i, &riid, (void**)&backBuffer);
 
       if(hr.IsFailure)
         throw new InvalidOperationException($"Failed to get back buffer {i}: {hr}");
@@ -250,7 +254,7 @@ public unsafe class DX12SwapChain: ISwapChain
 
       p_backBuffers[i] = new DX12Texture(
           p_device,
-          null,
+          p_d3d12,
           backBuffer,
           textureDesc,
           p_descriptorManager,

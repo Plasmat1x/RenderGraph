@@ -138,7 +138,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     ValidateSubresource(_mipLevel, _arraySlice);
     ValidateRegion(_mipLevel, _x, _y, _z, _width, _height, _depth);
 
-    // Для региональных обновлений используем специальный метод
     p_parentDevice.UploadTextureDataRegion(this, _data, _mipLevel, _arraySlice,
         _x, _y, _z, _width, _height, _depth);
   }
@@ -150,7 +149,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
     ValidateSubresource(_mipLevel, _arraySlice);
 
-    // Вычисляем ожидаемый размер данных для subresource
     var expectedSize = CalculateSubresourceSize(_mipLevel, _arraySlice);
     var actualSize = (ulong)(_data.Length * sizeof(T));
 
@@ -215,7 +213,6 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   // === DX12-specific overrides ===
   public override bool SupportsState(ResourceStates _state)
   {
-    // Проверяем, поддерживает ли текстура указанное состояние
     var bindFlags = p_description.BindFlags;
 
     return _state switch
@@ -224,7 +221,7 @@ public unsafe class DX12Texture: DX12Resource, ITexture
       ResourceStates.DepthWrite or ResourceStates.DepthRead => (bindFlags & BindFlags.DepthStencil) != 0,
       ResourceStates.AllShaderResource => (bindFlags & BindFlags.ShaderResource) != 0,
       ResourceStates.UnorderedAccess => (bindFlags & BindFlags.UnorderedAccess) != 0,
-      ResourceStates.CopyDest or ResourceStates.CopySource => true, // Все текстуры поддерживают копирование
+      ResourceStates.CopyDest or ResourceStates.CopySource => true,
       _ => true
     };
   }

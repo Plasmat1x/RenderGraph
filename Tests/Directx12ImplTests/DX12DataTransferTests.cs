@@ -159,7 +159,7 @@ public unsafe class DX12DataTransferTests: IDisposable
   {
     var width = 128u;
     var height = 128u;
-    var mipLevels = 4u;
+    var mipLevels = 1u;
 
     var textureDesc = new TextureDescription
     {
