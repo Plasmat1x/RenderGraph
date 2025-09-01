@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 
 using Resources;
 using Resources.Enums;
+using Resources.Extensions;
 
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
@@ -23,6 +24,10 @@ using System.Text;
 using Ultz.Extensions.Logging;
 
 namespace Directx12Impl;
+
+// TODO: need rework upload system and readback.
+// TODO: need rework swapchain and state transition resources
+
 public unsafe class DX12GraphicsDevice: IGraphicsDevice
 {
   private readonly D3D12 p_d3d12;
@@ -40,7 +45,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
   private ComPtr<ID3D12CommandAllocator> p_uploadCommandAllocator;
   private ComPtr<ID3D12GraphicsCommandList> p_uploadCommandList;
-  //private ComPtr<ID3D12Fence> p_uploadFence;
 
   private DX12Fence p_uploadFence;
 
@@ -151,7 +155,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
 
     var dataSize = (ulong)(_data.Length * sizeof(T));
 
-    // Начинаем upload batch
     var commandList = BeginResourceUpload();
 
     try
@@ -161,12 +164,10 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
         _buffer.SetDataInternal(commandList, pData, dataSize, _offset);
       }
 
-      // Завершаем и ждем
       EndResourceUpload(true);
     }
     catch
     {
-      // В случае ошибки все равно закрываем command list
       EndResourceUpload(false);
       throw;
     }
@@ -1137,7 +1138,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
       uint _width, uint _height, uint _depth) where T : unmanaged
   {
     var commandList = BeginResourceUpload();
-
+    
     try
     {
       fixed(T* pData = _data)
@@ -1161,18 +1162,57 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   internal void ReadbackTextureData<T>(DX12Texture _texture, T[] _result,
       uint _mipLevel, uint _arraySlice) where T : unmanaged
   {
-    var stagingDesc = _texture.Description.Clone() as TextureDescription;
-    stagingDesc.Name = $"{_texture.Name}_ReadbackStaging";
-    stagingDesc.Usage = ResourceUsage.Staging;
-    stagingDesc.CPUAccessFlags = CPUAccessFlags.Read;
-    stagingDesc.BindFlags = BindFlags.None;
-    stagingDesc.MipLevels = 1;
+    //var stagingDesc = _texture.Description.Clone() as TextureDescription;
+    //stagingDesc.Name = $"{_texture.Name}_ReadbackStaging";
+    //stagingDesc.Usage = ResourceUsage.Staging;
+    //stagingDesc.CPUAccessFlags = CPUAccessFlags.Read;
+    //stagingDesc.BindFlags = BindFlags.None;
+    //stagingDesc.MipLevels = 1;
+    //stagingDesc.TextureUsage = TextureUsage.Staging;
+    //stagingDesc.MiscFlags = ResourceMiscFlags.None;
 
-    using var stagingTexture = (DX12Texture)CreateTexture(stagingDesc);
+    // TODO: Delete after fix
+    // ОТЛАДОЧНАЯ ИНФОРМАЦИЯ - ВРЕМЕННО ДОБАВЬТЕ:
+    //Console.WriteLine($"Creating staging texture:");
+    //Console.WriteLine($"  Name: {stagingDesc.Name}");
+    //Console.WriteLine($"  Size: {stagingDesc.Width}x{stagingDesc.Height}x{stagingDesc.Depth}");
+    //Console.WriteLine($"  Format: {stagingDesc.Format}");
+    //Console.WriteLine($"  MipLevels: {stagingDesc.MipLevels}");
+    //Console.WriteLine($"  ArraySize: {stagingDesc.ArraySize}");
+    //Console.WriteLine($"  Usage: {stagingDesc.Usage}");
+    //Console.WriteLine($"  TextureUsage: {stagingDesc.TextureUsage}");
+    //Console.WriteLine($"  BindFlags: {stagingDesc.BindFlags}");
+    //Console.WriteLine($"  CPUAccessFlags: {stagingDesc.CPUAccessFlags}");
+    //Console.WriteLine($"  MiscFlags: {stagingDesc.MiscFlags}");
 
-    CopyTextureToStaging(_texture, stagingTexture, _mipLevel, _arraySlice);
 
-    stagingTexture.ReadDataFromStaging(_result, 0, 0);
+    //using var stagingTexture = (DX12Texture)CreateTexture(stagingDesc);
+
+    //CopyTextureToStaging(_texture, stagingTexture, _mipLevel, _arraySlice);
+
+    //stagingTexture.ReadDataFromStaging(_result, 0, 0);
+
+    var mipWidth = Math.Max(1u, _texture.Width >> (int)_mipLevel);
+    var mipHeight = Math.Max(1u, _texture.Height >> (int)_mipLevel);
+    var formatSize = _texture.Description.Format.GetFormatSize();
+    var rowPitch = (mipWidth * formatSize + 255) & ~255u;
+    var bufferSize = rowPitch * mipHeight;
+
+    var stagingBufferDesc = new BufferDescription
+    {
+      Name = $"{_texture.Name}_ReadbackStagingBuffer",
+      Size = bufferSize,
+      BufferUsage = BufferUsage.Staging,
+      Usage = ResourceUsage.Staging,
+      CPUAccessFlags = CPUAccessFlags.Read,
+      BindFlags = BindFlags.None,
+      Stride = 1
+    };
+
+    using var stagingBuffer = (DX12Buffer)CreateBuffer(stagingBufferDesc);
+
+    CopyTextureToStagingBuffer(_texture, stagingBuffer, _mipLevel, _arraySlice, rowPitch);
+    ReadFromStagingBuffer(stagingBuffer, _result, mipWidth, mipHeight, rowPitch, formatSize);
   }
 
   /// <summary>
@@ -1248,6 +1288,129 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     finally
     {
       EndResourceUpload(true);
+    }
+  }
+
+  private void CopyTextureToStagingBuffer(DX12Texture _source, DX12Buffer _stagingBuffer,
+    uint _mipLevel, uint _arraySlice, uint _rowPitch)
+  {
+    var commandList = BeginResourceUpload();
+
+    try
+    {
+      var sourceBarrier = new ResourceBarrier
+      {
+        Type = ResourceBarrierType.Transition,
+        Transition = new ResourceTransitionBarrier
+        {
+          PResource = _source.GetResource(),
+          StateBefore = _source.GetCurrentState(),
+          StateAfter = ResourceStates.CopySource,
+          Subresource = _source.GetSubresourceIndex(_mipLevel, _arraySlice)
+        }
+      };
+
+      var bufferBarrier = new ResourceBarrier
+      {
+        Type = ResourceBarrierType.Transition,
+        Transition = new ResourceTransitionBarrier
+        {
+          PResource = _stagingBuffer.GetResource(),
+          StateBefore = _stagingBuffer.GetCurrentState(),
+          StateAfter = ResourceStates.CopyDest,
+          Subresource = 0
+        }
+      };
+
+      var barriers = stackalloc ResourceBarrier[2];
+      barriers[0] = sourceBarrier;
+      barriers[1] = bufferBarrier;
+
+      commandList->ResourceBarrier(2, barriers);
+
+      PlacedSubresourceFootprint* layouts = stackalloc PlacedSubresourceFootprint[1];
+      ulong totalSize;
+      var desc = _source.GetResource()->GetDesc();
+
+      p_device.GetCopyableFootprints(
+          &desc,
+          _source.GetSubresourceIndex(_mipLevel, _arraySlice),
+          1,
+          0,
+          layouts,
+          (uint*)null,
+          (ulong*)null,
+          &totalSize);
+
+      var srcLocation = new TextureCopyLocation
+      {
+        PResource = _source.GetResource(),
+        Type = TextureCopyType.SubresourceIndex,
+        SubresourceIndex = _source.GetSubresourceIndex(_mipLevel, _arraySlice)
+      };
+
+      var dstLocation = new TextureCopyLocation
+      {
+        PResource = _stagingBuffer.GetResource(),
+        Type = TextureCopyType.PlacedFootprint,
+        PlacedFootprint = new PlacedSubresourceFootprint
+        {
+          Offset = 0,
+          Footprint = new SubresourceFootprint
+          {
+            Format = layouts[0].Footprint.Format,
+            Width = layouts[0].Footprint.Width,
+            Height = layouts[0].Footprint.Height,
+            Depth = 1,
+            RowPitch = _rowPitch
+          }
+        }
+      };
+
+      commandList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, null);
+
+      sourceBarrier.Transition.StateBefore = ResourceStates.CopySource;
+      sourceBarrier.Transition.StateAfter = _source.GetCurrentState();
+      bufferBarrier.Transition.StateBefore = ResourceStates.CopyDest;
+      bufferBarrier.Transition.StateAfter = _stagingBuffer.GetCurrentState();
+
+      commandList->ResourceBarrier(2, barriers);
+    }
+    finally
+    {
+      EndResourceUpload(true);
+    }
+  }
+
+  private void ReadFromStagingBuffer<T>(DX12Buffer _stagingBuffer, T[] _result,
+    uint _width, uint _height, uint _rowPitch, uint _formatSize) where T : unmanaged
+  {
+    var mappedPtr = _stagingBuffer.Map(MapMode.Read);
+
+    try
+    {
+      var srcPtr = (byte*)mappedPtr.ToPointer();
+      var elementSize = sizeof(T);
+      var elementsPerRow = _width * _formatSize / (uint)elementSize;
+      var resultIndex = 0;
+
+      fixed(T* resultPtr = _result)
+      {
+        for(uint row = 0; row < _height; row++)
+        {
+          var srcRowPtr = srcPtr + (row * _rowPitch);
+          var dstRowPtr = (byte*)resultPtr + (resultIndex * elementSize);
+
+          var rowSizeInBytes = elementsPerRow * elementSize;
+          Buffer.MemoryCopy(srcRowPtr, dstRowPtr, rowSizeInBytes, rowSizeInBytes);
+
+          resultIndex += (int)elementsPerRow;
+        }
+      }
+    }
+    finally
+    {
+      _stagingBuffer.Unmap();
     }
   }
 }

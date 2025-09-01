@@ -33,7 +33,6 @@ public class GeometryPass: RenderPass
 
   public override void Setup(RenderGraphBuilder _builder)
   {
-
     ColorTarget = _builder.CreateColorTarget("GeometryColor", ViewportWidth, ViewportHeight, TextureFormat.R8G8B8A8_UNORM);
     DepthTarget = _builder.CreateDepthTarget("GeometryDepth", ViewportWidth, ViewportHeight, TextureFormat.D32_FLOAT);
     CameraBuffer = _builder.CreateConstantBuffer("CameraConstants", 256);
