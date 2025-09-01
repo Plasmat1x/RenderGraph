@@ -245,16 +245,16 @@ public class Program
       BlendState = new BlendStateDescription
       {
         RenderTargets = new RenderTargetBlendDescription[1]
-            {
-                    new RenderTargetBlendDescription
-                    {
-                        BlendEnable = true,
-                        SrcBlend = BlendFactor.SrcAlpha,
-                        DstBlend = BlendFactor.InvSrcAlpha,
-                        BlendOp = BlendOperation.Add,
-                        WriteMask = ColorWriteMask.All
-                    }
-            }
+        {
+          new RenderTargetBlendDescription
+          {
+            BlendEnable = true,
+            SrcBlend = BlendFactor.SrcAlpha,
+            DstBlend = BlendFactor.InvSrcAlpha,
+            BlendOp = BlendOperation.Add,
+            WriteMask = ColorWriteMask.All
+          }
+        }
       },
       DepthStencilState = new DepthStencilStateDescription
       {
@@ -293,15 +293,15 @@ public class Program
     Console.WriteLine("  🎨 Format Support Check:");
     var formatsToTest = new[]
     {
-            TextureFormat.R8G8B8A8_UNORM,
-            TextureFormat.R16G16B16A16_FLOAT,
-            TextureFormat.R32G32B32A32_FLOAT,
-            TextureFormat.BC1_UNORM,
-            TextureFormat.BC3_UNORM,
-            TextureFormat.BC7_UNORM,
-            TextureFormat.D32_FLOAT,
-            TextureFormat.D24_UNORM_S8_UINT
-        };
+      TextureFormat.R8G8B8A8_UNORM,
+      TextureFormat.R16G16B16A16_FLOAT,
+      TextureFormat.R32G32B32A32_FLOAT,
+      TextureFormat.BC1_UNORM,
+      TextureFormat.BC3_UNORM,
+      TextureFormat.BC7_UNORM,
+      TextureFormat.D32_FLOAT,
+      TextureFormat.D24_UNORM_S8_UINT
+    };
 
     foreach(var format in formatsToTest)
     {

@@ -228,6 +228,18 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   private void CreateTextureResource()
   {
+    //TODO: Delete After fix
+    Console.WriteLine($"CreateTextureResource called for: {p_description.Name}");
+    Console.WriteLine($"  Usage: {p_description.Usage}");
+    Console.WriteLine($"  TextureUsage: {p_description.TextureUsage}");
+    Console.WriteLine($"  BindFlags: {p_description.BindFlags}");
+    Console.WriteLine($"  CPUAccessFlags: {p_description.CPUAccessFlags}");
+    Console.WriteLine($"  MiscFlags: {p_description.MiscFlags}");
+
+    var textureLayout = p_description.Usage == ResourceUsage.Staging
+      ? TextureLayout.LayoutRowMajor
+      : TextureLayout.LayoutUnknown;
+
     var resourceDesc = new ResourceDesc
     {
       Dimension = GetResourceDimension(),
@@ -238,13 +250,22 @@ public unsafe class DX12Texture: DX12Resource, ITexture
       MipLevels = (ushort)p_description.MipLevels,
       Format = p_description.Format.Convert(),
       SampleDesc = new SampleDesc((uint)p_description.SampleCount, 0),
-      Layout = TextureLayout.LayoutUnknown,
+      Layout = textureLayout,
       Flags = GetResourceFlags()
+    };
+
+    var heapType = p_description.Usage switch
+    {
+      ResourceUsage.Default => HeapType.Default,
+      ResourceUsage.Immutable => HeapType.Default,
+      ResourceUsage.Dynamic => HeapType.Upload,
+      ResourceUsage.Staging => HeapType.Readback,
+      _ => HeapType.Default
     };
 
     var heapProperties = new HeapProperties
     {
-      Type = HeapType.Default,
+      Type = heapType,
       CPUPageProperty = CpuPageProperty.Unknown,
       MemoryPoolPreference = MemoryPool.Unknown
     };
@@ -263,8 +284,21 @@ public unsafe class DX12Texture: DX12Resource, ITexture
       &riid,
       (void**)&pResource);
 
+    //TODO: Temp
+    if(!hr.IsSuccess)
+    {
+      var errorMsg = $"Failed to create texture resource '{p_description.Name}' " +
+           $"(Usage: {p_description.Usage}, " +
+           $"Size: {p_description.Width}x{p_description.Height}x{p_description.Depth}, " +
+           $"Format: {p_description.Format}, " +
+           $"HeapType: {heapType}, " +
+           $"Layout: {textureLayout}, " +
+           $"Flags: {resourceDesc.Flags}) " +
+           $"HRESULT: 0x{hr:X8}";
 
-    DX12Helpers.ThrowIfFailed(hr, "Failed to create texture resource");
+      DX12Helpers.ThrowIfFailed(hr, errorMsg);
+    }
+
 
     p_resource = pResource;
     p_currentState = initialState;
@@ -287,6 +321,9 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   private ResourceFlags GetResourceFlags()
   {
+    if(p_description.Usage == ResourceUsage.Staging)
+      return ResourceFlags.None;
+
     ResourceFlags flags = ResourceFlags.None;
 
     if((p_description.BindFlags & BindFlags.RenderTarget) != 0)
@@ -306,6 +343,9 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
   private ResourceStates GetInitialResourceState()
   {
+    if(p_description.Usage == ResourceUsage.Staging)
+      return ResourceStates.CopyDest;
+
     if((p_description.BindFlags & BindFlags.DepthStencil) != 0)
       return ResourceStates.DepthWrite;
     else if((p_description.BindFlags & BindFlags.RenderTarget) != 0)

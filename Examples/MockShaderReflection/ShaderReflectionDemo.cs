@@ -100,12 +100,12 @@ public class ShaderReflectionDemo
     Console.WriteLine("\n🌊 Multi-stream Input Layout:");
 
     var semanticMapping = new Dictionary<string, uint>
-        {
-            { "POSITION", 0 },
-            { "NORMAL", 0 },
-            { "TEXCOORD", 1 },
-            { "COLOR", 1 }
-        };
+    {
+      { "POSITION", 0 },
+      { "NORMAL", 0 },
+      { "TEXCOORD", 1 },
+      { "COLOR", 1 }
+    };
 
     var multiStreamLayout = InputLayoutDescription.FromMultipleStreams(shader, semanticMapping);
 

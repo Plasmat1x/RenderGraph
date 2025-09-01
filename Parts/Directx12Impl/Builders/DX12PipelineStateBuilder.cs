@@ -291,28 +291,28 @@ public class DX12PipelineStateBuilder
     return new InputLayoutDescription
     {
       Elements = new List<InputElementDescription>
+      {
+        new InputElementDescription
         {
-            new InputElementDescription
-            {
-                SemanticName = "POSITION",
-                SemanticIndex = 0,
-                Format = TextureFormat.R32G32B32_FLOAT,
-                InputSlot = 0,
-                AlignedByteOffset = 0,
-                InputSlotClass = GraphicsAPI.Enums.InputClassification.PerVertexData,
-                InstanceDataStepRate = 0
-            },
-            new InputElementDescription
-            {
-                SemanticName = "COLOR",
-                SemanticIndex = 0,
-                Format = TextureFormat.R32G32B32A32_FLOAT,
-                InputSlot = 0,
-                AlignedByteOffset = 12, // sizeof(float3)
-                InputSlotClass = GraphicsAPI.Enums.InputClassification.PerVertexData,
-                InstanceDataStepRate = 0
-            }
+          SemanticName = "POSITION",
+          SemanticIndex = 0,
+          Format = TextureFormat.R32G32B32_FLOAT,
+          InputSlot = 0,
+          AlignedByteOffset = 0,
+          InputSlotClass = GraphicsAPI.Enums.InputClassification.PerVertexData,
+          InstanceDataStepRate = 0
+        },
+        new InputElementDescription
+        {
+          SemanticName = "COLOR",
+          SemanticIndex = 0,
+          Format = TextureFormat.R32G32B32A32_FLOAT,
+          InputSlot = 0,
+          AlignedByteOffset = 12, // sizeof(float3)
+          InputSlotClass = GraphicsAPI.Enums.InputClassification.PerVertexData,
+          InstanceDataStepRate = 0
         }
+      }
     };
   }
 
