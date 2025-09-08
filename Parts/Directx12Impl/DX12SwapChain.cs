@@ -1,5 +1,6 @@
 using Directx12Impl.Parts;
 using Directx12Impl.Parts.Managers;
+using Directx12Impl.Parts.Utils;
 
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
@@ -89,11 +90,25 @@ public unsafe class DX12SwapChain: ISwapChain
 
   public void Present(uint _syncInterval = 0)
   {
-    var flags = _syncInterval == 0 ? (uint)PresentFlags.PresentAllowTearing : 0;
-    HResult hr = p_swapChain->Present(_syncInterval, flags);
+    var flags = _syncInterval == 0 && 
+               (_flags & SwapChainFlags.AllowTearing) != 0 ? 
+               (uint)PresentFlags.PresentAllowTearing : 0u;
 
-    if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to present: {hr}");
+
+    var currentBuffer = p_backBuffers[p_currentBackBufferIndex];
+    if(currentBuffer.GetCurrentState() != ResourceStates.Present)
+    {
+      // Нужен command list для transition
+      var commandList = p_parentDevice.GetImmediateContext();
+      DX12ResourceStateHelper.TransitionResource(
+          commandList,
+          currentBuffer,
+          ResourceStates.Present);
+      p_parentDevice.ExecuteImmediateContext();
+    }
+
+    var hr = p_swapChain->Present(_syncInterval, flags);
+    DX12Helpers.ThrowIfFailed(hr, "Failed to present swap chain");
 
     p_currentBackBufferIndex = p_swapChain->GetCurrentBackBufferIndex();
   }

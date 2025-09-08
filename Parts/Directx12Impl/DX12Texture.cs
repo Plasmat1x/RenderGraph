@@ -48,6 +48,11 @@ public unsafe class DX12Texture: DX12Resource, ITexture
     p_descriptorManager = _descriptorManager;
     p_parentDevice = _parentDevice;
     p_resource = _resource;
+
+    if((p_description.TextureUsage & TextureUsage.BackBuffer) != 0)
+      p_currentState = ResourceStates.Common;
+    else
+      p_currentState = GetInitialResourceState();
   }
 
   // === ITexture implementation ===
@@ -345,6 +350,9 @@ public unsafe class DX12Texture: DX12Resource, ITexture
   {
     if(p_description.Usage == ResourceUsage.Staging)
       return ResourceStates.CopyDest;
+
+    if((p_description.TextureUsage & TextureUsage.BackBuffer) != 0)
+      return ResourceStates.Common;
 
     if((p_description.BindFlags & BindFlags.DepthStencil) != 0)
       return ResourceStates.DepthWrite;

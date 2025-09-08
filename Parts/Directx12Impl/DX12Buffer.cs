@@ -253,6 +253,7 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
     _commandList->ResourceBarrier(1, &barrier);
   }
 
+  //TODO: Implement ReadBack
   private void GetDataInternal(ID3D12GraphicsCommandList* _commandList, void* _data, ulong _dataSize, ulong _offset)
   {
     // TODO: Implement readback using staging buffer
