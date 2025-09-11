@@ -191,12 +191,17 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   public void TransitionBackBufferForPresent(DX12Texture _backBuffer)
   {
-    p_stateTracker.TransitionResource(
-      _backBuffer.GetResource(),
-      ResourceStates.Present,
-      0);
+    var backBufferState = _backBuffer.GetCurrentState();
 
-    p_stateTracker.FlushResourceBarriers(p_commandList);
+    if(backBufferState != ResourceStates.Present)
+    {
+      p_stateTracker.TransitionResource(
+        _backBuffer.GetResource(),
+        ResourceStates.Present,
+        0);
+
+      p_stateTracker.FlushResourceBarriers(p_commandList);
+    }
   }
 
 

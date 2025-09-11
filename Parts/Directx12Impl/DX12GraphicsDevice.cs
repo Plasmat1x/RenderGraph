@@ -76,6 +76,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   private DeviceCapabilities p_capabilities;
   private bool p_immediateSync;
   private bool p_disposed;
+  private bool p_debug;
 
   public DX12GraphicsDevice(bool _enableDebugLayer = false)
   {
@@ -231,7 +232,8 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     this,
     _desc,
     _windowHandle,
-    p_d3d12);
+    p_d3d12,
+    p_debug);
   }
 
   public IFence CreateFence(ulong _initialValue = 0)
@@ -580,6 +582,7 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     if(_enableDebugLayer)
     {
       EnableDebugLayer();
+      p_debug = _enableDebugLayer;
     }
 #endif
 

@@ -1,7 +1,8 @@
 namespace GraphicsAPI.Enums;
 public enum AlphaMode
 {
-  Ignore,
-  Premultiplied,
-  Straight,
+  Unspecified = 0,
+  Premultiplied = 1,
+  Straight = 2,
+  Ignore = 3,
 }

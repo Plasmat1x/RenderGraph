@@ -1,5 +1,6 @@
 using Directx12Impl.Parts;
 using Directx12Impl.Parts.Managers;
+using Directx12Impl.Parts.Utils;
 
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
@@ -20,17 +21,18 @@ public unsafe class DX12SwapChain: ISwapChain
   private readonly ID3D12CommandQueue* p_directQueue;
   private readonly DX12DescriptorHeapManager p_descriptorManager;
   private readonly DX12GraphicsDevice p_parentDevice;
-  private readonly SwapChainDescription p_description;
+  private SwapChainDescription p_description;
   private readonly D3D12 p_d3d12;
+  private readonly IntPtr p_windowHandle;
+  private readonly bool p_debugMode;
 
   private IDXGISwapChain3* p_swapChain;
   private DX12Texture[] p_backBuffers;
   private DX12DescriptorAllocation[] p_rtvAllocations;
   private uint p_currentBackBufferIndex;
   private bool p_disposed;
-
-  public SwapChainDescription Description => p_description;
-  public uint CurrentBackBufferIndex => p_currentBackBufferIndex;
+  private bool p_isOccluded;
+  private uint p_presentCount;
 
   public DX12SwapChain(
       ID3D12Device* _device,
@@ -40,7 +42,8 @@ public unsafe class DX12SwapChain: ISwapChain
       DX12GraphicsDevice _parentDevice,
       SwapChainDescription _description,
       IntPtr _windowHandle,
-      D3D12 _d3d12)
+      D3D12 _d3d12,
+      bool _debugMode)
   {
     p_device = _device;
     p_dxgiFactory = _dxgiFactory;
@@ -49,13 +52,37 @@ public unsafe class DX12SwapChain: ISwapChain
     p_parentDevice = _parentDevice;
     p_description = _description ?? throw new ArgumentNullException(nameof(_description));
     p_d3d12 = _d3d12;
+    p_debugMode = _debugMode;
 
     if(_windowHandle == IntPtr.Zero)
       throw new ArgumentException("Window handle is required", nameof(_windowHandle));
 
+    if(p_debugMode)
+    {
+      var validation = DX12SwapChainValidator.ValidateDescription(p_description);
+      validation.LogResults();
+
+      if(!validation.IsValid)
+        throw new ArgumentException("Invalid SwapChain description");
+    }
+
     CreateSwapChain(_windowHandle);
     CreateBackBufferResources();
+
+    if(p_debugMode)
+    {
+      DX12SwapChainDebugger.LogSwapChainInfo(p_swapChain);
+    }
   }
+
+  public event Action<uint> OnPresent;
+  public event Action<uint, uint> OnResize;
+
+  public ResourceType resourceType => ResourceType.SwapChain;
+  public SwapChainDescription Description => p_description;
+  public uint CurrentBackBufferIndex => p_currentBackBufferIndex;
+  public uint PresentCount => p_presentCount;
+  public bool IsOccluded => p_isOccluded;
 
   public ITexture GetBackBuffer(uint _index)
   {
@@ -64,6 +91,8 @@ public unsafe class DX12SwapChain: ISwapChain
 
     return p_backBuffers[_index];
   }
+
+  public ITexture GetCurrentBackBuffer() => GetBackBuffer(p_currentBackBufferIndex);
 
   public ITextureView GetBackBufferRTV(uint _index)
   {
@@ -89,19 +118,87 @@ public unsafe class DX12SwapChain: ISwapChain
 
   public void Present(uint _syncInterval = 0)
   {
-    var flags = _syncInterval == 0 ? (uint)PresentFlags.PresentAllowTearing : 0;
+    var flags = _syncInterval == 0 ? 
+               (uint)PresentFlags.PresentAllowTearing : 0u;
+
+
+    //var currentBuffer = p_backBuffers[p_currentBackBufferIndex];
+    //if(currentBuffer.GetCurrentState() != ResourceStates.Present)
+    //{
+    //  // Нужен command list для transition
+    //  var commandList = p_parentDevice.GetImmediateContext();
+    //  DX12ResourceStateHelper.TransitionResource(
+    //      commandList,
+    //      currentBuffer,
+    //      ResourceStates.Present);
+    //  p_parentDevice.ExecuteImmediateContext();
+    //}
+
     HResult hr = p_swapChain->Present(_syncInterval, flags);
 
-    if(hr.IsFailure)
-      throw new InvalidOperationException($"Failed to present: {hr}");
+    switch((UInt32)hr.Value)
+    {
+      case 0x887A0001: // DXGI_ERROR_INVALID_CALL
+        throw new InvalidOperationException("Invalid call to Present - check render target states");
 
-    p_currentBackBufferIndex = p_swapChain->GetCurrentBackBufferIndex();
+      case 0x887A0002: // DXGI_ERROR_NOT_FOUND
+        throw new InvalidOperationException("SwapChain not found - may have been lost");
+
+      case 0x887A0005: // DXGI_ERROR_DEVICE_REMOVED
+        throw new InvalidOperationException("Device removed - need to recreate device and swapchain");
+
+      case 0x887A0006: // DXGI_ERROR_DEVICE_HUNG
+        throw new InvalidOperationException("Device hung - need to reset");
+
+      case 0x887A0007: // DXGI_ERROR_DEVICE_RESET
+        throw new InvalidOperationException("Device reset - need to recreate resources");
+
+      case 0x887A000A: // DXGI_STATUS_OCCLUDED
+        p_isOccluded = true;
+        if(p_debugMode)
+          Console.WriteLine("[SwapChain] Window is occluded, skipping Present");
+        break;
+
+      default:
+        p_isOccluded = false;
+        if(hr.IsFailure)
+          throw new InvalidOperationException($"Failed to present: {hr}");
+        break;
+    }
+
+    if(hr.IsSuccess && !p_isOccluded)
+    {
+      p_currentBackBufferIndex = p_swapChain->GetCurrentBackBufferIndex();
+      p_presentCount++;
+
+      if(p_debugMode && p_presentCount % 60 == 0)
+        Console.WriteLine($"[SwapChain] Presented {p_presentCount} frames");
+
+      OnPresent?.Invoke(p_presentCount);
+    }
   }
 
   public void Resize(uint _width, uint _height)
   {
     if(_width == 0 || _height == 0)
+    {
+      if(p_debugMode)
+        Console.WriteLine("[SwapChain] Ignoring resize to zero dimensions");
       return;
+    }
+
+    if(_width == p_description.Width && _height == p_description.Height)
+    {
+      if(p_debugMode)
+        Console.WriteLine("[SwapChain] Ignoring resize to same dimensions");
+      return;
+    }
+
+    if(p_debugMode)
+      Console.WriteLine($"[SwapChain] Resizing from {p_description.Width}x{p_description.Height} to {_width}x{_height}");
+
+
+    p_parentDevice.WaitForGPU();
 
     ReleaseBackBufferResources();
 
@@ -115,25 +212,44 @@ public unsafe class DX12SwapChain: ISwapChain
     if(hr.IsFailure)
       throw new InvalidOperationException($"Failed to resize swap chain: {hr}");
 
+    var oldWidth = p_description.Width;
+    var oldHeight = p_description.Height;
     p_description.Width = _width;
     p_description.Height = _height;
 
     CreateBackBufferResources();
+
+    p_currentBackBufferIndex = p_swapChain->GetCurrentBackBufferIndex();
+
+    if(p_debugMode)
+    {
+      Console.WriteLine($"[SwapChain] Resize completed successfully");
+      DX12SwapChainDebugger.LogSwapChainInfo(p_swapChain);
+    }
+
+    OnResize?.Invoke(_width, _height);
   }
 
   public void SetFullscreenState(bool _fullscreen, IMonitor _monitor = null)
   {
     IDXGIOutput* output = null;
 
-    if(_fullscreen && _monitor != null)
+    if(_fullscreen && _monitor is DX12Monitor dx12Monitor)
     {
-      // TODO: Получить IDXGIOutput из monitor
+      output = dx12Monitor.GetNativeOutput();
     }
 
     HResult hr = p_swapChain->SetFullscreenState(_fullscreen, output);
 
-    if(hr.IsFailure && hr != new HResult(unchecked((int)0x887A0007))) // DXGI_ERROR_NOT_CURRENTLY_AVAILABLE
+    if(hr.IsFailure && hr != new HResult(unchecked((int)0x887A0007)))
+    {
+      if(p_debugMode)
+        Console.WriteLine($"[SwapChain] Failed to set fullscreen state: {hr}");
       throw new InvalidOperationException($"Failed to set fullscreen state: {hr}");
+    }
+
+    if(p_debugMode)
+      Console.WriteLine($"[SwapChain] Fullscreen state set to: {_fullscreen}");
   }
 
   public bool IsFullscreen()
@@ -157,7 +273,16 @@ public unsafe class DX12SwapChain: ISwapChain
 
     if(p_swapChain != null)
     {
-      p_swapChain->SetFullscreenState(false, null);
+      try
+      {
+        p_swapChain->SetFullscreenState(false, null);
+      }
+      catch (Exception ex)
+      {
+          if(p_debugMode)
+            Console.WriteLine($"[SwapChain] Warning: Failed to exit fullscreen: {ex.Message}");
+      }
+
       p_swapChain->Release();
       p_swapChain = null;
     }
@@ -210,6 +335,29 @@ public unsafe class DX12SwapChain: ISwapChain
     };
   }
 
+  private Silk.NET.DXGI.AlphaMode ConvertAlphaMode(GraphicsAPI.Enums.AlphaMode _alphaMode)
+  {
+    return _alphaMode switch
+    {
+      GraphicsAPI.Enums.AlphaMode.Unspecified => Silk.NET.DXGI.AlphaMode.Unspecified,
+      GraphicsAPI.Enums.AlphaMode.Premultiplied => Silk.NET.DXGI.AlphaMode.Premultiplied,
+      GraphicsAPI.Enums.AlphaMode.Straight => Silk.NET.DXGI.AlphaMode.Straight,
+      GraphicsAPI.Enums.AlphaMode.Ignore => Silk.NET.DXGI.AlphaMode.Ignore,
+      _ => Silk.NET.DXGI.AlphaMode.Unspecified
+    };
+  }
+
+  private Scaling ConverScaling(ScalingMode _scalingMode)
+  {
+    return _scalingMode switch
+    {
+      ScalingMode.None => Scaling.None,
+      ScalingMode.Stretch => Scaling.Stretch,
+      ScalingMode.AspectRatioStretch => Scaling.AspectRatioStretch,
+      _ => Scaling.None
+    };
+  }
+
   private uint ConvertSwapChainFlags(SwapChainFlags _flags)
   {
     uint result = 0;
@@ -246,7 +394,7 @@ public unsafe class DX12SwapChain: ISwapChain
         MipLevels = 1,
         ArraySize = 1,
         Format = p_description.Format,
-        SampleCount = 1,
+        SampleCount = p_description.SampleCount,
         Usage = ResourceUsage.Default,
         BindFlags = BindFlags.RenderTarget,
         TextureUsage = TextureUsage.RenderTarget | TextureUsage.BackBuffer
@@ -259,6 +407,9 @@ public unsafe class DX12SwapChain: ISwapChain
           textureDesc,
           p_descriptorManager,
           p_parentDevice);
+
+      if(p_debugMode)
+        Console.WriteLine($"[SwapChain] BackBuffer {i} state: {p_backBuffers[i].GetCurrentState()}");
 
       p_rtvAllocations[i] = p_descriptorManager.AllocateRTV();
 
@@ -274,6 +425,11 @@ public unsafe class DX12SwapChain: ISwapChain
     }
   }
 
+  private bool SupportsVariableRefreshRate()
+  {
+    return (p_description.Flags & SwapChainFlags.AllowTearing) != 0;
+  }
+
   private void CreateSwapChain(IntPtr _windowHandle)
   {
     var swapChainDesc = new SwapChainDesc1
@@ -284,16 +440,30 @@ public unsafe class DX12SwapChain: ISwapChain
       Stereo = false,
       SampleDesc = new SampleDesc
       {
-        Count = 1,
-        Quality = 0
+        Count = p_description.SampleCount,
+        Quality = p_description.SampleQuality,
       },
       BufferUsage = DXGI.UsageRenderTargetOutput,
       BufferCount = p_description.BufferCount,
       Scaling = Scaling.None,
       SwapEffect = ConvertSwapEffect(p_description.SwapEffect),
-      AlphaMode = Silk.NET.DXGI.AlphaMode.Unspecified,
+      AlphaMode = ConvertAlphaMode(p_description.AlphaMode),
       Flags = ConvertSwapChainFlags(p_description.Flags)
     };
+
+    if(p_debugMode)
+    {
+      if(DX12SwapChainDebugger.ValidateSwapChainSettings(&swapChainDesc, out var issues))
+      {
+        Console.WriteLine("[SwapChain] SwapChain settings validation passed");
+      }
+      else
+      {
+        Console.WriteLine("[SwapChain] SwapChain settings validation issues:");
+        foreach(var issue in issues)
+          Console.WriteLine($"[SwapChain]   - {issue}");
+      }
+    }
 
     IDXGISwapChain1* swapChain1;
     HResult hr = p_dxgiFactory->CreateSwapChainForHwnd(
@@ -319,10 +489,5 @@ public unsafe class DX12SwapChain: ISwapChain
 
     p_swapChain = swapChain3;
     p_currentBackBufferIndex = p_swapChain->GetCurrentBackBufferIndex();
-  }
-
-  public ITexture GetCurrentBackBuffer()
-  {
-    return GetBackBuffer(p_currentBackBufferIndex);
   }
 }
