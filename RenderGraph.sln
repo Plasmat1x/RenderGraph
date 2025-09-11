@@ -62,6 +62,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DX12ShaderCompilation", "Ex
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Directx12ImplTests", "Tests\Directx12ImplTests\Directx12ImplTests.csproj", "{364D6CF0-3C0A-4EA6-9B26-E69C3EE26386}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DX12RenderGraph", "Examples\DX12RenderGraph\DX12RenderGraph.csproj", "{B2038DE6-CC7C-4E8B-99AA-F917A00FD013}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -128,6 +130,10 @@ Global
 		{364D6CF0-3C0A-4EA6-9B26-E69C3EE26386}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{364D6CF0-3C0A-4EA6-9B26-E69C3EE26386}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{364D6CF0-3C0A-4EA6-9B26-E69C3EE26386}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2038DE6-CC7C-4E8B-99AA-F917A00FD013}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2038DE6-CC7C-4E8B-99AA-F917A00FD013}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2038DE6-CC7C-4E8B-99AA-F917A00FD013}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2038DE6-CC7C-4E8B-99AA-F917A00FD013}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -151,6 +157,7 @@ Global
 		{13415754-52AB-4527-9AAB-9A96743003BB} = {FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE}
 		{F86666F9-717B-4177-A0C3-AC52DE355913} = {FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE}
 		{364D6CF0-3C0A-4EA6-9B26-E69C3EE26386} = {769087AC-BFC1-4A85-BF97-5DA63B548E7A}
+		{B2038DE6-CC7C-4E8B-99AA-F917A00FD013} = {FE4FE8E1-E440-4FB6-8079-1D02A5C4FAEE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {376DA86B-0E5C-4A57-9198-A072E5FD6F04}

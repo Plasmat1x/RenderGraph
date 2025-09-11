@@ -248,6 +248,8 @@ public class ResourceManager: IDisposable
     p_resourceDescriptions[handle] = _texture.Description;
     p_resourceLifetimes[handle] = ResourceLifetime.Imported;
 
+    p_resources.Add(handle, _texture);
+
     return handle;
   }
 
