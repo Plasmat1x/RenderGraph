@@ -191,17 +191,31 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   public void TransitionBackBufferForPresent(DX12Texture _backBuffer)
   {
-    var backBufferState = _backBuffer.GetCurrentState();
+    Console.WriteLine("\n[CommandBuffer] === TransitionBackBufferForPresent START ===");
 
-    if(backBufferState != ResourceStates.Present)
+    var currentState = _backBuffer.GetCurrentState();
+    Console.WriteLine($"[CommandBuffer] BackBuffer ({_backBuffer.Name}) current state: {currentState}");
+
+    if(currentState != ResourceStates.Present)
     {
-      p_stateTracker.TransitionResource(
-        _backBuffer.GetResource(),
-        ResourceStates.Present,
-        0);
+      Console.WriteLine($"[CommandBuffer] Transitioning for Present: {currentState} → Present");
 
+      p_stateTracker.TransitionResource(
+          _backBuffer.GetResource(),
+          ResourceStates.Present,
+          0);
+
+      _backBuffer.SetCurrentState(ResourceStates.Present);
+
+      Console.WriteLine("[CommandBuffer] Flushing barriers for Present...");
       p_stateTracker.FlushResourceBarriers(p_commandList);
     }
+    else
+    {
+      Console.WriteLine("[CommandBuffer] BackBuffer already in Present state, no transition needed");
+    }
+
+    Console.WriteLine("[CommandBuffer] === TransitionBackBufferForPresent END ===\n");
   }
 
 
@@ -302,8 +316,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   /// </summary>
   private void ExecuteCommandGeneric(ICommand _command)
   {
-    // Используем методы базового GenericCommandBuffer для неоптимизированных команд
-    // Эти методы автоматически создают соответствующие команды и добавляют их в список
     switch(_command)
     {
       case BeginEventCommand beginEvent:
@@ -329,21 +341,26 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void SetRenderTargetDirectly(ITextureView _colorTarget, ITextureView _depthTarget)
   {
+    Console.WriteLine("\n[CommandBuffer] === SetRenderTargetDirectly START ===");
+
     p_renderTargetCount = 0;
+
+    var transitionsNeeded = new List<(DX12Texture texture, ResourceStates targetState)>();
 
     if(_colorTarget is DX12TextureView colorView)
     {
       var colorTexture = colorView.Texture as DX12Texture;
-
-      // TODO: Resource barrier для color target
       if(colorTexture != null)
       {
-        p_stateTracker.TransitionResource(
-          colorTexture.GetResource(),
-          ResourceStates.RenderTarget,
-          0);
-      }
+        var currentState = colorTexture.GetCurrentState();
+        Console.WriteLine($"[CommandBuffer] Color target ({colorTexture.Name}) current state: {currentState}");
 
+        if(currentState != ResourceStates.RenderTarget)
+        {
+          transitionsNeeded.Add((colorTexture, ResourceStates.RenderTarget));
+          Console.WriteLine($"[CommandBuffer] Will transition color: {currentState} → RenderTarget");
+        }
+      }
       p_currentRenderTargets[0] = colorView.GetRenderTargetView();
       p_renderTargetCount = 1;
     }
@@ -351,16 +368,17 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     if(_depthTarget is DX12TextureView depthView)
     {
       var depthTexture = depthView.Texture as DX12Texture;
-
-      // TODO: Resource barrier для depth target
       if(depthTexture != null)
       {
-        p_stateTracker.TransitionResource(
-          depthTexture.GetResource(),
-          ResourceStates.DepthWrite,
-          0);
-      }
+        var currentState = depthTexture.GetCurrentState();
+        Console.WriteLine($"[CommandBuffer] Depth target ({depthTexture.Name}) current state: {currentState}");
 
+        if(currentState != ResourceStates.DepthWrite)
+        {
+          transitionsNeeded.Add((depthTexture, ResourceStates.DepthWrite));
+          Console.WriteLine($"[CommandBuffer] Will transition depth: {currentState} → DepthWrite");
+        }
+      }
       p_currentDepthStencil = depthView.GetDepthStencilView();
     }
     else
@@ -368,10 +386,32 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
       p_currentDepthStencil = null;
     }
 
-    // TODO: Flush barriers перед установкой render targets
-    p_stateTracker.FlushResourceBarriers(p_commandList);
+    if(transitionsNeeded.Count > 0)
+    {
+      Console.WriteLine($"[CommandBuffer] Executing {transitionsNeeded.Count} transitions...");
 
+      foreach(var (texture, targetState) in transitionsNeeded)
+      {
+        p_stateTracker.TransitionResource(
+            texture.GetResource(),
+            targetState,
+            0);
+
+        texture.SetCurrentState(targetState);
+      }
+
+      Console.WriteLine("[CommandBuffer] Flushing all resource barriers...");
+      p_stateTracker.FlushResourceBarriers(p_commandList);
+    }
+    else
+    {
+      Console.WriteLine("[CommandBuffer] No state transitions needed");
+    }
+
+    Console.WriteLine("[CommandBuffer] Setting render targets on command list...");
     ApplyRenderTargets();
+
+    Console.WriteLine("[CommandBuffer] === SetRenderTargetDirectly END ===\n");
   }
 
   private void SetRenderTargetsDirectly(ITextureView[] _colorTargets, ITextureView _depthTarget)
@@ -384,6 +424,21 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
       {
         if(_colorTargets[i] is DX12TextureView dx12View)
         {
+          var colorTexture = dx12View.Texture as DX12Texture;
+          if(colorTexture != null)
+          {
+            var currentState = colorTexture.GetCurrentState();
+            if(currentState != ResourceStates.RenderTarget)
+            {
+              p_stateTracker.TransitionResource(
+                  colorTexture.GetResource(),
+                  ResourceStates.RenderTarget,
+                  0);
+
+              Console.WriteLine($"[CommandBuffer] Transitioning color target {i}: {currentState} → RenderTarget");
+            }
+          }
+
           p_currentRenderTargets[i] = dx12View.GetRenderTargetView();
           p_renderTargetCount++;
         }
@@ -392,6 +447,21 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
     if(_depthTarget is DX12TextureView depthView)
     {
+      var depthTexture = depthView.Texture as DX12Texture;
+      if(depthTexture != null)
+      {
+        var currentState = depthTexture.GetCurrentState();
+        if(currentState != ResourceStates.DepthWrite)
+        {
+          p_stateTracker.TransitionResource(
+              depthTexture.GetResource(),
+              ResourceStates.DepthWrite,
+              0);
+
+          Console.WriteLine($"[CommandBuffer] Transitioning depth target: {currentState} → DepthWrite");
+        }
+      }
+
       p_currentDepthStencil = depthView.GetDepthStencilView();
     }
     else
@@ -399,29 +469,53 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
       p_currentDepthStencil = null;
     }
 
+    p_stateTracker.FlushResourceBarriers(p_commandList);
+
+    Console.WriteLine($"[CommandBuffer] Flushed resource barriers before setting render targets");
+
     ApplyRenderTargets();
   }
 
   private void ClearRenderTargetDirectly(ITextureView _target, Vector4 _color)
   {
+    Console.WriteLine("[CommandBuffer] === ClearRenderTargetDirectly START ===");
+
     if(_target is not DX12TextureView dx12View)
       throw new ArgumentException("Invalid texture view type");
 
     var texture = dx12View.Texture as DX12Texture;
     if(texture != null)
     {
-      p_stateTracker.TransitionResource(
-        texture.GetResource(),
-        ResourceStates.RenderTarget,
-        0);
+      var currentState = texture.GetCurrentState();
+      Console.WriteLine($"[CommandBuffer] Clear target ({texture.Name}) current state: {currentState}");
 
-      p_stateTracker.FlushResourceBarriers(p_commandList);
+      if(currentState != ResourceStates.RenderTarget)
+      {
+        Console.WriteLine($"[CommandBuffer] Transitioning for clear: {currentState} → RenderTarget");
+
+        p_stateTracker.TransitionResource(
+            texture.GetResource(),
+            ResourceStates.RenderTarget,
+            0);
+
+        texture.SetCurrentState(ResourceStates.RenderTarget);
+
+        Console.WriteLine("[CommandBuffer] Flushing barriers for clear...");
+        p_stateTracker.FlushResourceBarriers(p_commandList);
+      }
+      else
+      {
+        Console.WriteLine("[CommandBuffer] Clear target already in RenderTarget state");
+      }
     }
 
     var rtvHandle = dx12View.GetRenderTargetView();
     var colorArray = stackalloc float[4] { _color.X, _color.Y, _color.Z, _color.W };
 
+    Console.WriteLine($"[CommandBuffer] Clearing render target to [{_color.X:F2}, {_color.Y:F2}, {_color.Z:F2}, {_color.W:F2}]");
     p_commandList->ClearRenderTargetView(rtvHandle, colorArray, 0, null);
+
+    Console.WriteLine("[CommandBuffer] === ClearRenderTargetDirectly END ===\n");
   }
 
   private void ClearDepthStencilDirectly(ITextureView _target, GraphicsAPI.Enums.ClearFlags _flags, float _depth, byte _stencil)
@@ -479,58 +573,75 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void SetVertexShaderDirectly(IShader _shader)
   {
-    // Vertex shader устанавливается через pipeline state
-    // Здесь мы сохраняем ссылку для последующего создания PSO
     p_currentShaders[(int)ShaderStage.Vertex] = _shader;
     UpdateGraphicsPipelineState();
   }
 
   private void SetPixelShaderDirectly(IShader _shader)
   {
-    // Pixel shader устанавливается через pipeline state
     p_currentShaders[(int)ShaderStage.Pixel] = _shader;
     UpdateGraphicsPipelineState();
   }
 
   private void SetConstantBufferDirectly(SetConstantBufferCommand _cmd)
   {
-    if(p_currentRenderState == null)
-      throw new InvalidOperationException("RenderState must be set before setting constant buffers");
+    Console.WriteLine($"\n[CommandBuffer] === SetConstantBufferDirectly START ===");
+    Console.WriteLine($"[CommandBuffer] Stage: {_cmd.Stage}, Slot: {_cmd.Slot}");
 
     if(_cmd.Buffer is not DX12BufferView dx12View)
       throw new ArgumentException("Invalid buffer view type");
 
-    // Используем информацию из RenderState для правильной установки CBV
-    var rootSignature = p_currentRenderState.GetRootSignature();
-    var cbvHandle = dx12View.GetConstantBufferView();
+    if(p_currentRenderState == null)
+      throw new InvalidOperationException("RenderState must be set before setting constant buffers");
 
-    // Определяем root parameter index на основе stage и slot
     uint rootParamIndex = GetRootParameterIndex(_cmd.Stage, _cmd.Slot, ResourceType.ConstantBuffer);
 
+    var gpuVirtualAddress = dx12View.GetResource()->GetGPUVirtualAddress();
+
+    Console.WriteLine($"[CommandBuffer] Setting CBV at root parameter {rootParamIndex}");
+    Console.WriteLine($"[CommandBuffer] GPU Virtual Address: 0x{gpuVirtualAddress:X16}");
+
     if(_cmd.Stage == ShaderStage.Compute)
-      p_commandList->SetComputeRootConstantBufferView(rootParamIndex, dx12View.GetResource()->GetGPUVirtualAddress());
+    {
+      Console.WriteLine($"[CommandBuffer] Using SetComputeRootConstantBufferView");
+      p_commandList->SetComputeRootConstantBufferView(rootParamIndex, gpuVirtualAddress);
+    }
     else
-      p_commandList->SetGraphicsRootConstantBufferView(rootParamIndex, dx12View.GetResource()->GetGPUVirtualAddress());
+    {
+      Console.WriteLine($"[CommandBuffer] Using SetGraphicsRootConstantBufferView");
+      p_commandList->SetGraphicsRootConstantBufferView(rootParamIndex, gpuVirtualAddress);
+    }
+
+    Console.WriteLine($"[CommandBuffer] === SetConstantBufferDirectly END ===\n");
   }
 
   private void SetRenderStateDirectly(IRenderState _renderState)
   {
+    Console.WriteLine($"\n[CommandBuffer] === SetRenderStateDirectly START ===");
+
     if(_renderState is not DX12RenderState dx12RenderState)
       throw new ArgumentException("Invalid render state type");
 
-    // Сохраняем текущий RenderState
     p_currentRenderState = dx12RenderState;
 
-    // Применяем Pipeline State и Root Signature из RenderState
     var pipelineState = dx12RenderState.GetPipelineState();
     var rootSignature = dx12RenderState.GetRootSignature();
 
+    Console.WriteLine($"[CommandBuffer] Setting pipeline state: 0x{((IntPtr)pipelineState.Handle):X16}");
     p_commandList->SetPipelineState(pipelineState);
 
     if(Type == CommandBufferType.Compute)
+    {
+      Console.WriteLine($"[CommandBuffer] Setting compute root signature: 0x{((IntPtr)rootSignature.Handle):X16}");
       p_commandList->SetComputeRootSignature(rootSignature);
+    }
     else
+    {
+      Console.WriteLine($"[CommandBuffer] Setting graphics root signature: 0x{((IntPtr)rootSignature.Handle):X16}");
       p_commandList->SetGraphicsRootSignature(rootSignature);
+    }
+
+    Console.WriteLine($"[CommandBuffer] === SetRenderStateDirectly END ===\n");
   }
 
   private void SetShaderResourceDirectly(SetShaderResourceCommand _cmd)
@@ -538,19 +649,15 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     if(p_currentRenderState == null)
       throw new InvalidOperationException("RenderState must be set before setting shader resources");
 
-    // Определяем root parameter index
     uint rootParamIndex = GetRootParameterIndex(_cmd.Stage, _cmd.Slot, ResourceType.ShaderResource);
 
     if(_cmd.Resource is DX12TextureView texView)
     {
       var srvHandle = texView.GetShaderResourceView();
-      // Здесь нужно использовать descriptor table
-      // Это требует GPU-visible descriptor heap
     }
     else if(_cmd.Resource is DX12BufferView bufView)
     {
       var srvHandle = bufView.GetShaderResourceView();
-      // Аналогично
     }
   }
 
@@ -564,9 +671,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
     uint rootParamIndex = GetRootParameterIndex(_cmd.Stage, _cmd.Slot, ResourceType.Sampler);
 
-    // Samplers также требуют descriptor table
     var samplerHandle = dx12Sampler.GetDescriptorHandle();
-    // Установка через descriptor table
   }
 
   private void SetUnorderedAccessDirectly(SetUnorderedAccessCommand _cmd)
@@ -575,38 +680,52 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
       throw new InvalidOperationException("RenderState must be set before setting UAVs");
 
     uint rootParamIndex = GetRootParameterIndex(_cmd.Stage, _cmd.Slot, ResourceType.UnorderedAccess);
-
-    // UAV также через descriptor table
   }
 
   #endregion
 
   private uint GetRootParameterIndex(ShaderStage _stage, uint _slot, ResourceType _resourceType)
   {
-    // Здесь должна быть логика маппинга на основе root signature layout
-    // Пока используем простую схему:
-    // 0-3: Constant Buffers
-    // 4-7: Shader Resources  
-    // 8-11: UAVs
-    // 12-15: Samplers
 
-    uint baseIndex = _resourceType switch
+    // Root Parameter 0: Root CBV b0 (Vertex visibility)  
+    // Root Parameter 1: Root CBV b1 (All visibility)
+
+    Console.WriteLine($"[CommandBuffer] GetRootParameterIndex: Stage={_stage}, Slot={_slot}, Type={_resourceType}");
+
+    if(_resourceType == ResourceType.ConstantBuffer)
     {
-      ResourceType.ConstantBuffer => 0,
-      ResourceType.ShaderResource => 4,
-      ResourceType.UnorderedAccess => 8,
-      ResourceType.Sampler => 12,
-      _ => throw new ArgumentException($"Unsupported resource type: {_resourceType}")
-    };
+      // Для константных буферов используем прямое отображение slot → root parameter
+      // b0 → Root Parameter 0
+      // b1 → Root Parameter 1
+      uint rootParamIndex = _slot;
 
-    return baseIndex + _slot;
+      Console.WriteLine($"[CommandBuffer] Mapped CB slot {_slot} to root parameter {rootParamIndex}");
+      return rootParamIndex;
+    }
+
+    switch(_resourceType)
+    {
+      case ResourceType.ShaderResource:
+        Console.WriteLine($"[CommandBuffer] SRV resources not supported in basic layout");
+        throw new NotSupportedException("SRV resources require CreateBasicGraphics layout");
+
+      case ResourceType.UnorderedAccess:
+        Console.WriteLine($"[CommandBuffer] UAV resources not supported in basic layout");
+        throw new NotSupportedException("UAV resources require compute layout");
+
+      case ResourceType.Sampler:
+        Console.WriteLine($"[CommandBuffer] Sampler resources not supported in basic layout");
+        throw new NotSupportedException("Sampler resources require CreateBasicGraphics layout");
+
+      default:
+        Console.WriteLine($"[CommandBuffer] Unsupported resource type: {_resourceType}");
+        throw new ArgumentException($"Unsupported resource type: {_resourceType}");
+    }
   }
 
   private void UpdateGraphicsPipelineState()
   {
     // Создание/обновление graphics pipeline state на основе текущих шейдеров
-    // Это более сложная логика, которая требует PSO cache
-    // Пока что оставляем заглушку
   }
 
   private void ApplyRenderTargets()
@@ -683,7 +802,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   {
     if(!(p_executionMode == CommandBufferExecutionMode.Immediate))
       throw new InvalidOperationException("Cannot switch to immediate mode - buffer was created in deferred mode");
-    // Логика переключения
   }
 
   /// <summary>
@@ -693,11 +811,8 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   {
     if(p_executionMode == CommandBufferExecutionMode.Immediate)
     {
-      // В immediate режиме команды уже выполнены
       return;
     }
-
-    // В deferred режиме выполняем накопленные команды
     base.Execute();
   }
 
@@ -757,7 +872,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     }
   }
 
-  // Добавить private implementation методы:
   private void SetPrimitiveTopologyDirectly(PrimitiveTopology _topology)
   {
     var d3d12Topology = _topology.ConvertToCmd();
@@ -815,7 +929,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
   private void BeginEvent(string _name)
   {
     // Можно реализовать через PIX events или другие профайлеры
-    // Пока что простая заглушка
     Console.WriteLine($"[DX12] Begin Event: {_name}");
   }
 

@@ -199,6 +199,8 @@ public unsafe class RenderingExample
   {
     try
     {
+      Console.WriteLine("\n🎨 === RENDER FRAME START ===");
+
       var time = (float)(DateTime.Now.TimeOfDay.TotalSeconds);
       var rotationMatrix = Matrix4x4.CreateRotationZ(time * 0.5f);
       UpdateConstantBuffer(rotationMatrix);
@@ -208,12 +210,20 @@ public unsafe class RenderingExample
       var backBuffer = p_swapChain.GetCurrentBackBuffer();
       var renderTargetView = backBuffer.GetDefaultRenderTargetView();
 
+      Console.WriteLine($"🖼️ Got backbuffer {p_swapChain.CurrentBackBufferIndex}");
+
+      if(backBuffer is DX12Texture dx12BackBufferDebug)
+      {
+        Console.WriteLine($"🔍 BackBuffer state before render: {dx12BackBufferDebug.GetCurrentState()}");
+      }
+
       p_commandBuffer.Begin();
 
       try
       {
         using var debugScope = p_commandBuffer.BeginDebugScope("Triangle Render Pass");
 
+        Console.WriteLine("🎯 Setting render target...");
         p_commandBuffer.SetRenderTarget(renderTargetView, p_depthStencilView);
 
         var viewport = new Resources.Viewport
@@ -227,9 +237,11 @@ public unsafe class RenderingExample
         };
         p_commandBuffer.SetViewport(viewport);
 
+        Console.WriteLine("🧹 Clearing render target...");
         p_commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
         p_commandBuffer.ClearDepthStencil(p_depthStencilView, ClearFlags.Depth, 1.0f, 0);
 
+        Console.WriteLine("🔧 Setting render state (pipeline + root signature)...");
         p_commandBuffer.SetRenderState(p_simpleRenderState);
 
         var vertexView = p_vertexBuffer.GetDefaultShaderResourceView();
@@ -239,12 +251,16 @@ public unsafe class RenderingExample
         p_commandBuffer.SetVertexBuffer(vertexView, 0);
         p_commandBuffer.SetIndexBuffer(indexView, IndexFormat.UInt16);
         p_commandBuffer.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
+
+        Console.WriteLine("📋 Setting constant buffer (this should work now)...");
         p_commandBuffer.SetConstantBuffer(ShaderStage.Vertex, 0, constantView);
 
+        Console.WriteLine("✏️ Drawing triangle...");
         p_commandBuffer.DrawIndexed(3, 1, 0, 0, 0);
 
         if(p_commandBuffer is DX12CommandBuffer dx12Buffer && backBuffer is DX12Texture dx12BackBuffer)
         {
+          Console.WriteLine("🔄 Transitioning backbuffer for Present...");
           dx12Buffer.TransitionBackBufferForPresent(dx12BackBuffer);
         }
 
@@ -255,22 +271,21 @@ public unsafe class RenderingExample
         p_commandBuffer.End();
       }
 
+      Console.WriteLine("📤 Submitting command buffer...");
       p_device.Submit(p_commandBuffer);
+
+      Console.WriteLine("🖼️ Presenting...");
       p_swapChain.Present();
+
       p_device.EndFrame();
+
+      Console.WriteLine("🎨 === RENDER FRAME END ===\n");
     }
-    catch(TimeoutException ex)
+    catch(InvalidOperationException ex) when(ex.Message.Contains("Device removed"))
     {
-      Console.WriteLine($"⚠️ GPU Timeout: {ex.Message}");
-      try
-      {
-        p_device.WaitForGPU();
-      }
-      catch
-      {
-        Console.WriteLine("❌ Failed to recover from GPU timeout");
-        throw;
-      }
+      Console.WriteLine($"❌ Device removed error: {ex.Message}");
+      Console.WriteLine("Check GPU-Based Validation errors above for the root cause.");
+      throw;
     }
     catch(Exception ex)
     {
@@ -282,7 +297,15 @@ public unsafe class RenderingExample
 
   private void UpdateConstantBuffer(Matrix4x4 _worldViewProj)
   {
+    Console.WriteLine($"🔄 Updating constant buffer with matrix:");
+    Console.WriteLine($"   [{_worldViewProj.M11:F2}, {_worldViewProj.M12:F2}, {_worldViewProj.M13:F2}, {_worldViewProj.M14:F2}]");
+    Console.WriteLine($"   [{_worldViewProj.M21:F2}, {_worldViewProj.M22:F2}, {_worldViewProj.M23:F2}, {_worldViewProj.M24:F2}]");
+    Console.WriteLine($"   [{_worldViewProj.M31:F2}, {_worldViewProj.M32:F2}, {_worldViewProj.M33:F2}, {_worldViewProj.M34:F2}]");
+    Console.WriteLine($"   [{_worldViewProj.M41:F2}, {_worldViewProj.M42:F2}, {_worldViewProj.M43:F2}, {_worldViewProj.M44:F2}]");
+
     var mappedPtr = p_device.MapBuffer(p_constantBuffer, MapMode.WriteDiscard);
+
+    Console.WriteLine($"📍 Mapped constant buffer at: 0x{mappedPtr:X16}");
 
     try
     {
@@ -291,10 +314,13 @@ public unsafe class RenderingExample
         var matrixPtr = (Matrix4x4*)mappedPtr.ToPointer();
         *matrixPtr = _worldViewProj;
       }
+
+      Console.WriteLine($"✅ Successfully wrote matrix to constant buffer");
     }
     finally
     {
       p_device.UnmapBuffer(p_constantBuffer);
+      Console.WriteLine($"📍 Unmapped constant buffer");
     }
   }
 
