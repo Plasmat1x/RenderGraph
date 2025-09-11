@@ -232,7 +232,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     Console.WriteLine("[CommandBuffer] === TransitionBackBufferForPresent END ===\n");
   }
 
-
   // === Методы прямого выполнения ===
 
   /// <summary>

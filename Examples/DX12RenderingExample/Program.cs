@@ -37,6 +37,12 @@ public static class Program
 
     window.Closing += example.Cleanup;
     window.Render += _ => example.Render();
+    window.Update += _ => {
+      if(example.framesCount >= 10)
+      {
+        window.Close();
+      }
+    };
 
     window.Run();
 
