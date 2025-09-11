@@ -205,31 +205,20 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   public void TransitionBackBufferForPresent(DX12Texture _backBuffer)
   {
-    Console.WriteLine("\n[CommandBuffer] === TransitionBackBufferForPresent START ===");
-
-    var currentState = _backBuffer.GetCurrentState();
-    Console.WriteLine($"[CommandBuffer] BackBuffer ({_backBuffer.Name}) current state: {currentState}");
-
-    if(currentState != ResourceStates.Present)
+    var barrier = new ResourceBarrier
     {
-      Console.WriteLine($"[CommandBuffer] Transitioning for Present: {currentState} → Present");
+      Type = ResourceBarrierType.Transition,
+      Transition = new ResourceTransitionBarrier
+      {
+        PResource = _backBuffer.GetResource(),
+        StateBefore = ResourceStates.RenderTarget,
+        StateAfter = ResourceStates.Present,
+        Subresource = 0
+      }
+    };
 
-      p_stateTracker.TransitionResource(
-          _backBuffer.GetResource(),
-          ResourceStates.Present,
-          0);
-
-      _backBuffer.SetCurrentState(ResourceStates.Present);
-
-      Console.WriteLine("[CommandBuffer] Flushing barriers for Present...");
-      p_stateTracker.FlushResourceBarriers(p_commandList);
-    }
-    else
-    {
-      Console.WriteLine("[CommandBuffer] BackBuffer already in Present state, no transition needed");
-    }
-
-    Console.WriteLine("[CommandBuffer] === TransitionBackBufferForPresent END ===\n");
+    p_commandList->ResourceBarrier(1, &barrier);
+    _backBuffer.SetCurrentState(ResourceStates.Present);
   }
 
   // === Методы прямого выполнения ===

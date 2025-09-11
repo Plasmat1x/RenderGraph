@@ -168,8 +168,14 @@ public unsafe class DX12SwapChain: ISwapChain
 
     if(hr.IsSuccess && !p_isOccluded)
     {
+      var currentBuffer = p_backBuffers[p_currentBackBufferIndex];
+      currentBuffer.SetCurrentState(ResourceStates.Common);
+
       p_currentBackBufferIndex = p_swapChain->GetCurrentBackBufferIndex();
       p_presentCount++;
+
+      var newCurrentBuffer = p_backBuffers[p_currentBackBufferIndex];
+      newCurrentBuffer.SetCurrentState(ResourceStates.Common);
 
       if(p_debugMode && p_presentCount % 60 == 0)
         Console.WriteLine($"[SwapChain] Presented {p_presentCount} frames");
