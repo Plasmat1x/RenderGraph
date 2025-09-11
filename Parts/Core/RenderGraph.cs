@@ -3,6 +3,8 @@ using Core.Enums;
 using GraphicsAPI;
 using GraphicsAPI.Interfaces;
 
+using Resources.Enums;
+
 using System.Numerics;
 
 using Utility;
@@ -394,7 +396,11 @@ public class RenderGraph: IDisposable
       var usage = p_builder.GetResourceUsage(input, _pass.Name);
       if(usage != null)
       {
-        _commandBuffer.TransitionResource(p_resourceManager.GetTexture(input), usage.State);
+        IResource resource = input.Type == ResourceType.Buffer
+            ? p_resourceManager.GetBuffer(input)
+            : p_resourceManager.GetTexture(input);
+
+        _commandBuffer.TransitionResource(resource, usage.State);
       }
     }
 
@@ -403,7 +409,11 @@ public class RenderGraph: IDisposable
       var usage = p_builder.GetResourceUsage(output, _pass.Name);
       if(usage != null)
       {
-        _commandBuffer.TransitionResource(p_resourceManager.GetTexture(output), usage.State);
+        IResource resource = output.Type == ResourceType.Buffer
+            ? p_resourceManager.GetBuffer(output)
+            : p_resourceManager.GetTexture(output);
+
+        _commandBuffer.TransitionResource(resource, usage.State);
       }
     }
   }
