@@ -1,7 +1,7 @@
 namespace GraphicsAPI.Enums;
 public enum ScalingMode
 {
-  None,
-  Stretch,
-  AspectRation,
+  None = 0,
+  Stretch = 1,
+  AspectRatioStretch = 2,
 }

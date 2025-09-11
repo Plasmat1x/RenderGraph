@@ -2,6 +2,7 @@ using Directx12Impl.Extensions;
 using Directx12Impl.Parts.Managers;
 using Directx12Impl.Parts.Utils;
 
+using GraphicsAPI;
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Interfaces;
 

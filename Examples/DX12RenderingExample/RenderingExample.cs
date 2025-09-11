@@ -46,7 +46,7 @@ public unsafe class RenderingExample
       Width = _width,
       Height = _height,
       Format = TextureFormat.R8G8B8A8_UNORM,
-      BufferCount = 2,
+      BufferCount = 3,
       SampleCount = 1,
       SwapEffect = SwapEffect.FlipDiscard
     };
