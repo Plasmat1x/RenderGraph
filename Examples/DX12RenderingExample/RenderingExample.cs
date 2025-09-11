@@ -4,6 +4,7 @@ using Examples;
 
 using GraphicsAPI.Descriptions;
 using GraphicsAPI.Enums;
+using GraphicsAPI.Interfaces;
 
 using Resources;
 using Resources.Enums;
@@ -247,8 +248,12 @@ public unsafe class RenderingExample
         Console.WriteLine("🔧 Setting render state (pipeline + root signature)...");
         p_commandBuffer.SetRenderState(p_simpleRenderState);
 
-        var vertexView = p_vertexBuffer.GetDefaultShaderResourceView();
-        var indexView = p_indexBuffer.GetDefaultShaderResourceView();
+        //var vertexView = p_vertexBuffer.GetDefaultShaderResourceView();
+        //var indexView = p_indexBuffer.GetDefaultShaderResourceView();
+
+        var vertexView = CreateVertexBufferView(p_vertexBuffer);
+        var indexView = CreateIndexBufferView(p_indexBuffer);
+
         var constantView = p_constantBuffer.GetDefaultShaderResourceView();
 
         p_commandBuffer.SetVertexBuffer(vertexView, 0);
@@ -511,5 +516,31 @@ public unsafe class RenderingExample
     }
 
     return data;
+  }
+
+  private IBufferView CreateVertexBufferView(DX12Buffer _buffer)
+  {
+    var desc = new BufferViewDescription
+    {
+      ViewType = BufferViewType.VertexBuffer,
+      FirstElement = 0,
+      NumElements = _buffer.Size / _buffer.Stride,
+      StructureByteStride = _buffer.Stride
+    };
+
+    return _buffer.CreateView(desc);
+  }
+
+  private IBufferView CreateIndexBufferView(DX12Buffer _buffer)
+  {
+    var desc = new BufferViewDescription
+    {
+      ViewType = BufferViewType.IndexBuffer,
+      FirstElement = 0,
+      NumElements = _buffer.Size / _buffer.Stride,
+      StructureByteStride = _buffer.Stride
+    };
+
+    return _buffer.CreateView(desc);
   }
 }

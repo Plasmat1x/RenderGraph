@@ -118,21 +118,8 @@ public unsafe class DX12SwapChain: ISwapChain
 
   public void Present(uint _syncInterval = 0)
   {
-    var flags = _syncInterval == 0 ? 
+    var flags = _syncInterval == 0 && SupportsVariableRefreshRate() ? 
                (uint)PresentFlags.PresentAllowTearing : 0u;
-
-
-    //var currentBuffer = p_backBuffers[p_currentBackBufferIndex];
-    //if(currentBuffer.GetCurrentState() != ResourceStates.Present)
-    //{
-    //  // Нужен command list для transition
-    //  var commandList = p_parentDevice.GetImmediateContext();
-    //  DX12ResourceStateHelper.TransitionResource(
-    //      commandList,
-    //      currentBuffer,
-    //      ResourceStates.Present);
-    //  p_parentDevice.ExecuteImmediateContext();
-    //}
 
     HResult hr = p_swapChain->Present(_syncInterval, flags);
 
@@ -168,14 +155,17 @@ public unsafe class DX12SwapChain: ISwapChain
 
     if(hr.IsSuccess && !p_isOccluded)
     {
-      var currentBuffer = p_backBuffers[p_currentBackBufferIndex];
-      currentBuffer.SetCurrentState(ResourceStates.Common);
-
       p_currentBackBufferIndex = p_swapChain->GetCurrentBackBufferIndex();
       p_presentCount++;
 
-      var newCurrentBuffer = p_backBuffers[p_currentBackBufferIndex];
-      newCurrentBuffer.SetCurrentState(ResourceStates.Common);
+      for(uint i = 0; i < p_description.BufferCount; i++)
+      {
+        var buffer = p_backBuffers[i];
+        buffer.SetCurrentState(ResourceStates.Present);
+
+        var resourceComPtr = buffer.GetResource();
+        DX12ResourceStateTracker.RegisterInitialResourceState(resourceComPtr, ResourceStates.Present);
+      }
 
       if(p_debugMode && p_presentCount % 60 == 0)
         Console.WriteLine($"[SwapChain] Presented {p_presentCount} frames");
@@ -413,6 +403,11 @@ public unsafe class DX12SwapChain: ISwapChain
           textureDesc,
           p_descriptorManager,
           p_parentDevice);
+
+      var resourceComPtr = p_backBuffers[i].GetResource();
+      DX12ResourceStateTracker.RegisterInitialResourceState(resourceComPtr, ResourceStates.Present);
+
+      p_backBuffers[i].SetCurrentState(ResourceStates.Present);
 
       if(p_debugMode)
         Console.WriteLine($"[SwapChain] BackBuffer {i} state: {p_backBuffers[i].GetCurrentState()}");

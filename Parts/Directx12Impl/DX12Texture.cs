@@ -52,20 +52,13 @@ public unsafe class DX12Texture: DX12Resource, ITexture
 
     if((p_description.TextureUsage & TextureUsage.BackBuffer) != 0)
     {
-      p_currentState = ResourceStates.Common;
-      Console.WriteLine($"[DX12Texture] BackBuffer {p_description.Name} initialized in Common state");
+      p_currentState = ResourceStates.Present;
+      Console.WriteLine($"[DX12Texture] BackBuffer {p_description.Name} initialized in Present state");
     }
     else
     {
       p_currentState = GetInitialResourceState();
       Console.WriteLine($"[DX12Texture] Texture {p_description.Name} initialized in {p_currentState} state");
-    }
-
-    DX12ResourceStateTracker.RegisterInitialResourceState(_resource, p_currentState);
-
-    if(!string.IsNullOrEmpty(p_name))
-    {
-      DX12Helpers.SetResourceName(p_resource, p_name);
     }
   }
 

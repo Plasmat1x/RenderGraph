@@ -211,20 +211,50 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
   /// Внутренний метод для загрузки данных через command list
   /// Используется только внутри DirectX12 реализации
   /// </summary>
-  internal void SetDataInternal(ID3D12GraphicsCommandList* _commandList, void* _data, ulong _dataSize, ulong _offset)
+  //internal void SetDataInternal(ID3D12GraphicsCommandList* _commandList, void* _data, ulong _dataSize, ulong _offset)
+  //{
+  //  if(p_resource == null)
+  //    throw new InvalidOperationException($"Buffer '{Name}' resource is null - buffer was not created properly");
+
+  //  if(_commandList == null)
+  //    throw new ArgumentNullException(nameof(_commandList), "Command list cannot be null");
+
+  //  if(_data == null)
+  //    throw new ArgumentNullException(nameof(_data), "Data pointer cannot be null");
+
+  //  if(_dataSize == 0)
+  //    throw new ArgumentException("Data size cannot be zero");
+
+  //  if(_offset + _dataSize > p_description.Size)
+  //    throw new ArgumentException($"Data size ({_dataSize}) + offset ({_offset}) exceeds buffer size ({p_description.Size})");
+
+  //  var uploadManager = p_parentDevice.GetUploadManager();
+  //  if(uploadManager == null)
+  //    throw new InvalidOperationException("Upload manager is null");
+
+  //  var barrier = new ResourceBarrier
+  //  {
+  //    Type = ResourceBarrierType.Transition,
+  //    Flags = ResourceBarrierFlags.None
+  //  };
+
+  //  barrier.Anonymous.Transition.PResource = p_resource;
+  //  barrier.Anonymous.Transition.StateBefore = p_currentState;
+  //  barrier.Anonymous.Transition.StateAfter = ResourceStates.CopyDest;
+  //  barrier.Anonymous.Transition.Subresource = D3D12.ResourceBarrierAllSubresources;
+
+
+  //  _commandList->ResourceBarrier(1, &barrier);
+
+  //  uploadManager.UploadBufferData(_commandList, p_resource, _offset, _data, _dataSize);
+
+  //  barrier.Transition.StateBefore = ResourceStates.CopyDest;
+  //  barrier.Transition.StateAfter = p_currentState;
+  //  _commandList->ResourceBarrier(1, &barrier);
+  //}
+
+  internal unsafe void SetDataInternal(ID3D12GraphicsCommandList* _commandList, void* _data, ulong _dataSize, ulong _offset)
   {
-    if(p_resource == null)
-      throw new InvalidOperationException($"Buffer '{Name}' resource is null - buffer was not created properly");
-
-    if(_commandList == null)
-      throw new ArgumentNullException(nameof(_commandList), "Command list cannot be null");
-
-    if(_data == null)
-      throw new ArgumentNullException(nameof(_data), "Data pointer cannot be null");
-
-    if(_dataSize == 0)
-      throw new ArgumentException("Data size cannot be zero");
-
     if(_offset + _dataSize > p_description.Size)
       throw new ArgumentException($"Data size ({_dataSize}) + offset ({_offset}) exceeds buffer size ({p_description.Size})");
 
@@ -243,14 +273,43 @@ public unsafe class DX12Buffer: DX12Resource, IBuffer
     barrier.Anonymous.Transition.StateAfter = ResourceStates.CopyDest;
     barrier.Anonymous.Transition.Subresource = D3D12.ResourceBarrierAllSubresources;
 
-
     _commandList->ResourceBarrier(1, &barrier);
 
     uploadManager.UploadBufferData(_commandList, p_resource, _offset, _data, _dataSize);
 
+    var finalState = GetPostUploadState();
+
     barrier.Transition.StateBefore = ResourceStates.CopyDest;
-    barrier.Transition.StateAfter = p_currentState;
+    barrier.Transition.StateAfter = finalState;
     _commandList->ResourceBarrier(1, &barrier);
+
+    p_currentState = finalState;
+  }
+
+  private ResourceStates GetPostUploadState()
+  {
+    if((p_description.BindFlags & BindFlags.VertexBuffer) != 0 ||
+        (p_description.BindFlags & BindFlags.IndexBuffer) != 0)
+    {
+      return ResourceStates.GenericRead;
+    }
+
+    if((p_description.BindFlags & BindFlags.ConstantBuffer) != 0)
+    {
+      return ResourceStates.VertexAndConstantBuffer;
+    }
+
+    if((p_description.BindFlags & BindFlags.ShaderResource) != 0)
+    {
+      return ResourceStates.NonPixelShaderResource | ResourceStates.PixelShaderResource;
+    }
+
+    if((p_description.BindFlags & BindFlags.UnorderedAccess) != 0)
+    {
+      return ResourceStates.UnorderedAccess;
+    }
+
+    return ResourceStates.Common;
   }
 
   //TODO: Implement ReadBack
