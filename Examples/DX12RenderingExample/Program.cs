@@ -14,11 +14,13 @@ public static class Program
     Console.WriteLine("🚀 Starting DX12 Rendering Example...");
 
     var example = new RenderingExample();
+    int windowWidth = 1920;
+    int windowHeight = 1080;
 
     var window = Window.Create(new WindowOptions
     {
       API = Silk.NET.Windowing.GraphicsAPI.Default,
-      Size = new Vector2D<int>(800, 600),
+      Size = new Vector2D<int>(windowWidth, windowHeight),
       Position = new Vector2D<int>(200, 200),
       IsVisible = true,
       TopMost = false,
@@ -30,7 +32,7 @@ public static class Program
 
     window.Load += () => {
       var mockWindowHandle = window.Native.DXHandle.GetValueOrDefault();
-      example.Initialize(mockWindowHandle, 800, 600);
+      example.Initialize(mockWindowHandle, (uint)windowWidth, (uint)windowHeight);
       example.DemonstrateBatchUpload();
       example.DemonstrateReadback();
     };
