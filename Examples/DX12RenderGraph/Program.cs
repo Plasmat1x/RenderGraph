@@ -1,27 +1,33 @@
+#region Program Entry Point
+
 using System.Text;
-using System.Xml.Linq;
 
 /// <summary>
-/// Точка входа в приложение
+/// Точка входа в программу
 /// </summary>
-public static class Program
+public class Program
 {
   public static void Main(string[] args)
   {
     Console.OutputEncoding = Encoding.UTF8;
-    Console.WriteLine("🎨 Starting Simple RenderGraph + DirectX12 Example...");
+
+    Console.WriteLine("=== RenderGraph + DirectX12 Example ===\n");
 
     try
     {
-      using var example = new SimpleRenderGraphExample();
+      using var example = new RenderGraphDX12Example();
       example.Run();
     }
     catch(Exception ex)
     {
-      Console.WriteLine($"❌ Error: {ex.Message}");
-      Console.WriteLine(ex.StackTrace);
+      Console.WriteLine($"❌ Fatal error: {ex.Message}");
+      Console.WriteLine($"Stack trace: {ex.StackTrace}");
     }
 
-    Console.WriteLine("✅ Example completed!");
+    Console.WriteLine("\n=== Application Finished ===");
+    Console.WriteLine("Press any key to exit...");
+    Console.ReadKey();
   }
 }
+
+#endregion
