@@ -11,10 +11,12 @@ using GraphicsAPI.Commands.Interfaces;
 using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 
+using Resources;
 using Resources.Enums;
 
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
+using Silk.NET.Maths;
 
 using System.Numerics;
 
@@ -141,8 +143,23 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     if(p_executionMode == CommandBufferExecutionMode.Immediate)
     {
       ValidateRecording();
+
+      Console.WriteLine($"\n[CommandBuffer] === DrawIndexed START ===");
+      Console.WriteLine($"[CommandBuffer] IndexCount: {_indexCount}");
+      Console.WriteLine($"[CommandBuffer] InstanceCount: {_instanceCount}");
+      Console.WriteLine($"[CommandBuffer] StartIndex: {_startIndex}");
+      Console.WriteLine($"[CommandBuffer] BaseVertex: {_baseVertex}");
+      Console.WriteLine($"[CommandBuffer] StartInstance: {_startInstance}");
+
+      Console.WriteLine($"[CommandBuffer] Current render state: {(p_currentRenderState != null ? "SET" : "NULL")}");
+
       p_stateTracker.FlushResourceBarriers(p_commandList);
+      Console.WriteLine($"[CommandBuffer] Calling DrawIndexedInstanced...");
+
       p_commandList->DrawIndexedInstanced(_indexCount, _instanceCount, _startIndex, _baseVertex, _startInstance);
+
+      Console.WriteLine($"[CommandBuffer] DrawIndexedInstanced completed");
+      Console.WriteLine($"[CommandBuffer] === DrawIndexed END ===\n");
     }
     else
     {
@@ -254,14 +271,17 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
         break;
 
       case SetViewportCommand viewport:
+        Console.WriteLine($"[CommandBuffer] Processing SetViewportCommand: {viewport.Viewport.Width}x{viewport.Viewport.Height}");
         SetViewportDirectly(viewport.Viewport);
         break;
 
       case SetVertexBufferCommand vertexBuffer:
+        Console.WriteLine($"[CommandBuffer] Processing SetVertexBufferCommand: Slot={vertexBuffer.Slot}");
         SetVertexBufferDirectly(vertexBuffer.Buffer, vertexBuffer.Slot);
         break;
 
       case SetIndexBufferCommand indexBuffer:
+        Console.WriteLine($"[CommandBuffer] Processing SetIndexBufferCommand: Format={indexBuffer.Format}");
         SetIndexBufferDirectly(indexBuffer.Buffer, indexBuffer.Format);
         break;
 
@@ -315,9 +335,9 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
         SetRenderStateDirectly(renderState.RenderState);
         break;
 
-      case SetPrimitiveTopologyCommand topology:
-        Console.WriteLine($"[CommandBuffer] Processing SetPrimitiveTopologyCommand: {topology.Topology}");
-        SetPrimitiveTopologyDirectly(topology.Topology);
+      case SetPrimitiveTopologyCommand primitiveTopology:
+        Console.WriteLine($"[CommandBuffer] Processing SetPrimitiveTopologyCommand: Topology={primitiveTopology.Topology}");
+        SetPrimitiveTopologyDirectly(primitiveTopology.Topology);
         break;
 
       case BeginEventCommand beginEvent:
@@ -330,6 +350,10 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
       case SetMarkerCommand marker:
         SetMarker(marker.Name);
+        break;
+
+      case SetScissorRectCommand rectangle:
+        SetScissorRectDirectly(rectangle.Rect);
         break;
 
       default:
@@ -354,6 +378,30 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     // - Batch обработку ресурсов
     // - Оптимизацию переходов состояний
     ExecuteCommandImmediate(_command);
+  }
+
+  private void SetScissorRectDirectly(Resources.Rectangle _rect)
+  {
+    Console.WriteLine($"\n[CommandBuffer] === SetScissorRectDirectly START ===");
+    Console.WriteLine($"[CommandBuffer] ScissorRect X: {_rect.X}");
+    Console.WriteLine($"[CommandBuffer] ScissorRect Y: {_rect.Y}");
+    Console.WriteLine($"[CommandBuffer] ScissorRect Width: {_rect.Width}");
+    Console.WriteLine($"[CommandBuffer] ScissorRect Height: {_rect.Height}");
+
+    var d3d12Rect = new Box2D<int>
+    {
+      Min = new Vector2D<int>(_rect.X, _rect.Y),
+      Max = new Vector2D<int>(_rect.Width, _rect.Height)
+    };
+
+    Console.WriteLine($"[CommandBuffer] D3D12 Rect Left: {d3d12Rect.Min.X}");
+    Console.WriteLine($"[CommandBuffer] D3D12 Rect Top: {d3d12Rect.Min.Y}");
+    Console.WriteLine($"[CommandBuffer] D3D12 Rect Right: {d3d12Rect.Max.X}");
+    Console.WriteLine($"[CommandBuffer] D3D12 Rect Bottom: {d3d12Rect.Max.Y}");
+
+    p_commandList->RSSetScissorRects(1, &d3d12Rect);
+    Console.WriteLine($"[CommandBuffer] Called RSSetScissorRects");
+    Console.WriteLine($"[CommandBuffer] === SetScissorRectDirectly END ===\n");
   }
 
   /// <summary>
@@ -576,6 +624,14 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void SetViewportDirectly(Resources.Viewport _viewport)
   {
+    Console.WriteLine($"\n[CommandBuffer] === SetViewportDirectly START ===");
+    Console.WriteLine($"[CommandBuffer] Viewport X: {_viewport.X}");
+    Console.WriteLine($"[CommandBuffer] Viewport Y: {_viewport.Y}");
+    Console.WriteLine($"[CommandBuffer] Viewport Width: {_viewport.Width}");
+    Console.WriteLine($"[CommandBuffer] Viewport Height: {_viewport.Height}");
+    Console.WriteLine($"[CommandBuffer] Viewport MinDepth: {_viewport.MinDepth}");
+    Console.WriteLine($"[CommandBuffer] Viewport MaxDepth: {_viewport.MaxDepth}");
+
     var d3d12Viewport = new Silk.NET.Direct3D12.Viewport
     {
       TopLeftX = _viewport.X,
@@ -586,25 +642,106 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
       MaxDepth = _viewport.MaxDepth
     };
 
-    p_commandList->RSSetViewports(1, &d3d12Viewport);
-  }
+    Console.WriteLine($"[CommandBuffer] D3D12 Viewport TopLeftX: {d3d12Viewport.TopLeftX}");
+    Console.WriteLine($"[CommandBuffer] D3D12 Viewport TopLeftY: {d3d12Viewport.TopLeftY}");
+    Console.WriteLine($"[CommandBuffer] D3D12 Viewport Width: {d3d12Viewport.Width}");
+    Console.WriteLine($"[CommandBuffer] D3D12 Viewport Height: {d3d12Viewport.Height}");
 
+    p_commandList->RSSetViewports(1, &d3d12Viewport);
+    Console.WriteLine($"[CommandBuffer] Called RSSetViewports");
+    Console.WriteLine($"[CommandBuffer] === SetViewportDirectly END ===\n");
+  }
   private void SetVertexBufferDirectly(IBufferView _buffer, uint _slot)
   {
+    Console.WriteLine($"\n[CommandBuffer] === SetVertexBufferDirectly START ===");
+    Console.WriteLine($"[CommandBuffer] Slot: {_slot}");
+    Console.WriteLine($"[CommandBuffer] Buffer: {_buffer?.GetType().Name}");
+
     if(_buffer is not DX12BufferView dx12View)
+    {
+      Console.WriteLine($"[CommandBuffer] ERROR: Invalid buffer view type - expected DX12BufferView, got {_buffer?.GetType().Name}");
       throw new ArgumentException("Invalid buffer view type");
+    }
+
+    var buffer = dx12View.Buffer as DX12Buffer;
+    Console.WriteLine($"[CommandBuffer] Buffer name: {buffer?.Name}");
+    Console.WriteLine($"[CommandBuffer] Buffer size: {buffer?.Size} bytes");
+    Console.WriteLine($"[CommandBuffer] Buffer current state: {buffer?.GetCurrentState()}");
+
+    if(buffer != null)
+    {
+      var currentState = buffer.GetCurrentState();
+      var resourcePtr = buffer.GetNativeHandle();
+
+      if(currentState != ResourceStates.GenericRead &&
+          currentState != ResourceStates.VertexAndConstantBuffer)
+      {
+        Console.WriteLine($"[CommandBuffer] WARNING: Vertex buffer in wrong state for IA: {currentState}");
+        Console.WriteLine($"[CommandBuffer] Transitioning vertex buffer: {currentState} → GenericRead");
+
+        p_stateTracker.TransitionResource(buffer.GetResource(), ResourceStates.GenericRead);
+        buffer.SetCurrentState(ResourceStates.GenericRead);
+      }
+      else
+      {
+        Console.WriteLine($"[CommandBuffer] Vertex buffer in correct state: {currentState}");
+      }
+    }
 
     var vbView = dx12View.GetVertexBufferView();
+    Console.WriteLine($"[CommandBuffer] VBView BufferLocation: 0x{vbView.BufferLocation:X16}");
+    Console.WriteLine($"[CommandBuffer] VBView SizeInBytes: {vbView.SizeInBytes}");
+    Console.WriteLine($"[CommandBuffer] VBView StrideInBytes: {vbView.StrideInBytes}");
+
     p_commandList->IASetVertexBuffers(_slot, 1, &vbView);
+    Console.WriteLine($"[CommandBuffer] Called IASetVertexBuffers for slot {_slot}");
+    Console.WriteLine($"[CommandBuffer] === SetVertexBufferDirectly END ===\n");
   }
 
   private void SetIndexBufferDirectly(IBufferView _buffer, IndexFormat _format)
   {
+    Console.WriteLine($"\n[CommandBuffer] === SetIndexBufferDirectly START ===");
+    Console.WriteLine($"[CommandBuffer] Format: {_format}");
+    Console.WriteLine($"[CommandBuffer] Buffer: {_buffer?.GetType().Name}");
+
     if(_buffer is not DX12BufferView dx12View)
+    {
+      Console.WriteLine($"[CommandBuffer] ERROR: Invalid buffer view type - expected DX12BufferView, got {_buffer?.GetType().Name}");
       throw new ArgumentException("Invalid buffer view type");
+    }
+
+    var buffer = dx12View.Buffer as DX12Buffer;
+    Console.WriteLine($"[CommandBuffer] Buffer name: {buffer?.Name}");
+    Console.WriteLine($"[CommandBuffer] Buffer size: {buffer?.Size} bytes");
+    Console.WriteLine($"[CommandBuffer] Buffer current state: {buffer?.GetCurrentState()}");
+
+    if(buffer != null)
+    {
+      var currentState = buffer.GetCurrentState();
+
+      if(currentState != ResourceStates.GenericRead &&
+          currentState != ResourceStates.IndexBuffer)
+      {
+        Console.WriteLine($"[CommandBuffer] WARNING: Index buffer in wrong state for IA: {currentState}");
+        Console.WriteLine($"[CommandBuffer] Transitioning index buffer: {currentState} → GenericRead");
+
+        p_stateTracker.TransitionResource(buffer.GetResource(), ResourceStates.GenericRead);
+        buffer.SetCurrentState(ResourceStates.GenericRead);
+      }
+      else
+      {
+        Console.WriteLine($"[CommandBuffer] Index buffer in correct state: {currentState}");
+      }
+    }
 
     var ibView = dx12View.GetIndexBufferView(_format);
+    Console.WriteLine($"[CommandBuffer] IBView BufferLocation: 0x{ibView.BufferLocation:X16}");
+    Console.WriteLine($"[CommandBuffer] IBView SizeInBytes: {ibView.SizeInBytes}");
+    Console.WriteLine($"[CommandBuffer] IBView Format: {ibView.Format}");
+
     p_commandList->IASetIndexBuffer(&ibView);
+    Console.WriteLine($"[CommandBuffer] Called IASetIndexBuffer");
+    Console.WriteLine($"[CommandBuffer] === SetIndexBufferDirectly END ===\n");
   }
 
   private void SetComputeShaderDirectly(IShader _shader)
@@ -920,8 +1057,15 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void SetPrimitiveTopologyDirectly(PrimitiveTopology _topology)
   {
+    Console.WriteLine($"\n[CommandBuffer] === SetPrimitiveTopologyDirectly START ===");
+    Console.WriteLine($"[CommandBuffer] Topology: {_topology}");
+
     var d3d12Topology = _topology.ConvertToCmd();
+    Console.WriteLine($"[CommandBuffer] D3D12 Topology: {d3d12Topology}");
+
     p_commandList->IASetPrimitiveTopology(d3d12Topology);
+    Console.WriteLine($"[CommandBuffer] Called IASetPrimitiveTopology");
+    Console.WriteLine($"[CommandBuffer] === SetPrimitiveTopologyDirectly END ===\n");
   }
 
   public override void Dispose()

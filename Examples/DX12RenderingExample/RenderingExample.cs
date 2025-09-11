@@ -205,7 +205,7 @@ public unsafe class RenderingExample
       Console.WriteLine($"\n🎨 === RENDER FRAME START [{framesCount}] ===");
 
       var time = (float)(DateTime.Now.TimeOfDay.TotalSeconds);
-      var rotationMatrix = Matrix4x4.CreateRotationZ(time * 0.5f);
+      var rotationMatrix = Matrix4x4.Identity; //Matrix4x4.CreateRotationZ(time * 0.5f);
       UpdateConstantBuffer(rotationMatrix);
 
       p_device.BeginFrame();
@@ -239,6 +239,9 @@ public unsafe class RenderingExample
           MaxDepth = 1.0f
         };
 
+
+        Console.WriteLine("🔧 Setting viewport...");
+        Console.WriteLine($"Viewport: {viewport.Width}x{viewport.Height} at ({viewport.X},{viewport.Y})");
         p_commandBuffer.SetViewport(viewport);
 
         Console.WriteLine("🧹 Clearing render target...");
@@ -247,9 +250,6 @@ public unsafe class RenderingExample
 
         Console.WriteLine("🔧 Setting render state (pipeline + root signature)...");
         p_commandBuffer.SetRenderState(p_simpleRenderState);
-
-        //var vertexView = p_vertexBuffer.GetDefaultShaderResourceView();
-        //var indexView = p_indexBuffer.GetDefaultShaderResourceView();
 
         var vertexView = CreateVertexBufferView(p_vertexBuffer);
         var indexView = CreateIndexBufferView(p_indexBuffer);
