@@ -18,6 +18,7 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -841,10 +842,91 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     };
   }
 
+  ///// <summary>
+  ///// включение логера
+  ///// </summary>
+  ///// <exception cref="ArgumentOutOfRangeException"></exception>
+  //private void StartInfoPump(bool _debug, ILogger _logger)
+  //{
+  //  if(!_debug)
+  //  {
+  //    _logger.Log(LogLevel.Information, $"[{GetType().Name}]: Skipped creation of info pump due to the debug layer not being enabled.");
+  //    return;
+  //  }
+
+  //  HResult hr = p_device.QueryInterface(out p_infoQueue);
+  //  SilkMarshal.ThrowHResult(hr);
+
+  //  var loggerLock = new object();
+
+  //  var messageQueue = new ConcurrentQueue<(LogLevel level, EventId eventId, string message)>();
+
+  //  p_infoPump = Task.Factory.StartNew(() => {
+  //    _logger.Log(LogLevel.Information, $"[{GetType().Name}]: Info queue pump started");
+  //    while(!p_infoPumpCancellationToken.Token.IsCancellationRequested)
+  //    {
+  //      var numMessages = p_infoQueue.GetNumStoredMessages();
+  //      if(numMessages == 0)
+  //      {
+  //        continue;
+  //      }
+
+  //      for(var i = 0ul; i < numMessages; i++)
+  //      {
+  //        nuint msgByteLength;
+  //        SilkMarshal.ThrowHResult(p_infoQueue.Get().GetMessageA(i, null, &msgByteLength));
+  //        using var memory = GlobalMemory.Allocate((int)msgByteLength);
+  //        SilkMarshal.ThrowHResult(p_infoQueue.Get().GetMessageA(i, memory.AsPtr<Message>(), &msgByteLength));
+
+  //        ref var msg = ref memory.AsRef<Message>();
+  //        var descBytes = new Span<byte>(msg.PDescription, (int)msg.DescriptionByteLength);
+  //        var desc = Encoding.UTF8.GetString(descBytes[..^1]);
+  //        var eid = new EventId((int)msg.ID, msg.ID.ToString()["MessageID".Length..]);
+  //        var str = $"{msg.Category.ToString()} (From D3D12): {desc}";
+
+  //        switch(msg.Severity)
+  //        {
+  //          case MessageSeverity.Corruption:
+  //          {
+  //            _logger.LogCritical(eid, str);
+  //            break;
+  //          }
+  //          case MessageSeverity.Error:
+  //          {
+  //            _logger.LogError(eid, str);
+  //            break;
+  //          }
+  //          case MessageSeverity.Warning:
+  //          {
+  //            _logger.LogWarning(eid, str);
+  //            break;
+  //          }
+  //          case MessageSeverity.Info:
+  //          {
+  //            _logger.LogInformation(eid, str);
+  //            break;
+  //          }
+  //          case MessageSeverity.Message:
+  //          {
+  //            _logger.LogTrace(eid, str);
+  //            break;
+  //          }
+  //          default:
+  //            throw new ArgumentOutOfRangeException();
+  //        }
+  //      }
+
+  //      p_infoQueue.ClearStoredMessages();
+  //      p_infoQueue.Dispose();
+  //    }
+
+  //    _logger.Log(LogLevel.Information, "Info queue pump stopped");
+  //  }, p_infoPumpCancellationToken.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+  //}
+
   /// <summary>
-  /// включение логера
+  /// Включение логгера с потокобезопасным доступом к ID3D12InfoQueue
   /// </summary>
-  /// <exception cref="ArgumentOutOfRangeException"></exception>
   private void StartInfoPump(bool _debug, ILogger _logger)
   {
     if(!_debug)
@@ -856,66 +938,99 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     HResult hr = p_device.QueryInterface(out p_infoQueue);
     SilkMarshal.ThrowHResult(hr);
 
+    var loggerLock = new object();
+
+    var messageQueue = new ConcurrentQueue<(LogLevel level, EventId eventId, string message)>();
+
     p_infoPump = Task.Factory.StartNew(() => {
       _logger.Log(LogLevel.Information, $"[{GetType().Name}]: Info queue pump started");
+
+      try
+      {
+        while(!p_infoPumpCancellationToken.Token.IsCancellationRequested)
+        {
+          try
+          {
+            var numMessages = p_infoQueue.GetNumStoredMessages();
+            if(numMessages == 0)
+            {
+              Thread.Sleep(1);
+              continue;
+            }
+
+            for(var i = 0ul; i < numMessages; i++)
+            {
+              if(p_infoPumpCancellationToken.Token.IsCancellationRequested)
+                break;
+
+              try
+              {
+                nuint msgByteLength;
+                SilkMarshal.ThrowHResult(p_infoQueue.Get().GetMessageA(i, null, &msgByteLength));
+
+                using var memory = GlobalMemory.Allocate((int)msgByteLength);
+                SilkMarshal.ThrowHResult(p_infoQueue.Get().GetMessageA(i, memory.AsPtr<Message>(), &msgByteLength));
+
+                ref var msg = ref memory.AsRef<Message>();
+                var descBytes = new Span<byte>(msg.PDescription, (int)msg.DescriptionByteLength);
+                var desc = Encoding.UTF8.GetString(descBytes[..^1]);
+                var eid = new EventId((int)msg.ID, msg.ID.ToString()["MessageID".Length..]);
+                var str = $"{msg.Category.ToString()} (From D3D12): {desc}";
+
+                var logLevel = msg.Severity switch
+                {
+                  MessageSeverity.Corruption => LogLevel.Critical,
+                  MessageSeverity.Error => LogLevel.Error,
+                  MessageSeverity.Warning => LogLevel.Warning,
+                  MessageSeverity.Info => LogLevel.Information,
+                  MessageSeverity.Message => LogLevel.Trace,
+                  _ => LogLevel.Debug
+                };
+
+                messageQueue.Enqueue((logLevel, eid, str));
+              }
+              catch(Exception ex)
+              {
+                messageQueue.Enqueue((LogLevel.Error, new EventId(), $"Error processing D3D12 message: {ex.Message}"));
+              }
+            }
+
+            p_infoQueue.ClearStoredMessages();
+          }
+          catch(Exception ex)
+          {
+            messageQueue.Enqueue((LogLevel.Error, new EventId(), $"Error in info pump loop: {ex.Message}"));
+            Thread.Sleep(100);
+          }
+        }
+      }
+      finally
+      {
+        _logger.Log(LogLevel.Information, "Info queue pump stopped");
+      }
+    }, p_infoPumpCancellationToken.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+    Task.Factory.StartNew(() => {
       while(!p_infoPumpCancellationToken.Token.IsCancellationRequested)
       {
-        var numMessages = p_infoQueue.GetNumStoredMessages();
-        if(numMessages == 0)
+        while(messageQueue.TryDequeue(out var message))
         {
-          continue;
-        }
-
-        for(var i = 0ul; i < numMessages; i++)
-        {
-          nuint msgByteLength;
-          SilkMarshal.ThrowHResult(p_infoQueue.Get().GetMessageA(i, null, &msgByteLength));
-          using var memory = GlobalMemory.Allocate((int)msgByteLength);
-          SilkMarshal.ThrowHResult(p_infoQueue.Get().GetMessageA(i, memory.AsPtr<Message>(), &msgByteLength));
-
-          ref var msg = ref memory.AsRef<Message>();
-          var descBytes = new Span<byte>(msg.PDescription, (int)msg.DescriptionByteLength);
-          var desc = Encoding.UTF8.GetString(descBytes[..^1]);
-          var eid = new EventId((int)msg.ID, msg.ID.ToString()["MessageID".Length..]);
-          var str = $"{msg.Category.ToString()} (From D3D12): {desc}";
-
-          switch(msg.Severity)
+          lock(loggerLock)
           {
-            case MessageSeverity.Corruption:
+            try
             {
-              _logger.LogCritical(eid, str);
-              break;
+              _logger.Log(message.level, message.eventId, message.message);
             }
-            case MessageSeverity.Error:
+            catch(Exception ex)
             {
-              _logger.LogError(eid, str);
-              break;
+              Console.WriteLine($"Logger error: {ex.Message}");
+              Console.WriteLine($"Original message: {message.message}");
             }
-            case MessageSeverity.Warning:
-            {
-              _logger.LogWarning(eid, str);
-              break;
-            }
-            case MessageSeverity.Info:
-            {
-              _logger.LogInformation(eid, str);
-              break;
-            }
-            case MessageSeverity.Message:
-            {
-              _logger.LogTrace(eid, str);
-              break;
-            }
-            default:
-              throw new ArgumentOutOfRangeException();
           }
         }
 
-        p_infoQueue.ClearStoredMessages();
-        p_infoQueue.Dispose();
+        Thread.Sleep(5);
       }
-
-      _logger.Log(LogLevel.Information, "Info queue pump stopped");
     }, p_infoPumpCancellationToken.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
   }
 

@@ -25,6 +25,8 @@ public unsafe class RenderingExample
   private DX12Texture p_depthTexture;
   private DX12TextureView p_depthStencilView;
 
+  public int framesCount;
+
   private struct Vertex
   {
     public Vector3 Position;
@@ -235,10 +237,11 @@ public unsafe class RenderingExample
           MinDepth = 0.0f,
           MaxDepth = 1.0f
         };
+
         p_commandBuffer.SetViewport(viewport);
 
         Console.WriteLine("🧹 Clearing render target...");
-        p_commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+        p_commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
         p_commandBuffer.ClearDepthStencil(p_depthStencilView, ClearFlags.Depth, 1.0f, 0);
 
         Console.WriteLine("🔧 Setting render state (pipeline + root signature)...");
@@ -293,6 +296,8 @@ public unsafe class RenderingExample
       Console.WriteLine($"Stack trace: {ex.StackTrace}");
       throw;
     }
+
+    framesCount++;
   }
 
   private void UpdateConstantBuffer(Matrix4x4 _worldViewProj)
