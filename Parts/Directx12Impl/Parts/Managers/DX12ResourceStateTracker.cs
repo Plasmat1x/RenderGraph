@@ -9,6 +9,7 @@ public class DX12ResourceStateTracker: IDisposable
 
   private readonly Dictionary<ComPtr<ID3D12Resource>, ResourceStates> p_finalResourceStates = [];
   private readonly Dictionary<ComPtr<ID3D12Resource>, ResourceStates> p_pendingResourceStates = [];
+
   private List<ResourceBarrier> p_pendingResourceBarriers = [];
   private List<ResourceBarrier> p_resourceBarriers = [];
 
@@ -42,6 +43,8 @@ public class DX12ResourceStateTracker: IDisposable
     }
     else
     {
+      var currentState = GetResourceCurrentState(_resource);
+
       p_pendingResourceStates[_resource] = _stateAfter;
 
       var barrier = new ResourceBarrier
@@ -51,10 +54,13 @@ public class DX12ResourceStateTracker: IDisposable
       };
 
       barrier.Anonymous.Transition.PResource = _resource;
+      barrier.Anonymous.Transition.StateBefore = currentState;
       barrier.Anonymous.Transition.StateAfter = _stateAfter;
       barrier.Anonymous.Transition.Subresource = _subresource;
 
       p_pendingResourceBarriers.Add(barrier);
+
+      p_finalResourceStates[_resource] = _stateAfter;
     }
   }
 
@@ -166,6 +172,21 @@ public class DX12ResourceStateTracker: IDisposable
   }
 
   public int GetPengingBarrierCount() => p_pendingResourceBarriers.Count + p_resourceBarriers.Count;
+
+  private ResourceStates GetResourceCurrentState(ComPtr<ID3D12Resource> _resource)
+  {
+    if(p_finalResourceStates.TryGetValue(_resource, out var finalState))
+    {
+      return finalState;
+    }
+
+    if(s_globalResourceStates.TryGetValue(_resource, out var initialState))
+    {
+      return initialState;
+    }
+
+    return ResourceStates.Common;
+  }
 
   private unsafe void AddResourceBarrier(ComPtr<ID3D12Resource> _resource, ResourceStates _stateBefore, ResourceStates _stateAfter, uint _subresource)
   {

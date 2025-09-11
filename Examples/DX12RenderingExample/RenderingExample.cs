@@ -201,7 +201,7 @@ public unsafe class RenderingExample
   {
     try
     {
-      Console.WriteLine("\n🎨 === RENDER FRAME START ===");
+      Console.WriteLine($"\n🎨 === RENDER FRAME START [{framesCount}] ===");
 
       var time = (float)(DateTime.Now.TimeOfDay.TotalSeconds);
       var rotationMatrix = Matrix4x4.CreateRotationZ(time * 0.5f);
