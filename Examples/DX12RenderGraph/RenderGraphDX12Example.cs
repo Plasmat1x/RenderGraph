@@ -89,7 +89,6 @@ public unsafe class RenderGraphDX12Example: IDisposable
   /// </summary>
   private void CreateBackBufferPlaceholder()
   {
-    // Создаем временную текстуру которая будет служить placeholder для back buffer
     var builder = new RenderGraphBuilder(_renderGraph.ResourceManager);
     _backBufferHandle = builder.CreateColorTarget(
         "BackBufferPlaceholder",
