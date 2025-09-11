@@ -16,6 +16,15 @@ public class DX12ResourceStateTracker: IDisposable
 
   public DX12ResourceStateTracker() { }
 
+  public static void RegisterInitialResourceState(ComPtr<ID3D12Resource> _resource, ResourceStates _initialState)
+  {
+    lock(s_globalMutex)
+    {
+      s_globalResourceStates[_resource] = _initialState;
+      Console.WriteLine($"[StateTracker] Registered initial state {_initialState} for resource");
+    }
+  }
+
   public unsafe void TransitionResource(ComPtr<ID3D12Resource> _resource, ResourceStates _stateAfter, uint _subresource = D3D12.ResourceBarrierAllSubresources)
   {
     if(_resource.Handle == null)
@@ -75,15 +84,35 @@ public class DX12ResourceStateTracker: IDisposable
 
   public unsafe void FlushResourceBarriers(ComPtr<ID3D12GraphicsCommandList> _commandList)
   {
+    ResolvePendingResourceBarriers();
+
     if(p_resourceBarriers.Count == 0)
+    {
+      Console.WriteLine("[StateTracker] No barriers to flush");
       return;
+    }
+
+    Console.WriteLine($"[StateTracker] Flushing {p_resourceBarriers.Count} resource barriers");
+
+    for(int i = 0; i < p_resourceBarriers.Count; i++)
+    {
+      var barrier = p_resourceBarriers[i];
+      if(barrier.Type == ResourceBarrierType.Transition)
+      {
+        Console.WriteLine($"[StateTracker]   Barrier {i}: {barrier.Anonymous.Transition.StateBefore} → {barrier.Anonymous.Transition.StateAfter}");
+      }
+    }
 
     fixed(ResourceBarrier* pBarriers = p_resourceBarriers.ToArray())
     {
       _commandList.ResourceBarrier((uint)p_resourceBarriers.Count, pBarriers);
     }
 
+    CommitFinalResourceStates();
+
     p_resourceBarriers.Clear();
+
+    Console.WriteLine("[StateTracker] Resource barriers flushed and committed");
   }
 
   public unsafe void ResolvePendingResourceBarriers()
