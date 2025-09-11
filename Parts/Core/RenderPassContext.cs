@@ -33,14 +33,40 @@ public class RenderPassContext
 
   public ITextureView GetTextureView(ResourceHandle _handle, TextureViewType _viewType)
   {
-    var texture = GetTexture(_handle);
-    return new TextureViewStub(texture, _viewType);
+    if(Resources == null)
+      throw new InvalidOperationException("ResourceManager is not set in the context");
+
+    var texture = Resources.GetTexture(_handle);
+
+    var desc = new TextureViewDescription
+    {
+      ViewType = _viewType,
+      Format = texture.Format,
+      MostDetailedMip = 0,
+      MipLevels = texture.MipLevels,
+      FirstArraySlice = 0,
+      ArraySize = texture.ArraySize
+    };
+
+    return texture.CreateView(desc);
   }
 
   public IBufferView GetBufferView(ResourceHandle _handle, BufferViewType _viewType)
   {
-    var buffer = GetBuffer(_handle);
-    return new BufferViewStub(buffer, _viewType);
+    if(Resources == null)
+      throw new InvalidOperationException("ResourceManager is not set in the context");
+
+    var buffer = Resources.GetBuffer(_handle);
+
+    var desc = new BufferViewDescription
+    {
+      ViewType = _viewType,
+      FirstElement = 0,
+      NumElements = buffer.Size / Math.Max(buffer.Stride, 1),
+      StructureByteStride = buffer.Stride
+    };
+
+    return buffer.CreateView(desc);
   }
 
   public void SetViewport(float _x, float _y, float _width, float _height, float _minDepth = 0.0f, float _maxDepth = 1.0f)
@@ -62,54 +88,4 @@ public class RenderPassContext
   }
 
   public void SetFullScreenViewport() => SetViewport(0, 0, ViewportWidth, ViewportHeight);
-}
-
-internal class BufferViewStub: IBufferView
-{
-  public BufferViewStub(IBuffer _buffer, BufferViewType _viewType)
-  {
-    Buffer = _buffer;
-    ViewType = _viewType;
-  }
-
-  public IBuffer Buffer { get; }
-
-  public BufferViewType ViewType { get; }
-
-  public BufferViewDescription Description => throw new NotImplementedException();
-
-  public void Dispose()
-  {
-    throw new NotImplementedException();
-  }
-
-  public nint GetNativeHandle()
-  {
-    throw new NotImplementedException();
-  }
-}
-
-internal class TextureViewStub: ITextureView
-{
-  public TextureViewStub(ITexture _texture, TextureViewType _viewType)
-  {
-    Texture = _texture;
-    ViewType = _viewType;
-  }
-
-  public ITexture Texture { get; }
-
-  public TextureViewType ViewType { get; }
-
-  public TextureViewDescription Description => throw new NotImplementedException();
-
-  public void Dispose()
-  {
-    throw new NotImplementedException();
-  }
-
-  public nint GetNativeHandle()
-  {
-    throw new NotImplementedException();
-  }
 }
