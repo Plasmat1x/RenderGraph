@@ -137,13 +137,25 @@ public class DX12ResourceStateTracker: IDisposable
         var stateBefore = ResourceStates.Common;
 
         if(s_globalResourceStates.TryGetValue(resource, out var globalState))
+        {
           stateBefore = globalState;
+        }
+        else if(p_finalResourceStates.TryGetValue(resource, out var localState))
+        {
+          stateBefore = localState;
+        }
 
         if(stateBefore != stateAfter)
         {
           var resolvedBarrier = barrier;
           resolvedBarrier.Anonymous.Transition.StateBefore = stateBefore;
           p_resourceBarriers.Add(resolvedBarrier);
+
+          Console.WriteLine($"[StateTracker] Resolved barrier: {stateBefore} → {stateAfter}");
+        }
+        else
+        {
+          Console.WriteLine($"[StateTracker] Skipped barrier: already in state {stateAfter}");
         }
 
         p_finalResourceStates[resource] = stateAfter;

@@ -30,7 +30,7 @@ public static class Program
 
     window.Load += () => {
       var mockWindowHandle = window.Native.DXHandle.GetValueOrDefault();
-      example.Initialize(mockWindowHandle, 1920, 1080);
+      example.Initialize(mockWindowHandle, 800, 600);
       example.DemonstrateBatchUpload();
       example.DemonstrateReadback();
     };
@@ -38,9 +38,9 @@ public static class Program
     window.Closing += example.Cleanup;
     window.Render += _ => example.Render();
     window.Update += _ => {
-      if(example.framesCount >= 10)
+      if(example.framesCount >= 3)
       {
-        window.Close();
+        //window.Close();
       }
     };
 

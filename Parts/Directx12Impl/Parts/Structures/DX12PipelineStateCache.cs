@@ -8,6 +8,8 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
 using Silk.NET.DXGI;
 
+using System.Runtime.InteropServices;
+
 namespace Directx12Impl.Parts.Structures;
 public unsafe class DX12PipelineStateCache: IDisposable
 {
@@ -72,13 +74,11 @@ public unsafe class DX12PipelineStateCache: IDisposable
       }
       else
       {
-        // Автоматическое создание из рефлексии
         var vsReflection = vs.GetReflection();
         var autoLayout = InputLayoutDescription.FromReflection(vsReflection);
         (inputElements, stringPointers) = autoLayout.ConvertWithMemory();
       }
 
-      // Создание PSO описания
       var psoDesc = new GraphicsPipelineStateDesc
       {
         PRootSignature = _key.RootSignature.Handle,
@@ -106,7 +106,6 @@ public unsafe class DX12PipelineStateCache: IDisposable
         Flags = PipelineStateFlags.None
       };
 
-      // Установка форматов render targets
       for(var i = 0; i < 8; i++)
       {
         if(_key.PipelineStateDescription.RenderTargetFormats != null &&
@@ -120,7 +119,6 @@ public unsafe class DX12PipelineStateCache: IDisposable
         }
       }
 
-      // Установка Input Layout
       if(inputElements != null && inputElements.Length > 0)
       {
         fixed(InputElementDesc* pElements = inputElements)
@@ -131,7 +129,6 @@ public unsafe class DX12PipelineStateCache: IDisposable
             NumElements = (uint)inputElements.Length
           };
 
-          // Создание PSO
           ID3D12PipelineState* pipelineState;
           fixed(Guid* pGuid = &ID3D12PipelineState.Guid)
           {
@@ -139,11 +136,32 @@ public unsafe class DX12PipelineStateCache: IDisposable
 
             if(hr.IsFailure)
             {
-              // Попытка получить подробную информацию об ошибке
               string errorDetails = GetPSOCreationErrorDetails(hr);
               throw new InvalidOperationException(
                   $"Failed to create graphics pipeline state: 0x{hr.Value:X8}\n{errorDetails}");
             }
+
+            Console.WriteLine("=== INPUT LAYOUT DEBUG ===");
+            if(inputElements != null)
+            {
+              Console.WriteLine($"Input Layout has {inputElements.Length} elements:");
+              for(int i = 0; i < inputElements.Length; i++)
+              {
+                var element = inputElements[i];
+                Console.WriteLine($"  Element {i}:");
+                Console.WriteLine($"    SemanticName: {Marshal.PtrToStringAnsi((IntPtr)element.SemanticName)}");
+                Console.WriteLine($"    SemanticIndex: {element.SemanticIndex}");
+                Console.WriteLine($"    Format: {element.Format}");
+                Console.WriteLine($"    InputSlot: {element.InputSlot}");
+                Console.WriteLine($"    AlignedByteOffset: {element.AlignedByteOffset}");
+                Console.WriteLine($"    InputSlotClass: {element.InputSlotClass}");
+              }
+            }
+            else
+            {
+              Console.WriteLine("Input Layout is NULL!");
+            }
+            Console.WriteLine("=== END INPUT LAYOUT DEBUG ===");
           }
 
           return pipelineState;
@@ -151,7 +169,6 @@ public unsafe class DX12PipelineStateCache: IDisposable
       }
       else
       {
-        // Без Input Layout (редкий случай)
         psoDesc.InputLayout = new InputLayoutDesc
         {
           PInputElementDescs = null,
@@ -170,7 +187,6 @@ public unsafe class DX12PipelineStateCache: IDisposable
     }
     finally
     {
-      // ВАЖНО: Освобождаем память выделенную для строк
       if(stringPointers != null)
       {
         InputLayoutDescriptionExtensions.FreeStringPointers(stringPointers);
@@ -233,11 +249,9 @@ public unsafe class DX12PipelineStateCache: IDisposable
 
   private string GetPSOCreationErrorDetails(HResult _hr)
   {
-    // Попытка получить более детальную информацию об ошибке
     var errorMessage = new System.Text.StringBuilder();
     errorMessage.AppendLine($"HRESULT: 0x{_hr.Value:X8}");
 
-    // Общие ошибки создания PSO
     switch((uint)_hr.Value)
     {
       case 0x80070057: // E_INVALIDARG
