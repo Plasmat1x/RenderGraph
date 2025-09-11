@@ -238,7 +238,7 @@ public unsafe class RenderingExample
         p_commandBuffer.SetViewport(viewport);
 
         Console.WriteLine("🧹 Clearing render target...");
-        p_commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
+        p_commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(1.0f, 0.2f, 0.2f, 1.0f));
         p_commandBuffer.ClearDepthStencil(p_depthStencilView, ClearFlags.Depth, 1.0f, 0);
 
         Console.WriteLine("🔧 Setting render state (pipeline + root signature)...");
