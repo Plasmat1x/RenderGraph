@@ -245,6 +245,7 @@ public class ResourceManager: IDisposable
       throw new ArgumentNullException(nameof(_texture));
 
     var handle = p_handleGenerator.Generate(ResourceType.Texture2D, _name);
+    p_resources[handle] = _texture;
     p_resourceDescriptions[handle] = _texture.Description;
     p_resourceLifetimes[handle] = ResourceLifetime.Imported;
 
@@ -257,6 +258,7 @@ public class ResourceManager: IDisposable
       throw new ArgumentNullException(nameof(_buffer));
 
     var handle = p_handleGenerator.Generate(ResourceType.Buffer, _name);
+    p_resources[handle] = _buffer;
     p_resourceDescriptions[handle] = _buffer.Description;
     p_resourceLifetimes[handle] = ResourceLifetime.Imported;
 

@@ -40,7 +40,7 @@ public static class Program
     window.Update += _ => {
       if(example.framesCount >= 10)
       {
-        window.Close();
+        //window.Close();
       }
     };
 

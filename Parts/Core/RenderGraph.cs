@@ -36,6 +36,8 @@ public class RenderGraph: IDisposable
   public IReadOnlyList<RenderPass> Passes => p_passes.AsReadOnly();
   public IReadOnlyList<RenderPass> ExecutionOrder => p_executionOrder?.AsReadOnly();
   public FrameData FrameData => p_frameData;
+  
+  public ResourceManager ResourceManager => p_resourceManager;
 
   public void AddPass<T>(T _pass) where T : RenderPass
   {
