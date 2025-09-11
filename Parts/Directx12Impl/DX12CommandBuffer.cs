@@ -189,6 +189,20 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     }
   }
 
+  public override void SetConstantBuffer(ShaderStage _stage, uint _slot, IBufferView _buffer)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      var cmd = new SetConstantBufferCommand(_stage, _slot, _buffer);
+      SetConstantBufferDirectly(cmd);
+    }
+    else
+    {
+      base.SetConstantBuffer(_stage, _slot, _buffer);
+    }
+  }
+
   public void TransitionBackBufferForPresent(DX12Texture _backBuffer)
   {
     Console.WriteLine("\n[CommandBuffer] === TransitionBackBufferForPresent START ===");
@@ -263,11 +277,31 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
         SetIndexBufferDirectly(indexBuffer.Buffer, indexBuffer.Format);
         break;
 
+      case SetConstantBufferCommand constantBuffer:
+        Console.WriteLine($"[CommandBuffer] Processing SetConstantBufferCommand: Stage={constantBuffer.Stage}, Slot={constantBuffer.Slot}");
+        SetConstantBufferDirectly(constantBuffer);
+        break;
+
+      case SetShaderResourceCommand shaderResource:
+        Console.WriteLine($"[CommandBuffer] Processing SetShaderResourceCommand: Stage={shaderResource.Stage}, Slot={shaderResource.Slot}");
+        SetShaderResourceDirectly(shaderResource);
+        break;
+
+      case SetSamplerCommand sampler:
+        Console.WriteLine($"[CommandBuffer] Processing SetSamplerCommand: Stage={sampler.Stage}, Slot={sampler.Slot}");
+        SetSamplerDirectly(sampler);
+        break;
+
+      case SetUnorderedAccessCommand uav:
+        Console.WriteLine($"[CommandBuffer] Processing SetUnorderedAccessCommand: Stage={uav.Stage}, Slot={uav.Slot}");
+        SetUnorderedAccessDirectly(uav);
+        break;
+
       case TransitionResourceCommand transition:
         if(transition.Resource is DX12Resource dx12Resource)
         {
           p_stateTracker.TransitionResource(dx12Resource.GetResource(),
-            transition.NewState.Convert());
+              transition.NewState.Convert());
         }
         break;
 
@@ -288,7 +322,30 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
         SetPixelShaderDirectly(pixelShader.Shader);
         break;
 
+      case SetRenderStateCommand renderState:
+        Console.WriteLine($"[CommandBuffer] Processing SetRenderStateCommand");
+        SetRenderStateDirectly(renderState.RenderState);
+        break;
+
+      case SetPrimitiveTopologyCommand topology:
+        Console.WriteLine($"[CommandBuffer] Processing SetPrimitiveTopologyCommand: {topology.Topology}");
+        SetPrimitiveTopologyDirectly(topology.Topology);
+        break;
+
+      case BeginEventCommand beginEvent:
+        BeginEvent(beginEvent.Name);
+        break;
+
+      case EndEventCommand:
+        EndEvent();
+        break;
+
+      case SetMarkerCommand marker:
+        SetMarker(marker.Name);
+        break;
+
       default:
+        Console.WriteLine($"[CommandBuffer] ⚠️ WARNING: Unsupported command type {_command.GetType().Name} in immediate mode");
         ExecuteCommandGeneric(_command);
         break;
     }
@@ -585,6 +642,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
 
   private void SetConstantBufferDirectly(SetConstantBufferCommand _cmd)
   {
+
     Console.WriteLine($"\n[CommandBuffer] === SetConstantBufferDirectly START ===");
     Console.WriteLine($"[CommandBuffer] Stage: {_cmd.Stage}, Slot: {_cmd.Slot}");
 

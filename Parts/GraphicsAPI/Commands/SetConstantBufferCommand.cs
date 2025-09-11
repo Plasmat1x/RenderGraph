@@ -9,4 +9,5 @@ public record SetConstantBufferCommand(ShaderStage Stage, uint Slot, IBufferView
 {
   public CommandType Type => CommandType.SetConstantBuffer;
   public int SizeInBytes => sizeof(int) + sizeof(uint) + sizeof(long);
+  public IBufferView Resource => Buffer;
 }
