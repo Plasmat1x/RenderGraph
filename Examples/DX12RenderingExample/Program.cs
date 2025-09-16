@@ -7,6 +7,9 @@ namespace DX12RenderingExample;
 
 public static class Program
 {
+  //TODO: треугольник рисуется но у него цвета нет, поэтому не отображается.
+  //необходимо проверить шейдеры и все с этм связаное.
+  //Есть вероятность что матрицы используются в Col-major, что так же может влиять на отображение
   public static void Main(string[] args)
   {
     Console.OutputEncoding = Encoding.UTF8;
@@ -40,7 +43,7 @@ public static class Program
     window.Closing += example.Cleanup;
     window.Render += _ => example.Render();
     window.Update += _ => {
-      if(example.framesCount >= 3)
+      if(example.framesCount >= 10)
       {
         //window.Close();
       }

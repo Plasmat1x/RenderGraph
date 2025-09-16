@@ -132,7 +132,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   public CommandBuffer CreateCommandBuffer(CommandBufferType _type)
   {
     return CreateCommandBuffer(_type, CommandBufferExecutionMode.Immediate);
-
   }
 
   public CommandBuffer CreateCommandBuffer(CommandBufferType _type, CommandBufferExecutionMode _mode = CommandBufferExecutionMode.Immediate)
@@ -311,6 +310,8 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
   {
     if(_commandBuffer == null)
       throw new ArgumentNullException(nameof(_commandBuffer));
+
+
 
     if(_commandBuffer is DX12CommandBuffer dx12Buffer)
     {

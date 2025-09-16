@@ -16,6 +16,7 @@ using Resources.Enums;
 
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D12;
+using Silk.NET.DXGI;
 using Silk.NET.Maths;
 
 using System.Numerics;
@@ -220,6 +221,71 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     }
   }
 
+  public override void SetViewport(Resources.Viewport _viewport)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      SetViewportDirectly(_viewport);
+    }
+    else
+    {
+      base.SetViewport(_viewport);
+    }
+  }
+
+  public override void SetScissorRect(Resources.Rectangle _rect)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      SetScissorRectDirectly(_rect);
+    }
+    else
+    {
+      base.SetScissorRect(_rect);
+    }
+  }
+
+  public override void SetVertexBuffer(IBufferView _vertices, uint _slot)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      SetVertexBufferDirectly(_vertices, _slot);
+    }
+    else
+    {
+      base.SetVertexBuffer(_vertices);
+    }
+  }
+
+  public override void SetIndexBuffer(IBufferView _indices, IndexFormat _format)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      SetIndexBufferDirectly(_indices, _format);
+    }
+    else
+    {
+      base.SetIndexBuffer(_indices, _format);
+    }
+  }
+
+  public override void ClearDepthStencil(ITextureView _target, GraphicsAPI.Enums.ClearFlags _flags, float _depth, byte _stencil)
+  {
+    if(p_executionMode == CommandBufferExecutionMode.Immediate)
+    {
+      ValidateRecording();
+      ClearDepthStencilDirectly(_target, _flags, _depth, _stencil);
+    }
+    else
+    {
+      base.ClearDepthStencil(_target, _flags, _depth, _stencil);
+    }
+  }
+
   public void TransitionBackBufferForPresent(DX12Texture _backBuffer)
   {
     var barrier = new ResourceBarrier
@@ -237,6 +303,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     p_commandList->ResourceBarrier(1, &barrier);
     _backBuffer.SetCurrentState(ResourceStates.Present);
   }
+
 
   // === Методы прямого выполнения ===
 
@@ -273,6 +340,11 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
       case SetViewportCommand viewport:
         Console.WriteLine($"[CommandBuffer] Processing SetViewportCommand: {viewport.Viewport.Width}x{viewport.Viewport.Height}");
         SetViewportDirectly(viewport.Viewport);
+        break;
+
+      case SetScissorRectCommand rectangle:
+        Console.WriteLine($"[CommandBuffer] Processing SetScissorRectCommand: ({rectangle.Rect.X},{rectangle.Rect.Y},{rectangle.Rect.Width},{rectangle.Rect.Height})");
+        SetScissorRectDirectly(rectangle.Rect);
         break;
 
       case SetVertexBufferCommand vertexBuffer:
@@ -352,10 +424,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
         SetMarker(marker.Name);
         break;
 
-      case SetScissorRectCommand rectangle:
-        SetScissorRectDirectly(rectangle.Rect);
-        break;
-
       default:
         Console.WriteLine($"[CommandBuffer] ⚠️ WARNING: Unsupported command type {_command.GetType().Name} in immediate mode");
         ExecuteCommandGeneric(_command);
@@ -391,7 +459,7 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     var d3d12Rect = new Box2D<int>
     {
       Min = new Vector2D<int>(_rect.X, _rect.Y),
-      Max = new Vector2D<int>(_rect.Width, _rect.Height)
+      Max = new Vector2D<int>(_rect.X + _rect.Width, _rect.Y + _rect.Height)
     };
 
     Console.WriteLine($"[CommandBuffer] D3D12 Rect Left: {d3d12Rect.Min.X}");
@@ -1026,32 +1094,6 @@ public unsafe class DX12CommandBuffer: GenericCommandBuffer
     else
     {
       base.SetPrimitiveTopology(_topology);
-    }
-  }
-
-  public override void SetIndexBuffer(IBufferView _buffer, IndexFormat _format)
-  {
-    if(p_executionMode == CommandBufferExecutionMode.Immediate)
-    {
-      ValidateRecording();
-      SetIndexBufferDirectly(_buffer, _format);
-    }
-    else
-    {
-      base.SetIndexBuffer(_buffer, _format);
-    }
-  }
-
-  public override void SetVertexBuffer(IBufferView _buffer, uint _slot)
-  {
-    if(p_executionMode == CommandBufferExecutionMode.Immediate)
-    {
-      ValidateRecording();
-      SetVertexBufferDirectly(_buffer, _slot);
-    }
-    else
-    {
-      base.SetVertexBuffer(_buffer, _slot);
     }
   }
 

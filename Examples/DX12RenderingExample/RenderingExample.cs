@@ -123,9 +123,9 @@ public unsafe class RenderingExample
   {
     var vertices = new Vertex[]
     {
-            new Vertex(new Vector3( 0.0f,  0.5f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f)), // Top (red)
-            new Vertex(new Vector3(-0.5f, -0.5f, 0.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f)), // Bottom-left (green)
-            new Vertex(new Vector3( 0.5f, -0.5f, 0.0f), new Vector4(0.0f, 0.0f, 1.0f, 1.0f))  // Bottom-right (blue)
+      new Vertex(new Vector3( 0.0f,  0.5f, 0.0f), new Vector4(1.0f, 0.0f, 0.0f, 1.0f)), // Top (red)
+      new Vertex(new Vector3(-0.5f, -0.5f, 0.0f), new Vector4(0.0f, 1.0f, 0.0f, 1.0f)), // Bottom-left (green)
+      new Vertex(new Vector3( 0.5f, -0.5f, 0.0f), new Vector4(0.0f, 0.0f, 1.0f, 1.0f))  // Bottom-right (blue)
     };
 
     var vbDesc = new BufferDescription
@@ -139,9 +139,9 @@ public unsafe class RenderingExample
     };
 
     p_vertexBuffer = p_device.CreateBuffer(vbDesc) as DX12Buffer;
-
     p_vertexBuffer.SetData(vertices);
     Console.WriteLine($"✅ Uploaded {vertices.Length} vertices to vertex buffer");
+    p_device.WaitForGPU();
 
     var indices = new ushort[] { 0, 1, 2 };
 
@@ -156,9 +156,10 @@ public unsafe class RenderingExample
     };
 
     p_indexBuffer = p_device.CreateBuffer(ibDesc) as DX12Buffer;
-
     p_indexBuffer.SetData(indices);
     Console.WriteLine($"✅ Uploaded {indices.Length} indices to index buffer");
+
+    p_device.WaitForGPU();
 
     var cbDesc = new BufferDescription
     {
@@ -205,7 +206,7 @@ public unsafe class RenderingExample
       Console.WriteLine($"\n🎨 === RENDER FRAME START [{framesCount}] ===");
 
       var time = (float)(DateTime.Now.TimeOfDay.TotalSeconds);
-      var rotationMatrix = Matrix4x4.Identity; //Matrix4x4.CreateRotationZ(time * 0.5f);
+      var rotationMatrix = Matrix4x4.Transpose(Matrix4x4.CreateRotationZ(time * 0.5f));
       UpdateConstantBuffer(rotationMatrix);
 
       p_device.BeginFrame();
@@ -239,14 +240,25 @@ public unsafe class RenderingExample
           MaxDepth = 1.0f
         };
 
-
         Console.WriteLine("🔧 Setting viewport...");
         Console.WriteLine($"Viewport: {viewport.Width}x{viewport.Height} at ({viewport.X},{viewport.Y})");
         p_commandBuffer.SetViewport(viewport);
 
+        var scissorRect = new Resources.Rectangle
+        {
+          X = 0,
+          Y = 0,
+          Width = (int)viewport.Width,
+          Height = (int)viewport.Height
+        };
+
+        Console.WriteLine("🔧 Setting scissor rect...");
+        p_commandBuffer.SetScissorRect(scissorRect);
+        Console.WriteLine($"✅ Scissor rect set: {scissorRect.Width}x{scissorRect.Height}");
+
         Console.WriteLine("🧹 Clearing render target...");
         p_commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
-        p_commandBuffer.ClearDepthStencil(p_depthStencilView, ClearFlags.Depth, 1.0f, 0);
+        //p_commandBuffer.ClearDepthStencil(p_depthStencilView, ClearFlags.Depth, 1.0f, 0);
 
         Console.WriteLine("🔧 Setting render state (pipeline + root signature)...");
         p_commandBuffer.SetRenderState(p_simpleRenderState);
