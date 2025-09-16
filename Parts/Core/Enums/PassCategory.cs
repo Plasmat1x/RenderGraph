@@ -9,5 +9,6 @@ public enum PassCategory
   PostProcessing,
   UI,
   Debug,
-  Finalization
+  Finalization,
+  Utility
 }

@@ -28,7 +28,6 @@ public unsafe class DX12BufferView: IBufferView
     p_buffer = _buffer ?? throw new ArgumentNullException(nameof(_buffer));
     p_description = _description;
 
-    // Создаем дескриптор для CBV/SRV/UAV
     p_descriptorHandle = CreateDescriptor(_descriptorManager);
   }
 
@@ -53,7 +52,6 @@ public unsafe class DX12BufferView: IBufferView
   {
     var allocation = _descriptorManager.AllocateCBVSRVUAV();
 
-    // Определяем тип представления на основе usage буфера
     if(p_buffer.Description.BufferUsage == BufferUsage.Constant)
     {
       CreateConstantBufferView(allocation.CpuHandle);
