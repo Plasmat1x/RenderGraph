@@ -28,7 +28,6 @@ public unsafe class RenderingExample
 
   public int framesCount;
 
-  [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
   private struct Vertex
   {
     public Vector3 Position;
