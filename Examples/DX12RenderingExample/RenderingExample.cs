@@ -28,6 +28,7 @@ public unsafe class RenderingExample
 
   public int framesCount;
 
+  [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
   private struct Vertex
   {
     public Vector3 Position;
@@ -143,7 +144,7 @@ public unsafe class RenderingExample
     Console.WriteLine($"✅ Uploaded {vertices.Length} vertices to vertex buffer");
     p_device.WaitForGPU();
 
-    var indices = new ushort[] { 0, 1, 2 };
+    var indices = new ushort[] { 0, 2, 1 };
 
     var ibDesc = new BufferDescription
     {
@@ -258,7 +259,7 @@ public unsafe class RenderingExample
 
         Console.WriteLine("🧹 Clearing render target...");
         p_commandBuffer.ClearRenderTarget(renderTargetView, new Vector4(0.2f, 0.3f, 0.4f, 1.0f));
-        //p_commandBuffer.ClearDepthStencil(p_depthStencilView, ClearFlags.Depth, 1.0f, 0);
+        p_commandBuffer.ClearDepthStencil(p_depthStencilView, ClearFlags.Depth, 1.0f, 0);
 
         Console.WriteLine("🔧 Setting render state (pipeline + root signature)...");
         p_commandBuffer.SetRenderState(p_simpleRenderState);
