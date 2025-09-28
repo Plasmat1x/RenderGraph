@@ -26,8 +26,8 @@ public class RenderGraphScenarios
 
     var singlePass = new SimpleRenderToTexturePass("SinglePass")
     {
-      OutputWidth = 640,
-      OutputHeight = 480
+      OutputWidth = 1920,
+      OutputHeight = 1080
     };
 
     renderGraph.AddPass(singlePass);

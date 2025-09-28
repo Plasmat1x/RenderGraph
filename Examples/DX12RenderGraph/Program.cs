@@ -1,5 +1,3 @@
-#region Program Entry Point
-
 using DX12RenderGraph;
 
 using System.Text;
@@ -17,20 +15,10 @@ public class Program
 
     try
     {
-      //using var example = new RenderGraphDX12Example();
-      //example.Run();
-
-      Console.WriteLine("\n🎯 Running Additional Scenarios...");
       RenderGraphScenarios.RunSinglePassScenario();
       RenderGraphScenarios.RunLinearPipelineScenario();
       RenderGraphScenarios.RunPassesPackageScenario();
 
-
-      //using(var example = new SimpleRenderGraphExample())
-      //{
-      //  example.ExecuteSimplePipeline();
-      //  example.PrintStatistics();
-      //}
     }
     catch(Exception ex)
     {
@@ -43,5 +31,3 @@ public class Program
     Console.ReadKey();
   }
 }
-
-#endregion
