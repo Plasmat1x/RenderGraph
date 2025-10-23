@@ -23,4 +23,10 @@
     <ProjectReference Include="..\GraphicsAPI\GraphicsAPI.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Silk.NET" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.Maths" Version="2.22.0" />
+    <PackageReference Include="Silk.NET.Vulkan" Version="2.22.0" />
+  </ItemGroup>
+
 </Project>
