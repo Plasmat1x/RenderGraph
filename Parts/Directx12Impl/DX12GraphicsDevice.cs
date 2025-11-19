@@ -1291,7 +1291,6 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     //stagingDesc.MiscFlags = ResourceMiscFlags.None;
 
     // TODO: Delete after fix
-    // ОТЛАДОЧНАЯ ИНФОРМАЦИЯ - ВРЕМЕННО ДОБАВЬТЕ:
     //Console.WriteLine($"Creating staging texture:");
     //Console.WriteLine($"  Name: {stagingDesc.Name}");
     //Console.WriteLine($"  Size: {stagingDesc.Width}x{stagingDesc.Height}x{stagingDesc.Depth}");

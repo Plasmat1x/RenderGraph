@@ -32,7 +32,7 @@ public class Program
 
     Console.WriteLine("\n=== Render Graph Demo END ===\n");
     Console.WriteLine("\nPress any key to exit...");
-    Console.ReadKey();
+    
   }
 
   private static void RunRenderGraphDemo()

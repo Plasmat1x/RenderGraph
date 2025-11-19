@@ -4,15 +4,44 @@ using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 using Resources;
 using Resources.Enums;
+using Silk.NET.Vulkan;
+using Vulkan = Silk.NET.Vulkan;
+using CommandBuffer = GraphicsAPI.CommandBuffer;
+using SampleCountFlags = GraphicsAPI.Enums.SampleCountFlags;
 
 namespace VulkanImpl;
 
 public class VKGraphicsDevice: IGraphicsDevice
 {
+  //TODO: individual command pool per queue type by family index
+  // Command pool is implementation detail 
+  
+  private readonly Queue<CommandBuffer> p_submissionQueue = [];
+  private readonly object p_submissionLock = new object();
+
+  private Vulkan.Vk p_vk;
+  private Vulkan.Instance p_instance; 
+  private Vulkan.PhysicalDevice p_physicalDevice;
+  private Vulkan.Device p_device;
+
+  private Vulkan.CommandPool p_copyCommandPool;
+  private Vulkan.Queue p_copyQueue;
+  
+  private Vulkan.CommandPool p_directCommandPool;
+  private Vulkan.Queue p_directQueue;
+  
+  private Vulkan.CommandPool p_computeCommandPool;
+  private Vulkan.Queue p_computeQueue;
+  
   public string Name { get; }
   public API API { get; }
   public DeviceCapabilities Capabilities { get; }
 
+  public VKGraphicsDevice()
+  {
+
+  }
+  
   public ITexture CreateTexture(TextureDescription _description)
   {
     throw new NotImplementedException();
