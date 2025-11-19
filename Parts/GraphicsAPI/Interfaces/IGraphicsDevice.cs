@@ -11,31 +11,89 @@ public interface IGraphicsDevice: IDisposable
   string Name { get; }
   API API { get; }
   DeviceCapabilities Capabilities { get; }
-
-  // === Создание ресурсов ===
-  ITexture CreateTexture(TextureDescription _description);
-  IBuffer CreateBuffer(BufferDescription _description);
-  IShader CreateShader(ShaderDescription _description);
-  IRenderState CreateRenderState(RenderStateDescription _description);
-  IRenderState CreateRenderState(RenderStateDescription _renderStateDesc, PipelineStateDescription _pipelineStateDesc);
-  ISampler CreateSampler(SamplerDescription _description);
-  IFence CreateFence(ulong _initialValue = 0);
-  ISwapChain CreateSwapChain(SwapChainDescription _description, IntPtr _windowHandle);
-
-  // === Создание командных буферов ===
-  CommandBuffer CreateCommandBuffer();
-  CommandBuffer CreateCommandBuffer(CommandBufferType _type, CommandBufferExecutionMode _mode);
-
-  // === ОБНОВЛЕННЫЕ методы выполнения для Generic архитектуры ===
-
+  
   /// <summary>
-  /// Выполнить командный буфер (заменяет ExecuteCommandBuffer)
+  /// Создание экземпляра текстуры по декларативному описанию
   /// </summary>
+  /// <param name="_description">Декларативное описание</param>
+  /// <returns>Экземпляр Экземпляр интерфейсаса текстуры</returns>
+  ITexture CreateTexture(TextureDescription _description);
+  
+  /// <summary>
+  /// Создание экземляра буффера по декларативному описанию
+  /// </summary>
+  /// <param name="_description">Декларативнон описание</param>
+  /// <returns>Экземпляр Экземпляр интерфейсаса буффера</returns>
+  IBuffer CreateBuffer(BufferDescription _description);
+  
+  /// <summary>
+  /// Создание экземпяра шейдера по декларативному описанию
+  /// </summary>
+  /// <param name="_description">Декларативное описание</param>
+  /// <returns>Экземпляр интерфейса шейдера</returns>
+  IShader CreateShader(ShaderDescription _description);
+  
+  /// <summary>
+  /// Создание экземпяра состояния рендеринга по декларативному описанию
+  /// </summary>
+  /// <param name="_description">декларативное описание</param>
+  /// <returns>Экземпляр интерфейса состояние рендеринга</returns>
+  IRenderState CreateRenderState(RenderStateDescription _description);
+  
+  /// <summary>
+  /// Создание экземпяра состояния рендеринга по декларативному описанию
+  /// </summary>
+  /// <param name="_renderStateDesc">Декларативное описание</param>
+  /// <param name="_pipelineStateDesc">Декларативное описание</param>
+  /// <returns>Экземпляр интерфейса состояние рендеринга</returns>
+  IRenderState CreateRenderState(RenderStateDescription _renderStateDesc, PipelineStateDescription _pipelineStateDesc);
+  
+  /// <summary>
+  /// Создание экземпляра сэмплера по декларативному описанию
+  /// </summary>
+  /// <param name="_description">Декларативное описание</param>
+  /// <returns>Экземпляр интерфейсас сэмплера</returns>
+  ISampler CreateSampler(SamplerDescription _description);
+  
+  /// <summary>
+  /// Создание фенса
+  /// </summary>
+  /// <param name="_initialValue">начальное значение фенса</param>
+  /// <returns>Экземпляр интерфейса фенса</returns>
+  IFence CreateFence(ulong _initialValue = 0);
+  
+  /// <summary>
+  /// Создание свопчейна по декларативному описанию и хендлу окна
+  /// </summary>
+  /// <param name="_description">Декларативное описание</param>
+  /// <param name="_windowHandle">хендл окна</param>
+  /// <returns>Экземпляр интерфейсас свопчейна</returns>
+  ISwapChain CreateSwapChain(SwapChainDescription _description, IntPtr _windowHandle);
+  
+  /// <summary>
+  /// Создание коммандного буффера по умолчнию Direct и Immediate
+  /// </summary>
+  /// <returns>Экземпляр абстрактного класса коммандного буффера</returns>
+  CommandBuffer CreateCommandBuffer();
+  
+  /// <summary>
+  /// Создание коммандного буффера
+  /// </summary>
+  /// <param name="_type">Тип коммандного буффера</param>
+  /// <param name="_mode">Режим исполнения коммандного буффера</param>
+  /// <returns></returns>
+  CommandBuffer CreateCommandBuffer(CommandBufferType _type, CommandBufferExecutionMode _mode);
+  
+  /// <summary>
+  /// Выполнить командный буфер
+  /// </summary>
+  /// <param name="_commandBuffer">Коммандный буффера</param>
   void Submit(CommandBuffer _commandBuffer);
 
   /// <summary>
-  /// Выполнить несколько командных буферов (заменяет ExecuteCommandBuffers)
+  /// Выполнить командные буферы батчем
   /// </summary>
+  /// <param name="_commandBuffer">Коммандные буфферы</param>
   void Submit(CommandBuffer[] _commandBuffers);
 
   /// <summary>
@@ -47,31 +105,22 @@ public interface IGraphicsDevice: IDisposable
   /// Асинхронное выполнение командного буфера
   /// </summary>
   Task SubmitAsync(CommandBuffer _commandBuffer);
-
-
-  //void ExecuteCommandBuffer(CommandBuffer _commandBuffer);
-  //void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers);
-
-  // === Синхронизация ===
+  
   void WaitForGPU();
   void WaitForFence(IFence _fence);
   void WaitForFenceValue(IFence _fence, ulong _value);
-
-  // === Презентация ===
+  
   void Present();
   void Present(ISwapChain _swapChain);
-
-  // === Информация о памяти ===
+  
   MemoryInfo GetMemoryInfo();
   ulong GetTotalMemory();
   ulong GetAvailableMemory();
-
-  // === Поддержка форматов ===
+  
   bool SupportsFormat(TextureFormat _format, FormatUsage _usage);
   uint GetFormatBytesPerPixel(TextureFormat _format);
   SampleCountFlags GetSupportedSampleCounts(TextureFormat _format);
-
-  // === Отладка и профилирование ===
+  
   void SetDebugName(IResource _resource, string _name);
   void BeginEvent(string _name);
   void EndEvent();
