@@ -1,0 +1,315 @@
+@startuml Architecture_Overview
+!theme plain
+hide stereotype
+
+' ==============================================================================
+' Architecture Overview - Общая диаграмма архитектуры RenderGraph
+' ==============================================================================
+
+package "RenderGraph" {
+  
+  ' ------------------------------------------------------------------------------
+  ' Слой 1: GraphicsAPI (абстракция графического API)
+  ' ------------------------------------------------------------------------------
+  
+  package "GraphicsAPI.Interfaces" {
+    
+    interface IGraphicsDevice {
+      + CreateTexture(TextureDescription): ITexture
+      + CreateBuffer(BufferDescription): IBuffer
+      + CreateShader(ShaderDescription): IShader
+      + CreateRenderState(RenderStateDescription): IRenderState
+      + CreateSampler(SamplerDescription): ISampler
+      + CreateFence(ulong): IFence
+      + CreateSwapChain(SwapChainDescription, IntPtr): ISwapChain
+      + CreateCommandBuffer(): CommandBuffer
+      + Submit(CommandBuffer): void
+      + Present(): void
+      + WaitForGPU(): void
+    }
+    
+    interface IResource {
+      + Name: string
+      + ResourceType: ResourceType
+      + IsDisposed: bool
+      + GetMemorySize(): ulong
+    }
+    
+    interface ITexture {
+      + Description: TextureDescription
+      + Width, Height, Depth: uint
+      + MipLevels, ArraySize: uint
+      + Format: TextureFormat
+      + CreateView(TextureViewDescription): ITextureView
+    }
+    
+    interface IBuffer {
+      + Description: BufferDescription
+      + Size: ulong
+      + Stride: uint
+      + CreateView(BufferViewDescription): IBufferView
+      + Map(MapMode): IntPtr
+    }
+    
+    interface IShader {
+      + Stage: ShaderStage
+      + Bytecode: byte[]
+      + GetReflection(): ShaderReflection
+    }
+    
+    interface ISampler {
+      + Description: SamplerDescription
+    }
+    
+    interface ISwapChain {
+      + CurrentBackBufferIndex: uint
+      + GetBackBuffer(uint): ITexture
+      + Present(uint): void
+    }
+    
+    interface IFence {
+      + Value: ulong
+      + Signal(ulong): void
+      + Wait(ulong, uint): void
+    }
+    
+    interface IBlendState
+    interface IDepthStencilState
+    interface IRasterizerState
+    interface IQuery
+    interface IMonitor
+    interface IBatchUploader
+    
+  }
+  
+  package "GraphicsAPI.Descriptions" {
+    
+    class TextureDescription {
+      + Width, Height, Depth: uint
+      + MipLevels, ArraySize: uint
+      + Format: TextureFormat
+      + SampleCount: uint
+      + TextureUsage: TextureUsage
+    }
+    
+    class BufferDescription {
+      + Size: ulong
+      + Stride, StructureByteStride: uint
+      + BufferUsage: BufferUsage
+    }
+    
+    class ShaderDescription
+    class SamplerDescription
+    class SwapChainDescription
+    class BlendStateDescription
+    class DepthStencilStateDescription
+    class RasterizerStateDescription
+    class RenderStateDescription
+    class PipelineStateDescription
+    class QueryDescription
+    
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' Слой 2: Core (ядро RenderGraph)
+  ' ------------------------------------------------------------------------------
+  
+  package "Core" {
+    
+    class RenderGraph {
+      + Passes: IReadOnlyList<RenderPass>
+      + ExecutionOrder: IReadOnlyList<RenderPass>
+      + FrameData: FrameData
+      + ResourceManager: ResourceManager
+      
+      + AddPass<T>(T): void
+      + RemovePass(RenderPass): void
+      + Compile(): void
+      + Execute(CommandBuffer): void
+      + Reset(): void
+      + ImportTexture(string, ITexture): ResourceHandle
+      + ImportBuffer(string, IBuffer): ResourceHandle
+    }
+    
+    abstract class RenderPass {
+      + Name: string
+      + Enabled: bool
+      + Inputs, Outputs: IReadOnlyList<ResourceHandle>
+      + Dependencies: IReadOnlyList<RenderPass>
+      
+      + {abstract} Setup(RenderGraphBuilder): void
+      + {abstract} Execute(RenderPassContext): void
+      
+      + OnPassSetup: Action<RenderPass>
+      + OnPassExecuted: Action<RenderPass>
+      + OnPassError: Action<RenderPass, Exception>
+    }
+    
+    class RenderGraphBuilder {
+      + CreateTexture(string, TextureDescription): ResourceHandle
+      + CreateBuffer(string, BufferDescription): ResourceHandle
+      + ReadTexture(ResourceHandle): void
+      + WriteTexture(ResourceHandle): void
+      + ReadBuffer(ResourceHandle): void
+      + WriteBuffer(ResourceHandle): void
+      + ReadWriteTexture(ResourceHandle): void
+      + ReadWriteBuffer(ResourceHandle): void
+      + ImportTexture(string, ITexture): ResourceHandle
+      + ImportBuffer(string, IBuffer): ResourceHandle
+    }
+    
+    class ResourceManager {
+      + CreateTexture(TextureDescription): ResourceHandle
+      + CreateBuffer(BufferDescription): ResourceHandle
+      + GetTexture(ResourceHandle): ITexture
+      + GetBuffer(ResourceHandle): IBuffer
+      + SetResourceLifetime(ResourceHandle, ResourceLifetime): void
+      + ImportTexture(string, ITexture): ResourceHandle
+      + ImportBuffer(string, IBuffer): ResourceHandle
+    }
+    
+    class DependencyResolver {
+      + AddNode(RenderPass): void
+      + AddEdge(RenderPass, RenderPass): void
+      + TopologicalSort(): List<RenderPass>
+      + DetectCycles(): List<RenderPass>
+      + CullUnusedPasses(): List<RenderPass>
+    }
+    
+    class RenderPassContext {
+      + CommandBuffer: CommandBuffer
+      + Resources: ResourceManager
+      + FrameData: FrameData
+      
+      + GetTexture(ResourceHandle): ITexture
+      + GetBuffer(ResourceHandle): IBuffer
+      + SetViewport(float, float, float, float, float, float): void
+    }
+    
+    class FrameData {
+      + FrameIndex: ulong
+      + DeltaTime: float
+      + ViewMatrix, ProjectionMatrix: Matrix4x4
+      + CameraPosition: Vector3
+      + ScreenWidth, ScreenHeight: uint
+    }
+    
+    struct ResourceHandle {
+      + Id, Generation: uint
+      + Type: ResourceType
+      + Name: string
+    }
+    
+    class ResourceUsageInfo {
+      + Handle: ResourceHandle
+      + AccessType: ResourceAccessType
+      + State: ResourceState
+      + PassName: string
+    }
+    
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' Слой 3: Resources (описания)
+  ' ------------------------------------------------------------------------------
+  
+  package "Resources" {
+    
+    abstract class ResourceDescription {
+      + Name: string
+      + Usage: ResourceUsage
+      + BindFlags: BindFlags
+      + CPUAccessFlags: CPUAccessFlags
+      + MiscFlags: ResourceMiscFlags
+    }
+    
+    class TextureDescription
+    class BufferDescription
+    
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' Слой 4: Enums (перечисления)
+  ' ------------------------------------------------------------------------------
+  
+  package "Core.Enums" {
+    
+    class PassCategory
+    class PassPriority
+    class ResourceLifetime
+    class ResourceAccessType
+  }
+  
+  package "Resources.Enums" {
+    
+    class ResourceType
+    class ResourceState
+    class ResourceUsage
+    class BindFlags
+    class CPUAccessFlags
+    class ResourceMiscFlags
+    class TextureFormat
+    class TextureUsage
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' Слой 5: Реализации (Implementations)
+  ' ------------------------------------------------------------------------------
+  
+  package "DirectX12Impl" {
+    
+    class Dx12GraphicsDevice implements IGraphicsDevice
+    class Dx12Texture implements ITexture
+    class Dx12Buffer implements IBuffer
+    class Dx12Shader implements IShader
+    
+  }
+  
+  package "VulkanImpl" {
+    
+    class VkGraphicsDevice implements IGraphicsDevice
+    class VkTexture implements ITexture
+    class VkBuffer implements IBuffer
+    class VkShader implements IShader
+    
+  }
+  
+}
+
+' ==============================================================================
+' Отношения между слоями
+' ==============================================================================
+
+' GraphicsAPI -> Core
+RenderGraph --> IGraphicsDevice : использует
+RenderGraph --> ITexture : импортирует
+RenderGraph --> IBuffer : импортирует
+
+' Core -> Resources
+RenderGraphBuilder --> TextureDescription : создаёт
+RenderGraphBuilder --> BufferDescription : создаёт
+ResourceManager --> TextureDescription : использует
+ResourceManager --> BufferDescription : использует
+
+' Core -> Enums
+RenderPass --> PassCategory : использует
+RenderPass --> PassPriority : использует
+ResourceHandle --> ResourceType : использует
+ResourceUsageInfo --> ResourceAccessType : использует
+ResourceUsageInfo --> ResourceState : использует
+ResourceDescription --> ResourceUsage : использует
+ResourceDescription --> BindFlags : использует
+ResourceDescription --> CPUAccessFlags : использует
+
+' Implementations -> GraphicsAPI
+Dx12GraphicsDevice --> IGraphicsDevice
+Dx12Texture --> ITexture
+Dx12Buffer --> IBuffer
+Dx12Shader --> IShader
+
+VkGraphicsDevice --> IGraphicsDevice
+VkTexture --> ITexture
+VkBuffer --> IBuffer
+VkShader --> IShader
+
+@enduml

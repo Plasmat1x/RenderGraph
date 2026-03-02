@@ -6,6 +6,8 @@ using GraphicsAPI.Interfaces;
 using Resources;
 using Resources.Enums;
 
+using System.Collections.Generic;
+
 namespace MockImpl;
 public class MockGraphicsDevice: IGraphicsDevice
 {
@@ -225,5 +227,47 @@ public class MockGraphicsDevice: IGraphicsDevice
   {
     Console.WriteLine($"  [GPU] Creating render state");
     return new MockRenderState(_renderStateDesc);
+  }
+
+  public IBlendState CreateBlendState(BlendStateDescription _description)
+  {
+    Console.WriteLine($"  [GPU] Creating blend state");
+    throw new NotImplementedException();
+  }
+
+  public IDepthStencilState CreateDepthStencilState(DepthStencilStateDescription _description)
+  {
+    Console.WriteLine($"  [GPU] Creating depth-stencil state");
+    throw new NotImplementedException();
+  }
+
+  public IRasterizerState CreateRasterizerState(RasterizerStateDescription _description)
+  {
+    Console.WriteLine($"  [GPU] Creating rasterizer state");
+    throw new NotImplementedException();
+  }
+
+  public IQuery CreateQuery(QueryDescription _description)
+  {
+    Console.WriteLine($"  [GPU] Creating query ({_description.Type})");
+    throw new NotImplementedException();
+  }
+
+  public IBatchUploader CreateBatchUploader()
+  {
+    Console.WriteLine($"  [GPU] Creating batch uploader");
+    return new MockBatchUploader();
+  }
+
+  public IReadOnlyList<IMonitor> GetMonitors()
+  {
+    Console.WriteLine($"  [GPU] Getting monitors");
+    return new List<IMonitor> { new MockMonitor("Mock Monitor 1", 1920, 1080, 60, 32, true) };
+  }
+
+  public IMonitor GetPrimaryMonitor()
+  {
+    Console.WriteLine($"  [GPU] Getting primary monitor");
+    return new MockMonitor("Mock Monitor 1", 1920, 1080, 60, 32, true);
   }
 }

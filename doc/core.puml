@@ -1,0 +1,348 @@
+@startuml Core_Classes
+!theme plain
+hide stereotype
+
+' ==============================================================================
+' Core Classes - Диаграмма основных классов RenderGraph
+' ==============================================================================
+
+package "Core" {
+  
+  ' ------------------------------------------------------------------------------
+  ' Основной класс RenderGraph
+  ' ------------------------------------------------------------------------------
+  
+  class RenderGraph {
+    - p_passes: List<RenderPass>
+    - p_resourceManager: ResourceManager
+    - p_dependencyResolver: DependencyResolver
+    - p_device: IGraphicsDevice
+    - p_builder: RenderGraphBuilder
+    - p_frameData: FrameData
+    - p_compiled: bool
+    - p_disposed: bool
+    - p_executionOrder: List<RenderPass>
+    - p_passContexts: Dictionary<RenderPass, RenderPassContext>
+    
+    + RenderGraph(IGraphicsDevice)
+    
+    + IsCompilded: bool {get}
+    + Passes: IReadOnlyList<RenderPass> {get}
+    + ExecutionOrder: IReadOnlyList<RenderPass> {get}
+    + FrameData: FrameData {get}
+    + ResourceManager: ResourceManager {get}
+    
+    + AddPass<T>(T): void
+    + RemovePass(RenderPass): void
+    + GetPass<T>(): T
+    + GetPass(string): RenderPass
+    + Execute(CommandBuffer): void
+    + Compile(): void
+    + Reset(): void
+    + ValidateGraph(): bool
+    + GetExecutionOrder(): List<RenderPass>
+    + UpdateFrameData(float, uint, uint): void
+    + SetViewMatrix(Matrix4x4): void
+    + SetProjectionMatrix(Matrix4x4): void
+    + SetCameraPosition(Vector3): void
+    + ImportTexture(string, ITexture): ResourceHandle
+    + ImportBuffer(string, IBuffer): ResourceHandle
+    + GetNamedResource(string): ResourceHandle
+    + HasNamedResource(string): bool
+    + GetMemoryUsage(): MemoryUsageInfo
+    + GetStatistics(): RenderGraphStatistics
+    
+    - SetupPasses(): void
+    - BuildDependencyGraph(): void
+    - ValidateResourceProducers(): void
+    - OptimizeResources(): void
+    - TransitionResourcesForPass(RenderPass, CommandBuffer): void
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' Базовый класс RenderPass
+  ' ------------------------------------------------------------------------------
+  
+  abstract class RenderPass {
+    - p_inputs: List<ResourceHandle>
+    - p_outputs: List<ResourceHandle>
+    - p_dependencies: List<RenderPass>
+    - p_enabled: bool
+    - p_executionOrder: int
+    
+    + RenderPass(string)
+    
+    + Name: string {get; protected set}
+    + Enabled: bool {get; set}
+    + Inputs: IReadOnlyList<ResourceHandle> {get}
+    + Outputs: IReadOnlyList<ResourceHandle> {get}
+    + Dependencies: IReadOnlyList<RenderPass> {get}
+    + ExecutionOrder: int {get; set}
+    + AlwaysExecute: bool {get; set}
+    + Category: PassCategory {get; set}
+    + Priority: PassPriority {get; set}
+    + Statistics: PassStatistics {get;}
+    
+    + OnPassSetup: Action<RenderPass>
+    + OnPassExecuted: Action<RenderPass>
+    + OnPassError: Action<RenderPass, Exception>
+    
+    + {abstract} Setup(RenderGraphBuilder): void
+    + {abstract} Execute(RenderPassContext): void
+    
+    + Initialize(): void
+    + OnGraphCompiled(RenderGraph): void
+    + OnFrameBegin(FrameData): void
+    + OnFrameEnd(FrameData): void
+    + GetResourceUsage(): ResourceUsageInfo
+    + IsCompatibleWith(RenderPass): bool
+    + Validate(out string): bool
+    + CanExecute(): bool
+    
+    + AddDependency(RenderPass): void
+    + RemoveDependency(RenderPass): void
+    + ClearDependencies(): void
+    + HasDependency(RenderPass): bool
+    + HasDependencyOn(RenderPass): bool
+    
+    # Dispose(bool): void
+    
+    + AddInput(ResourceHandle): void
+    + AddOutput(ResourceHandle): void
+    + ClearInputsOutputs(): void
+    
+    + InternalSetup(RenderGraphBuilder): void
+    + InternalExecute(RenderPassContext): void
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' RenderGraphBuilder - построитель графа
+  ' ------------------------------------------------------------------------------
+  
+  class RenderGraphBuilder {
+    - p_resourceManager: ResourceManager
+    - p_resourceUsages: Dictionary<ResourceHandle, List<ResourceUsageInfo>>
+    - p_namedResources: Dictionary<string, ResourceHandle>
+    - p_currentPassUsages: List<ResourceUsageInfo>
+    - p_currentPass: RenderPass
+    
+    + RenderGraphBuilder(ResourceManager)
+    
+    + CreateTexture(string, TextureDescription): ResourceHandle
+    + CreateBuffer(string, BufferDescription): ResourceHandle
+    + ReadTexture(ResourceHandle): void
+    + WriteTexture(ResourceHandle): void
+    + ReadBuffer(ResourceHandle): void
+    + WriteBuffer(ResourceHandle): void
+    + ReadWriteTexture(ResourceHandle): void
+    + ReadWriteBuffer(ResourceHandle): void
+    + ReadTextureAsDepth(ResourceHandle): void
+    + WriteTextureAsDepth(ResourceHandle): void
+    + ReadTextureAsRenderTarget(ResourceHandle): void
+    + ImportTexture(string, ITexture): ResourceHandle
+    + ImportBuffer(string, IBuffer): ResourceHandle
+    + SetResourceLifetime(ResourceHandle, ResourceLifetime): void
+    + GetNamedReource(string): ResourceHandle
+    + HasNamedResource(string): bool
+    + GetResourceUsages(): IEnumerable<ResourceUsageInfo>
+    + GetResourceUsages(ResourceHandle): IEnumerable<ResourceUsageInfo>
+    + GetResourceUsage(ResourceHandle, string): ResourceUsageInfo
+    + GetNameResourceNames(): IEnumerable<string>
+    + GetResourceDescription(ResourceHandle): ResourceDescription
+    + ValidateResourceUsages(): void
+    + Clear(): void
+    
+    - ValidateTextureHandle(ResourceHandle): void
+    - ValidateBufferHandle(ResourceHandle): void
+    
+    + SetCurrentPass(RenderPass): void
+    + FinishCurrentPass(): void
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' ResourceManager - управление ресурсами
+  ' ------------------------------------------------------------------------------
+  
+  class ResourceManager {
+    - p_resources: Dictionary<ResourceHandle, IResource>
+    - p_resourceDescriptions: Dictionary<ResourceHandle, ResourceDescription>
+    - p_texturePool: ResourcePool<ITexture>
+    - p_bufferPool: ResourcePool<IBuffer>
+    - p_alliasedResources: Dictionary<ResourceHandle, ResourceHandle>
+    - p_resourceLifetimes: Dictionary<ResourceHandle, ResourceLifetime>
+    - p_handleGenerator: ResourceHandleGenerator
+    - p_device: IGraphicsDevice
+    - p_disposed: bool
+    
+    + ResourceManager(IGraphicsDevice)
+    
+    + CreateBuffer(BufferDescription): ResourceHandle
+    + CreateTexture(TextureDescription): ResourceHandle
+    + GetTexture(ResourceHandle): ITexture
+    + GetBuffer(ResourceHandle): IBuffer
+    + AlliaseResource(ResourceHandle, ResourceHandle): void
+    + TransitionResource(ResourceHandle, ResourceState): void
+    + GetResourceDescription(ResourceHandle): ResourceDescription
+    + OptimizeResourceUsage(): void
+    + GetMemoryUsage(): MemoryUsageInfo
+    + ReleaseResource(ResourceHandle): void
+    + GetResourceLifetime(ResourceHandle): ResourceLifetime
+    + SetResourceLifetime(ResourceHandle, ResourceLifetime): void
+    + ImportTexture(string, ITexture): ResourceHandle
+    + ImportBuffer(string, IBuffer): ResourceHandle
+    
+    - IsValidHandle(ResourceHandle): bool
+    - GetActualHandle(ResourceHandle): ResourceHandle
+    - AreResourceComaptible(ResourceHandle, ResourceHandle): bool
+    - TryGetFromTexturePool(TextureDescription): ITexture
+    - TryGetFromBufferPool(BufferDescription): IBuffer
+    - ReturnToPool(IResource): void
+    - GetResourceTypeFromTexture(TextureDescription): ResourceType
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' DependencyResolver - разрешение зависимостей
+  ' ------------------------------------------------------------------------------
+  
+  class DependencyResolver {
+    - p_passGraph: DirectedGraph<RenderPass>
+    - p_resourceDependencies: Dictionary<ResourceHandle, List<RenderPass>>
+    
+    + AddNode(RenderPass): void
+    + AddEdge(RenderPass, RenderPass): void
+    + BuildDependencyGraph(List<RenderPass>): void
+    + TopologicalSort(): List<RenderPass>
+    + DetectCycles(): List<RenderPass>
+    + CullUnusedPasses(): List<RenderPass>
+    + ValidateDependencies(): bool
+    + GetCrtiticalPath(): List<RenderPass>
+    + Clear(): void
+    
+    - FindLongestPath(RenderPass, HashSet<RenderPass>): List<RenderPass>
+    - DetectCycleDFS(RenderPass, HashSet<RenderPass>, HashSet<RenderPass>, List<RenderPass>): bool
+    - HasExternalOutputs(RenderPass): bool
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' RenderPassContext - контекст выполнения прохода
+  ' ------------------------------------------------------------------------------
+  
+  class RenderPassContext {
+    + CommandBuffer: CommandBuffer {get; set}
+    + Resources: ResourceManager {get; set}
+    + FrameData: FrameData {get; set}
+    + PassIndex: int {get; set}
+    + ViewportWidth: uint {get; set}
+    + ViewportHeight: uint {get; set}
+    
+    + GetTexture(ResourceHandle): ITexture
+    + GetBuffer(ResourceHandle): IBuffer
+    + GetTextureView(ResourceHandle, TextureViewType): ITextureView
+    + GetBufferView(ResourceHandle, BufferViewType): IBufferView
+    + SetViewport(float, float, float, float, float, float): void
+    + SetFullScreenViewport(): void
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' FrameData - данные кадра
+  ' ------------------------------------------------------------------------------
+  
+  class FrameData {
+    - p_globalConstants: Dictionary<string, object>
+    
+    + FrameIndex: ulong {get; set}
+    + DeltaTime: float {get; set}
+    + TotalTime: float {get; set}
+    + ViewMatrix: Matrix4x4 {get; set}
+    + ProjectionMatrix: Matrix4x4 {get; set}
+    + ViewProjectionMatrix: Matrix4x4 {get; private set}
+    + CameraPosition: Vector3 {get; set}
+    + ScreenWidth: uint {get; set}
+    + ScreenHeight: uint {get; set}
+    
+    + GetConstantBuffer<T>(): T
+    + SetConstantBuffer<T>(T): void
+    + SetGlobalConstants(string, object): void
+    + GetGlobalConstant<T>(string): T
+    + UpdateMatrices(): void
+    + Reset(): void
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' ResourceHandle - хендл ресурса
+  ' ------------------------------------------------------------------------------
+  
+  struct ResourceHandle {
+    + Id: uint
+    + Type: ResourceType
+    + Generation: uint
+    + Name: string
+    + INVALID_ID: const uint = 0
+    + INVALID_GENERATION: const uint = 0
+    + Invalid: static ResourceHandle {get}
+    
+    + IsValid(): bool
+    + Equals(ResourceHandle): bool
+    + GetHashCode(): int
+    + ToString(): string
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' ResourceBarrier - барьер ресурса
+  ' ------------------------------------------------------------------------------
+  
+  struct ResourceBarrier {
+    + Resource: ResourceHandle
+    + Before: ResourceState
+    + After: ResourceState
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' ResourceUsageInfo - информация об использовании ресурса
+  ' ------------------------------------------------------------------------------
+  
+  class ResourceUsageInfo {
+    + Handle: ResourceHandle {get; set}
+    + AccessType: ResourceAccessType {get; set}
+    + Usage: ResourceUsage {get; set}
+    + State: ResourceState {get; set}
+    + PassName: string {get; set}
+    
+    + IsRead(): bool
+    + IsWrite(): bool
+    + ConflictsWith(ResourceUsageInfo): bool
+    + Equals(object?): bool
+    + GetHashCode(): int
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' Отношения между классами
+  ' ------------------------------------------------------------------------------
+  
+  RenderGraph --> RenderPass : содержит
+  RenderGraph --> ResourceManager : содержит
+  RenderGraph --> DependencyResolver : содержит
+  RenderGraph --> RenderGraphBuilder : содержит
+  RenderGraph --> FrameData : содержит
+  RenderGraph --> RenderPassContext : создаёт
+  
+  RenderPass --> ResourceHandle : использует
+  RenderPass --> RenderGraphBuilder : настраивается через
+  
+  RenderGraphBuilder --> ResourceManager : использует
+  RenderGraphBuilder --> ResourceUsageInfo : создаёт
+  RenderGraphBuilder --> ResourceHandle : создаёт
+  
+  ResourceManager --> IGraphicsDevice : использует
+  ResourceManager --> ResourceHandle : управляет
+  ResourceManager --> IResource : хранит
+  
+  RenderPassContext --> ResourceManager : использует
+  RenderPassContext --> FrameData : использует
+  RenderPassContext --> CommandBuffer : использует
+  
+  DependencyResolver --> RenderPass : анализирует
+  
+}
+
+@enduml

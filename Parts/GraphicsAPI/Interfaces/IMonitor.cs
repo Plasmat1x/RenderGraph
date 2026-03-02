@@ -6,4 +6,5 @@ public interface IMonitor
   int Height { get; }
   int RefreshRate { get; }
   IntPtr Handle { get; }
+  int BitsPerPixel { get; }
 }

@@ -1,4 +1,5 @@
 using GraphicsAPI.Descriptions;
+using GraphicsAPI.Enums;
 using GraphicsAPI.Interfaces;
 using Resources.Enums;
 
@@ -6,17 +7,26 @@ namespace VulkanImpl;
 
 public class VKTextureView : ITextureView
 {
-  public void Dispose()
+  private readonly TextureViewDescription p_description;
+  private bool p_disposed;
+
+  public VKTextureView(TextureViewDescription _description)
   {
-    throw new NotImplementedException();
+    p_description = _description;
   }
 
-  public ITexture Texture { get; }
-  public TextureViewType ViewType { get; }
-  public TextureViewDescription Description { get; }
+  public TextureViewDescription Description => p_description;
+  public ITexture? Texture => null;
+  public TextureViewType ViewType => p_description.ViewType;
+  public TextureFormat Format => p_description.Format;
+  public ResourceType ResourceType => ResourceType.Texture2D;
 
-  public IntPtr GetNativeHandle()
+  public IntPtr GetNativeHandle() => IntPtr.Zero;
+
+  public void Dispose()
   {
-    throw new NotImplementedException();
+    if(p_disposed)
+      return;
+    p_disposed = true;
   }
 }

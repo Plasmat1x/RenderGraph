@@ -49,6 +49,7 @@ public unsafe class DX12Monitor: IMonitor
       if(numModes > 0)
       {
         p_refreshRate = (int)(modes[0].RefreshRate.Numerator / modes[0].RefreshRate.Denominator);
+        BitsPerPixel = 32; // FormatR8G8B8A8Unorm = 32 bpp
       }
     }
     else
@@ -57,6 +58,7 @@ public unsafe class DX12Monitor: IMonitor
       p_width = 1280;
       p_height = 720;
       p_refreshRate = 30;
+      BitsPerPixel = 32;
     }
   }
 
@@ -69,6 +71,8 @@ public unsafe class DX12Monitor: IMonitor
   public int RefreshRate => p_refreshRate;
 
   public nint Handle => (IntPtr)p_output;
+
+  public int BitsPerPixel { get; private set; }
 
   public ComPtr<IDXGIOutput> GetNativeOutput() => p_output;
 }

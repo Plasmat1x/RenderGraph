@@ -1,0 +1,257 @@
+@startuml GraphicsAPI_Interfaces
+!theme plain
+hide stereotype
+
+' ==============================================================================
+' GraphicsAPI Interfaces - Диаграмма интерфейсов графического API
+' ==============================================================================
+
+package "GraphicsAPI.Interfaces" {
+  
+  ' ------------------------------------------------------------------------------
+  ' Базовые интерфейсы
+  ' ------------------------------------------------------------------------------
+  
+  interface IResource {
+    + Name: string
+    + ResourceType: ResourceType
+    + IsDisposed: bool
+    + GetMemorySize(): ulong
+    + GetNativeHandle(): IntPtr
+  }
+  
+  interface IDisposable {
+    + Dispose()
+  }
+  
+  IDisposable <|.. IResource
+  
+  ' ------------------------------------------------------------------------------
+  ' Интерфейсы ресурсов
+  ' ------------------------------------------------------------------------------
+  
+  interface ITexture {
+    + Description: TextureDescription
+    + Width: uint
+    + Height: uint
+    + Depth: uint
+    + MipLevels: uint
+    + ArraySize: uint
+    + Format: TextureFormat
+    + SampleCount: uint
+    + CreateView(TextureViewDescription): ITextureView
+    + GetDefaultShaderResourceView(): ITextureView
+    + GetDefaultRenderTargetView(): ITextureView
+    + GetDefaultDepthStencilView(): ITextureView
+    + GetDefaultUnorderedAccessView(): ITextureView
+    + SetData<T>(T[], uint, uint)
+    + GetData<T>(uint, uint): T[]
+    + GetSubresourceIndex(uint, uint): uint
+    + GenerateMips()
+  }
+  
+  interface IBuffer {
+    + Description: BufferDescription
+    + Size: ulong
+    + Stride: uint
+    + Usage: BufferUsage
+    + IsMapped: bool
+    + CreateView(BufferViewDescription): IBufferView
+    + GetDefaultShaderResourceView(): IBufferView
+    + GetDefaultUnorderedAccessView(): IBufferView
+    + Map(MapMode): IntPtr
+    + Unmap()
+    + SetData<T>(T[], ulong)
+    + SetData<T>(T, ulong)
+    + GetData<T>(ulong, int): T[]
+    + GetData<T>(ulong): T
+  }
+  
+  IResource <|.. ITexture
+  IResource <|.. IBuffer
+  
+  ' ------------------------------------------------------------------------------
+  ' Интерфейсы представлений (Views)
+  ' ------------------------------------------------------------------------------
+  
+  interface ITextureView {
+    + Texture: ITexture
+    + ViewType: TextureViewType
+    + Description: TextureViewDescription
+    + GetNativeHandle(): IntPtr
+  }
+  
+  interface IBufferView {
+    + Buffer: IBuffer
+    + ViewType: BufferViewType
+    + Description: BufferViewDescription
+    + GetNativeHandle(): IntPtr
+  }
+  
+  IDisposable <|.. ITextureView
+  IDisposable <|.. IBufferView
+  
+  ' ------------------------------------------------------------------------------
+  ' Шейдеры и сэмплеры
+  ' ------------------------------------------------------------------------------
+  
+  interface IShader {
+    + Stage: ShaderStage
+    + Description: ShaderDescription
+    + Bytecode: byte[]
+    + GetReflection(): ShaderReflection
+    + HasConstantBuffer(string): bool
+    + HasTexture(string): bool
+    + HasSampler(string): bool
+    + HasUnordererAccess(string): bool
+    + GetConstantBufferInfo(string): ConstantBufferInfo
+    + GetResourceInfo(string): ResourceBindingInfo
+    + GetSamplerInfo(string): SamplerBindingInfo
+    + IsCompatibleWith(IShader): bool
+  }
+  
+  interface ISampler {
+    + Description: SamplerDescription
+  }
+  
+  IResource <|.. IShader
+  IResource <|.. ISampler
+  
+  ' ------------------------------------------------------------------------------
+  ' Состояния рендеринга
+  ' ------------------------------------------------------------------------------
+  
+  interface IRenderState {
+    + Description: RenderStateDescription
+  }
+  
+  interface IBlendState {
+    + Description: BlendStateDescription
+  }
+  
+  interface IDepthStencilState {
+    + Description: DepthStencilStateDescription
+  }
+  
+  interface IRasterizerState {
+    + Description: RasterizerStateDescription
+  }
+  
+  IResource <|.. IRenderState
+  IResource <|.. IBlendState
+  IResource <|.. IDepthStencilState
+  IResource <|.. IRasterizerState
+  
+  ' ------------------------------------------------------------------------------
+  ' Синхронизация и запросы
+  ' ------------------------------------------------------------------------------
+  
+  interface IFence {
+    + Value: ulong
+    + IsSignaled: bool
+    + Signal(ulong)
+    + Wait(ulong, uint)
+    + GetNativeHandle(): IntPtr
+  }
+  
+  interface IQuery {
+    + Type: QueryType
+    + GetData<T>(out T): bool
+    + GetNativeHandle(): IntPtr
+  }
+  
+  IDisposable <|.. IFence
+  IDisposable <|.. IQuery
+  
+  ' ------------------------------------------------------------------------------
+  ' SwapChain и мониторы
+  ' ------------------------------------------------------------------------------
+  
+  interface ISwapChain {
+    + Description: SwapChainDescription
+    + CurrentBackBufferIndex: uint
+    + GetBackBuffer(uint): ITexture
+    + GetBackBufferRTV(uint): ITextureView
+    + Present(uint)
+    + Resize(uint, uint)
+    + SetFullscreenState(bool, IMonitor)
+    + IsFullscreen(): bool
+    + GetNativeHandle(): IntPtr
+  }
+  
+  interface IMonitor {
+    + Name: string
+    + Width: int
+    + Height: int
+    + RefreshRate: int
+    + Handle: IntPtr
+    + BitsPerPixel: int
+  }
+  
+  IDisposable <|.. ISwapChain
+  
+  ' ------------------------------------------------------------------------------
+  ' Пакетная загрузка
+  ' ------------------------------------------------------------------------------
+  
+  interface IBatchUploader {
+    + UploadBuffer<T>(IBuffer, T[], ulong)
+    + UploadTexture<T>(ITexture, T[], uint, uint)
+    + AddBufferUpload(IBuffer, ulong, ulong, IntPtr)
+    + AddTextureUpload(ITexture, uint, uint, IntPtr, ulong, ulong)
+    + Flush()
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' Основной интерфейс графического устройства
+  ' ------------------------------------------------------------------------------
+  
+  interface IGraphicsDevice {
+    + Name: string
+    + API: API
+    + Capabilities: DeviceCapabilities
+    + CreateTexture(TextureDescription): ITexture
+    + CreateBuffer(BufferDescription): IBuffer
+    + CreateShader(ShaderDescription): IShader
+    + CreateRenderState(RenderStateDescription): IRenderState
+    + CreateRenderState(RenderStateDescription, PipelineStateDescription): IRenderState
+    + CreateSampler(SamplerDescription): ISampler
+    + CreateFence(ulong): IFence
+    + CreateSwapChain(SwapChainDescription, IntPtr): ISwapChain
+    + CreateCommandBuffer(): CommandBuffer
+    + CreateCommandBuffer(CommandBufferType, CommandBufferExecutionMode): CommandBuffer
+    + Submit(CommandBuffer)
+    + Submit(CommandBuffer[])
+    + Submit(CommandBuffer, IFence, ulong)
+    + SubmitAsync(CommandBuffer): Task
+    + WaitForGPU()
+    + WaitForFence(IFence)
+    + WaitForFenceValue(IFence, ulong)
+    + Present()
+    + Present(ISwapChain)
+    + GetMemoryInfo(): MemoryInfo
+    + GetTotalMemory(): ulong
+    + GetAvailableMemory(): ulong
+    + SupportsFormat(TextureFormat, FormatUsage): bool
+    + GetFormatBytesPerPixel(TextureFormat): uint
+    + GetSupportedSampleCounts(TextureFormat): SampleCountFlags
+    + SetDebugName(IResource, string)
+    + BeginEvent(string)
+    + EndEvent()
+    + SetMarker(string)
+    + CreateBlendState(BlendStateDescription): IBlendState
+    + CreateDepthStencilState(DepthStencilStateDescription): IDepthStencilState
+    + CreateRasterizerState(RasterizerStateDescription): IRasterizerState
+    + CreateQuery(QueryDescription): IQuery
+    + ExecuteCommandBuffer(CommandBuffer)
+    + ExecuteCommandBuffers(CommandBuffer[])
+    + CreateBatchUploader(): IBatchUploader
+    + GetMonitors(): IReadOnlyList<IMonitor>
+    + GetPrimaryMonitor(): IMonitor
+  }
+  
+  IDisposable <|.. IGraphicsDevice
+  
+}
+
+@enduml

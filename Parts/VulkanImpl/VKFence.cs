@@ -4,26 +4,45 @@ namespace VulkanImpl;
 
 public class VKFence : IFence
 {
-  public void Dispose()
+  private ulong p_value;
+  private bool p_signaled;
+  private bool p_disposed;
+
+  public VKFence(ulong _initialValue)
   {
-    throw new NotImplementedException();
+    p_value = _initialValue;
   }
 
-  public ulong Value { get; }
-  public bool IsSignaled { get; }
+  public ulong Value => p_value;
+  public bool IsSignaled => p_signaled;
 
   public void Signal(ulong _value)
   {
-    throw new NotImplementedException();
+    Console.WriteLine($"  [Vulkan] Fence signal {_value}");
+    p_value = _value;
+    p_signaled = true;
   }
 
-  public void Wait(ulong _value, uint _timeoutMs = UInt32.MaxValue)
+  public void Wait(ulong _value, uint _timeoutMs = uint.MaxValue)
   {
-    throw new NotImplementedException();
+    Console.WriteLine($"  [Vulkan] Fence wait {_value}");
+    p_signaled = false;
   }
 
-  public IntPtr GetNativeHandle()
+  public void Reset()
   {
-    throw new NotImplementedException();
+    Console.WriteLine($"  [Vulkan] Fence reset");
+    p_signaled = false;
+  }
+
+  public IntPtr GetNativeHandle() => IntPtr.Zero;
+  public ulong GetMemorySize() => 8;
+
+  public void Dispose()
+  {
+    if(p_disposed)
+      return;
+    Console.WriteLine($"  [Vulkan] Dispose fence");
+    p_disposed = true;
   }
 }

@@ -91,7 +91,7 @@ public class ResourceManager: IDisposable
 
     var actualHandle = GetActualHandle(_handle);
 
-    if(p_resources.TryGetValue(_handle, out var resource))
+    if(p_resources.TryGetValue(actualHandle, out var resource))
     {
       if(resource is IBuffer buffer)
         return buffer;

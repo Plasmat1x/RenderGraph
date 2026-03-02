@@ -4,6 +4,8 @@ using GraphicsAPI.Enums;
 using Resources;
 using Resources.Enums;
 
+using System.Collections.Generic;
+
 namespace GraphicsAPI.Interfaces;
 
 public interface IGraphicsDevice: IDisposable
@@ -125,4 +127,50 @@ public interface IGraphicsDevice: IDisposable
   void BeginEvent(string _name);
   void EndEvent();
   void SetMarker(string _name);
+
+  /// <summary>
+  /// Создать состояние blending по декларативному описанию
+  /// </summary>
+  IBlendState CreateBlendState(BlendStateDescription _description);
+
+  /// <summary>
+  /// Создать состояние depth-stencil по декларативному описанию
+  /// </summary>
+  IDepthStencilState CreateDepthStencilState(DepthStencilStateDescription _description);
+
+  /// <summary>
+  /// Создать состояние rasterizer по декларативному описанию
+  /// </summary>
+  IRasterizerState CreateRasterizerState(RasterizerStateDescription _description);
+
+  /// <summary>
+  /// Создать query по декларативному описанию
+  /// </summary>
+  IQuery CreateQuery(QueryDescription _description);
+
+  /// <summary>
+  /// Выполнить командный буфер немедленно
+  /// </summary>
+  void ExecuteCommandBuffer(CommandBuffer _commandBuffer);
+
+  /// <summary>
+  /// Выполнить несколько командных буферов немедленно
+  /// </summary>
+  void ExecuteCommandBuffers(CommandBuffer[] _commandBuffers);
+
+  /// <summary>
+  /// Создать пакетный загрузчик ресурсов
+  /// </summary>
+  IBatchUploader CreateBatchUploader();
+
+  /// <summary>
+  /// Получить список всех доступных мониторов
+  /// </summary>
+  IReadOnlyList<IMonitor> GetMonitors();
+
+  /// <summary>
+  /// Получить primary монитор
+  /// </summary>
+  /// <returns>Primary монитор или null, если не определён</returns>
+  IMonitor GetPrimaryMonitor();
 }

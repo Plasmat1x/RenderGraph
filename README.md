@@ -216,6 +216,7 @@ var postProcessChain = new RenderGraphBuilder()
 - Thread-Safe Operations - Safe concurrent access to all APIs
 
 ## 🔌 Platform Support
+
 ### Graphics APIs
 - 🔄 DirectX 12 - Full feature support with advanced optimizations
 - 📋 Vulkan - Cross-platform with vendor-specific extensions
@@ -226,6 +227,14 @@ var postProcessChain = new RenderGraphBuilder()
 - ✅ Windows 10/11 - Primary development platform
 - 📋 Linux
 - 📋 Android 
+
+### Testing Notes
+
+- **Windows**: All tests pass including DirectX 12 implementation tests
+- **Linux**: 
+  - DirectX 12 tests are skipped (require Windows-only native libraries)
+  - Run Core tests only: `dotnet test Tests/RenderGraph.Tests/`
+  - Vulkan tests require Vulkan-capable GPU and drivers
 
 ### Hardware Requirements
 - Minimum: DirectX 12 compatible GPU (GTX 900 series, RX 400 series)

@@ -1,0 +1,126 @@
+@startuml Resources_Descriptions
+!theme plain
+hide stereotype
+
+' ==============================================================================
+' Resources Descriptions - Диаграмма описаний ресурсов
+' ==============================================================================
+
+package "Resources" {
+  
+  ' ------------------------------------------------------------------------------
+  ' Базовый класс ResourceDescription
+  ' ------------------------------------------------------------------------------
+  
+  abstract class ResourceDescription {
+    + Name: string {get; set}
+    + Usage: ResourceUsage {get; set}
+    + BindFlags: BindFlags {get; set}
+    + CPUAccessFlags: CPUAccessFlags {get; set}
+    + MiscFlags: ResourceMiscFlags {get; set}
+    
+    + {abstract} GetMemorySize(): ulong
+    + {abstract} IsCompatible(ResourceDescription): bool
+    
+    + RequiresCPUAccess(): bool
+    + IsReadOnlyCPU(): bool
+    + IsWriteOnlyCPU(): bool
+    + IsReadWriteCPU(): bool
+    + IsImmutable(): bool
+    + IsDynamic(): bool
+    + IsStaging(): bool
+    + IsDefault(): bool
+    + SupportsShaderResource(): bool
+    + SupportsRenderTarget(): bool
+    + SupportsDepthStencil(): bool
+    + SupportsUnorderedAccess(): bool
+    + SupportsVertexBuffer(): bool
+    + SupportsIndexBuffer(): bool
+    + SupportsConstantBuffer(): bool
+    + IsShared(): bool
+    + CanGenerateMips(): bool
+    + IsGDICompatible(): bool
+    + Validate(out string): bool
+    + GetBindFlagsString(): string
+    + GetCPUAccessFlagsString(): string
+    + GetMiscFlagsString(): string
+    + GetMemoryAlignment(): ulong
+    + CanAliasWith(ResourceDescription): bool
+    + Clone(): ResourceDescription
+    + ApplyModifications(Action<ResourceDescription>): void
+    + Equals(object?): bool
+    + GetHashCode(): int
+    + ToString(): string
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' TextureDescription - описание текстуры
+  ' ------------------------------------------------------------------------------
+  
+  class TextureDescription {
+    + Width: uint {get; set} = 1
+    + Height: uint {get; set} = 1
+    + Depth: uint {get; set} = 1
+    + MipLevels: uint {get; set} = 1
+    + ArraySize: uint {get; set} = 1
+    + Format: TextureFormat {get; set}
+    + SampleCount: uint {get; set} = 1
+    + SampleQuality: uint {get; set} = 0
+    + TextureUsage: TextureUsage {get; set}
+    
+    + CreateMipChain(): List<TextureDescription>
+    + IsRenderTarget(): bool
+    + IsDepthStencil(): bool
+    + IsShaderResource(): bool
+    + IsUnorderedAccess(): bool
+    + IsMultisampled(): bool
+    + IsArray(): bool
+    + IsVolume(): bool
+    + IsCubemap(): bool
+    + GetMemorySize(): ulong
+    + Clone(): ResourceDescription
+    + IsCompatible(ResourceDescription): bool
+    + Validate(out string): bool
+    + ToString(): string
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' BufferDescription - описание буфера
+  ' ------------------------------------------------------------------------------
+  
+  class BufferDescription {
+    + Size: ulong {get; set}
+    + Stride: uint {get; set} = 0
+    + BufferUsage: BufferUsage {get; set}
+    + ElementCount: ulong {get; set} = 0
+    + StructureByteStride: uint {get; set} = 0
+    
+    + UpdateElementCount(): void
+    + IsStructured(): bool
+    + IsConstant(): bool
+    + IsVertex(): bool
+    + IsIndex(): bool
+    
+    + CreateVertexBuffer(ulong, uint, string): BufferDescription
+    + CreateIndexBuffer(ulong, string): BufferDescription
+    + CreateConstantBuffer(ulong, string): BufferDescription
+    + CreateStructuredBuffer(ulong, uint, string, bool): BufferDescription
+    + CreateRawBuffer(ulong, string, bool): BufferDescription
+    
+    + GetMemorySize(): ulong
+    + IsCompatible(ResourceDescription): bool
+    + Clone(): ResourceDescription
+    + Validate(out string): bool
+    + ToString(): string
+  }
+  
+  ' ------------------------------------------------------------------------------
+  ' Отношения наследования
+  ' ------------------------------------------------------------------------------
+  
+  ResourceDescription <|-- TextureDescription
+  ResourceDescription <|-- BufferDescription
+  
+}
+
+@enduml

@@ -428,6 +428,41 @@ public unsafe class DX12GraphicsDevice: IGraphicsDevice
     Console.WriteLine($"[DEBUG] Marker: {_name}");
   }
 
+  public IBlendState CreateBlendState(BlendStateDescription _description)
+  {
+    throw new NotImplementedException();
+  }
+
+  public IDepthStencilState CreateDepthStencilState(DepthStencilStateDescription _description)
+  {
+    throw new NotImplementedException();
+  }
+
+  public IRasterizerState CreateRasterizerState(RasterizerStateDescription _description)
+  {
+    throw new NotImplementedException();
+  }
+
+  public IQuery CreateQuery(QueryDescription _description)
+  {
+    throw new NotImplementedException();
+  }
+
+  public IBatchUploader CreateBatchUploader()
+  {
+    throw new NotImplementedException();
+  }
+
+  public IReadOnlyList<IMonitor> GetMonitors()
+  {
+    throw new NotImplementedException();
+  }
+
+  public IMonitor GetPrimaryMonitor()
+  {
+    throw new NotImplementedException();
+  }
+
   /// <summary>
   /// Установить режим немедленной синхронизации (для отладки)
   /// </summary>

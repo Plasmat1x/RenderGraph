@@ -39,4 +39,25 @@ internal unsafe class DX12BatchUploader: IBatchUploader
       dx12Texture.SetDataInternal(p_commandList, pData, _data.Length * sizeof(T), _mipLevel, _arraySlice);
     }
   }
+
+  public void AddBufferUpload(IBuffer _buffer, ulong _offset, ulong _size, IntPtr _data)
+  {
+    if(_buffer is not DX12Buffer dx12Buffer)
+      throw new ArgumentException("Buffer must be DX12Buffer");
+
+    dx12Buffer.SetDataInternal(p_commandList, (void*)_data, _size, _offset);
+  }
+
+  public void AddTextureUpload(ITexture _texture, uint _mipLevel, uint _arraySlice, IntPtr _data, ulong _rowPitch, ulong _slicePitch)
+  {
+    if(_texture is not DX12Texture dx12Texture)
+      throw new ArgumentException("Texture must be DX12Texture");
+
+    dx12Texture.SetDataInternal(p_commandList, (void*)_data, (int)(_rowPitch * _slicePitch), _mipLevel, _arraySlice);
+  }
+
+  public void Flush()
+  {
+    // Flush is handled by the graphics device when ending the batch upload
+  }
 }
